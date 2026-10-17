@@ -1,0 +1,101 @@
+import type { ComponentProps, ReactNode } from "react";
+import { cn } from "@/lib/cn";
+
+const control =
+  "w-full rounded-md border border-line-strong bg-raised px-3 text-base text-ink placeholder:text-subtle focus:border-focus focus:outline-2 focus:outline-offset-0 focus:outline-focus aria-[invalid=true]:border-danger";
+
+type Meta = { label: ReactNode; hint?: ReactNode; error?: ReactNode; counter?: ReactNode; className?: string };
+
+function Wrapper({ id, label, hint, error, counter, className, children }: Meta & { id: string; children: ReactNode }) {
+  return (
+    <div className={cn("grid gap-1", className)}>
+      <label htmlFor={id} className="text-sm font-bold text-ink">
+        {label}
+      </label>
+      {children}
+      {(hint || error || counter) && (
+        <div className="flex items-start justify-between gap-3">
+          {error ? (
+            <span id={`${id}-msg`} className="text-sm font-bold text-danger">
+              {error}
+            </span>
+          ) : hint ? (
+            <span id={`${id}-msg`} className="text-sm text-muted">
+              {hint}
+            </span>
+          ) : (
+            <span />
+          )}
+          {counter && <span className="shrink-0 text-xs text-subtle tabular">{counter}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TextField({ id, label, hint, error, counter, className, inputClassName, ...rest }: Meta & { id: string; inputClassName?: string } & ComponentProps<"input">) {
+  return (
+    <Wrapper id={id} label={label} hint={hint} error={error} counter={counter} className={className}>
+      <input
+        id={id}
+        className={cn(control, "h-11", inputClassName)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={hint || error ? `${id}-msg` : undefined}
+        {...rest}
+      />
+    </Wrapper>
+  );
+}
+
+export function TextArea({ id, label, hint, error, counter, className, rows = 4, ...rest }: Meta & { id: string } & ComponentProps<"textarea">) {
+  return (
+    <Wrapper id={id} label={label} hint={hint} error={error} counter={counter} className={className}>
+      <textarea
+        id={id}
+        rows={rows}
+        className={cn(control, "resize-y py-2.5 leading-6")}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={hint || error ? `${id}-msg` : undefined}
+        {...rest}
+      />
+    </Wrapper>
+  );
+}
+
+export function Select({ id, label, hint, className, children, ...rest }: Meta & { id: string } & ComponentProps<"select">) {
+  return (
+    <Wrapper id={id} label={label} hint={hint} className={className}>
+      <select id={id} className={cn(control, "h-11 appearance-none bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-9")} style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666c87' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }} {...rest}>
+        {children}
+      </select>
+    </Wrapper>
+  );
+}
+
+export function Checkbox({ children, className, ...rest }: { children: ReactNode; className?: string } & ComponentProps<"input">) {
+  return (
+    <label className={cn("flex cursor-pointer items-start gap-3 text-sm", className)}>
+      <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-[var(--brand)]" {...rest} />
+      <span>{children}</span>
+    </label>
+  );
+}
+
+/** A selectable card holding a radio button. */
+export function RadioCard({ checked, heading, description, className, ...rest }: { heading: ReactNode; description?: ReactNode; className?: string } & Omit<ComponentProps<"input">, "title">) {
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer items-start gap-3 rounded-md border bg-raised px-4 py-3 transition-colors",
+        checked ? "border-brand bg-brand-soft shadow-[inset_0_0_0_1px_var(--brand)]" : "border-line hover:border-line-strong",
+        className,
+      )}
+    >
+      <input type="radio" checked={checked} className="mt-0.5 size-5 shrink-0 accent-[var(--brand)]" {...rest} />
+      <span className="grid gap-0.5">
+        <span className="font-bold">{heading}</span>
+        {description && <span className="text-sm text-muted">{description}</span>}
+      </span>
+    </label>
+  );
+}

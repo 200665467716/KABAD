@@ -1,0 +1,8 @@
+{
+  "name": "sharp",
+  "version": "0.0.0-kabad",
+  "private": true,
+  "description": "Remplace sharp (libvips sous LGPL). KABAD n'utilise pas l'optimisation d'images de Next.js.",
+  "license": "MIT",
+  "main": "index.js"
+}

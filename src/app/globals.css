@@ -1,0 +1,265 @@
+@import "tailwindcss";
+
+/*
+ * KABAD design tokens.
+ * Primitives first, then semantic tokens. Light is the default; dark follows the
+ * system setting unless data-theme forces one or the other.
+ * Every size and line-height below sits on the 4px grid.
+ */
+:root {
+  --neutral-0: #ffffff;
+  --neutral-25: #f9f9fc;
+  --neutral-50: #f3f4f9;
+  --neutral-100: #e8eaf2;
+  --neutral-200: #d5d8e6;
+  --neutral-300: #b6bacd;
+  --neutral-400: #8b90a9;
+  --neutral-500: #666c87;
+  --neutral-600: #4b5172;
+  --neutral-700: #353b5a;
+  --neutral-800: #242942;
+  --neutral-900: #171b2f;
+  --neutral-950: #0d1020;
+  --neutral-1000: #080a15;
+  --indigo-50: #eef0fb;
+  --indigo-100: #dfe3f7;
+  --indigo-200: #c1c8ef;
+  --indigo-300: #9aa5e2;
+  --indigo-400: #6f7dd0;
+  --indigo-500: #4c5bbd;
+  --indigo-600: #3644a3;
+  --indigo-700: #283588;
+  --indigo-800: #1f296b;
+  --indigo-900: #171e4f;
+  --indigo-950: #0f1433;
+  --maize-100: #fdf3cf;
+  --maize-300: #f8d55a;
+  --maize-500: #f2b705;
+  --maize-700: #8a6500;
+  --maize-950: #2e2203;
+  --palm-100: #ddf2e7;
+  --palm-300: #6fcb9f;
+  --palm-600: #13724b;
+  --palm-950: #0b2a1c;
+  --clay-100: #f9e2dd;
+  --clay-300: #ee8e80;
+  --clay-600: #a3281b;
+  --clay-950: #33100b;
+
+  --bg: var(--neutral-50);
+  --bg-raised: var(--neutral-0);
+  --bg-sunken: var(--neutral-100);
+  --border: var(--neutral-200);
+  --border-strong: var(--neutral-500);
+  --text: var(--neutral-950);
+  --text-muted: var(--neutral-600);
+  --text-subtle: var(--neutral-500);
+  --brand: var(--indigo-700);
+  --brand-hover: var(--indigo-800);
+  --on-brand: var(--neutral-0);
+  --brand-soft: var(--indigo-50);
+  --brand-text: var(--indigo-600);
+  --accent: var(--maize-500);
+  --on-accent: var(--neutral-950);
+  --accent-soft: var(--maize-100);
+  --accent-text: var(--maize-700);
+  --success: var(--palm-600);
+  --on-success: var(--neutral-0);
+  --success-soft: var(--palm-100);
+  --danger: var(--clay-600);
+  --on-danger: var(--neutral-0);
+  --danger-soft: var(--clay-100);
+  --focus: var(--indigo-500);
+  --scrim: rgb(13 16 32 / 0.48);
+  --shadow-sm: 0 1px 2px rgb(13 16 32 / 0.06), 0 1px 1px rgb(13 16 32 / 0.04);
+  --shadow-md: 0 6px 16px rgb(23 30 79 / 0.08), 0 2px 4px rgb(13 16 32 / 0.05);
+  --shadow-lg: 0 24px 48px rgb(23 30 79 / 0.16), 0 6px 12px rgb(13 16 32 / 0.06);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: var(--neutral-950);
+    --bg-raised: var(--neutral-900);
+    --bg-sunken: var(--neutral-1000);
+    --border: var(--neutral-800);
+    --border-strong: var(--neutral-400);
+    --text: var(--neutral-25);
+    --text-muted: var(--neutral-300);
+    --text-subtle: var(--neutral-400);
+    --brand: var(--indigo-300);
+    --brand-hover: var(--indigo-200);
+    --on-brand: var(--indigo-950);
+    --brand-soft: var(--indigo-900);
+    --brand-text: var(--indigo-300);
+    --accent-soft: var(--maize-950);
+    --accent-text: var(--maize-300);
+    --success: var(--palm-300);
+    --on-success: var(--neutral-950);
+    --success-soft: var(--palm-950);
+    --danger: var(--clay-300);
+    --on-danger: var(--neutral-950);
+    --danger-soft: var(--clay-950);
+    --focus: var(--indigo-300);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
+    --shadow-md: 0 6px 16px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 24px 48px rgb(0 0 0 / 0.65), 0 6px 12px rgb(0 0 0 / 0.45);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: var(--neutral-950);
+  --bg-raised: var(--neutral-900);
+  --bg-sunken: var(--neutral-1000);
+  --border: var(--neutral-800);
+  --border-strong: var(--neutral-400);
+  --text: var(--neutral-25);
+  --text-muted: var(--neutral-300);
+  --text-subtle: var(--neutral-400);
+  --brand: var(--indigo-300);
+  --brand-hover: var(--indigo-200);
+  --on-brand: var(--indigo-950);
+  --brand-soft: var(--indigo-900);
+  --brand-text: var(--indigo-300);
+  --accent-soft: var(--maize-950);
+  --accent-text: var(--maize-300);
+  --success: var(--palm-300);
+  --on-success: var(--neutral-950);
+  --success-soft: var(--palm-950);
+  --danger: var(--clay-300);
+  --on-danger: var(--neutral-950);
+  --danger-soft: var(--clay-950);
+  --focus: var(--indigo-300);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 6px 16px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 24px 48px rgb(0 0 0 / 0.65), 0 6px 12px rgb(0 0 0 / 0.45);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-raised: var(--bg-raised);
+  --color-sunken: var(--bg-sunken);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text);
+  --color-muted: var(--text-muted);
+  --color-subtle: var(--text-subtle);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-on-brand: var(--on-brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-text: var(--brand-text);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-success: var(--success);
+  --color-on-success: var(--on-success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-focus: var(--focus);
+  --color-code: var(--neutral-950);
+  --color-on-code: var(--neutral-25);
+
+  --font-display: var(--font-ojuju), "Fira Sans", system-ui, sans-serif;
+  --font-sans: var(--font-fira), "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-overpass-mono), ui-monospace, Menlo, monospace;
+  --font-celebrate: var(--font-danfo), var(--font-ojuju), serif;
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+@theme {
+  /* Type scale: every line-height is a multiple of 4. */
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 16px;
+  --text-base--line-height: 24px;
+  --text-md: 17px;
+  --text-md--line-height: 28px;
+  --text-lg: 18px;
+  --text-lg--line-height: 28px;
+  --text-xl: 22px;
+  --text-xl--line-height: 28px;
+  --text-2xl: 28px;
+  --text-2xl--line-height: 32px;
+  --text-3xl: 36px;
+  --text-3xl--line-height: 40px;
+  --text-4xl: 48px;
+  --text-4xl--line-height: 52px;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
+
+  --breakpoint-lg: 1024px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  ::selection {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+}
+
+@layer utilities {
+  /* Trims the font's built-in top and bottom space so text centres on the exact middle of a control. */
+  .text-trim {
+    text-box: trim-both cap alphabetic;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .safe-bottom {
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
