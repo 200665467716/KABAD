@@ -1,0 +1,367 @@
+/*
+ * Messaging rules, enforced on the server:
+ * - a first contact is an invitation with one message of 300 characters at most;
+ * - a conversation opens only once the invitation is accepted, and both become contacts;
+ * - groups are private: only their creator adds participants, chosen among the creator's contacts;
+ * - only members read and write in a conversation; blocking stops direct messages and invitations.
+ * Every function takes the acting member's id, never trusts ids coming from the client alone.
+ */
+import { Prisma } from "@/generated/prisma/client";
+import { db, type Db } from "./db";
+import { DomainError, forbidden, notFound } from "./errors";
+import { notify } from "./realtime-events";
+import { GROUP_MAX_MEMBERS } from "@/lib/schemas";
+import type { ChatMessage, ConversationDetail, ConversationSummary, InvitationDetail } from "@/lib/messaging-types";
+
+export type { ChatMessage, ConversationSummary };
+
+const directKey = (a: string, b: string) => [a, b].sort().join(":");
+const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
+const listNames = (names: string[]) => (names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`);
+
+async function isBlocked(prisma: Db | Prisma.TransactionClient, a: string, b: string) {
+  const n = await prisma.block.count({ where: { OR: [{ blockerId: a, blockedId: b }, { blockerId: b, blockedId: a }] } });
+  return n > 0;
+}
+
+async function membership(prisma: Db | Prisma.TransactionClient, userId: string, conversationId: string) {
+  const m = await prisma.conversationMember.findUnique({
+    where: { conversationId_userId: { conversationId, userId } },
+    include: { conversation: { include: { members: { select: { userId: true } } } } },
+  });
+  if (!m) throw notFound("Conversation introuvable.");
+  return m;
+}
+
+/* Conversations */
+
+
+
+export async function unreadCounts(userId: string, prisma: Db = db): Promise<Map<string, number>> {
+  const rows = await prisma.$queryRaw<Array<{ conversationId: string; unread: bigint }>>`
+    SELECT cm."conversationId", COUNT(m.id) AS unread
+    FROM "ConversationMember" cm
+    JOIN "Message" m ON m."conversationId" = cm."conversationId"
+    WHERE cm."userId" = ${userId}
+      AND m."createdAt" > cm."lastReadAt"
+      AND m.kind = 'TEXT'
+      AND m."authorId" IS DISTINCT FROM ${userId}
+    GROUP BY cm."conversationId"`;
+  return new Map(rows.map((r) => [r.conversationId, Number(r.unread)]));
+}
+
+export async function unreadTotal(userId: string, prisma: Db = db) {
+  let total = 0;
+  for (const n of (await unreadCounts(userId, prisma)).values()) total += n;
+  return total;
+}
+
+export async function listConversations(userId: string, prisma: Db = db): Promise<ConversationSummary[]> {
+  const [rows, unread] = await Promise.all([
+    prisma.conversation.findMany({
+      where: { members: { some: { userId } } },
+      orderBy: { lastMessageAt: "desc" },
+      include: {
+        members: { include: { user: { select: { id: true, name: true } } } },
+        messages: { orderBy: { createdAt: "desc" }, take: 1, include: { author: { select: { name: true } } } },
+      },
+    }),
+    unreadCounts(userId, prisma),
+  ]);
+  return rows.map((c) => {
+    const other = c.kind === "DIRECT" ? c.members.find((m) => m.userId !== userId)?.user : undefined;
+    const last = c.messages[0];
+    return {
+      id: c.id,
+      kind: c.kind,
+      title: c.kind === "GROUP" ? (c.name ?? "Groupe") : (other?.name ?? "Conversation"),
+      otherId: other?.id ?? null,
+      memberCount: c.members.length,
+      isOwner: c.createdById === userId,
+      unread: unread.get(c.id) ?? 0,
+      lastMessageAt: c.lastMessageAt.toISOString(),
+      last: last ? { body: last.body, authorId: last.authorId, authorName: last.author?.name ?? null, system: last.kind === "SYSTEM" } : null,
+    };
+  });
+}
+
+
+
+const toChat = (m: { id: string; authorId: string | null; author: { name: string } | null; body: string; kind: string; createdAt: Date; clientId: string | null }): ChatMessage => ({
+  id: m.id,
+  authorId: m.authorId,
+  authorName: m.author?.name ?? null,
+  body: m.body,
+  system: m.kind === "SYSTEM",
+  createdAt: m.createdAt.toISOString(),
+  clientId: m.clientId,
+});
+
+export async function getConversation(userId: string, conversationId: string, opts: { before?: string; limit?: number } = {}, prisma: Db = db): Promise<ConversationDetail> {
+  const m = await membership(prisma, userId, conversationId);
+  const limit = Math.min(Math.max(opts.limit ?? 50, 1), 100);
+  const c = await prisma.conversation.findUniqueOrThrow({
+    where: { id: conversationId },
+    include: { members: { include: { user: { select: { id: true, name: true, role: true, city: true } } }, orderBy: { joinedAt: "asc" } } },
+  });
+  const rows = await prisma.message.findMany({
+    where: { conversationId, ...(opts.before ? { createdAt: { lt: new Date(opts.before) } } : {}) },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit + 1,
+    include: { author: { select: { name: true } } },
+  });
+  const other = c.kind === "DIRECT" ? c.members.find((x) => x.userId !== userId)?.user : undefined;
+  return {
+    id: c.id,
+    kind: c.kind,
+    title: c.kind === "GROUP" ? (c.name ?? "Groupe") : (other?.name ?? "Conversation"),
+    other: other ? { id: other.id, name: other.name, role: other.role, city: other.city } : null,
+    isOwner: c.createdById === userId,
+    members: c.members.map((x) => ({ id: x.user.id, name: x.user.name, owner: x.role === "OWNER" })),
+    lastReadAt: m.lastReadAt.toISOString(),
+    hasMore: rows.length > limit,
+    messages: rows.slice(0, limit).reverse().map(toChat),
+  };
+}
+
+export async function sendMessage(userId: string, conversationId: string, input: { body: string; clientId?: string }, prisma: Db = db): Promise<ChatMessage> {
+  const m = await membership(prisma, userId, conversationId);
+  if (input.clientId) {
+    const existing = await prisma.message.findUnique({ where: { authorId_clientId: { authorId: userId, clientId: input.clientId } }, include: { author: { select: { name: true } } } });
+    if (existing) return toChat(existing);
+  }
+  if (m.conversation.kind === "DIRECT") {
+    const other = m.conversation.members.find((x) => x.userId !== userId)?.userId;
+    if (other && (await isBlocked(prisma, userId, other))) throw forbidden("Vous ne pouvez plus écrire à ce membre.");
+  }
+  const recipients = m.conversation.members.map((x) => x.userId);
+  return prisma.$transaction(async (tx) => {
+    const msg = await tx.message.create({
+      data: { conversationId, authorId: userId, body: input.body, clientId: input.clientId },
+      include: { author: { select: { name: true } } },
+    });
+    await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: msg.createdAt } });
+    await tx.conversationMember.update({ where: { conversationId_userId: { conversationId, userId } }, data: { lastReadAt: msg.createdAt } });
+    await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients });
+    return toChat(msg);
+  });
+}
+
+export async function markRead(userId: string, conversationId: string, prisma: Db = db) {
+  await membership(prisma, userId, conversationId);
+  await prisma.$transaction(async (tx) => {
+    await tx.conversationMember.update({ where: { conversationId_userId: { conversationId, userId } }, data: { lastReadAt: new Date() } });
+    await notify(tx, { t: "read", conversationId, recipients: [userId] });
+  });
+}
+
+/* Contacts and invitations */
+
+export async function areContacts(a: string, b: string, prisma: Db | Prisma.TransactionClient = db) {
+  return (await prisma.contact.count({ where: { userId: a, contactId: b } })) > 0;
+}
+
+export async function listContacts(userId: string, prisma: Db = db) {
+  const rows = await prisma.contact.findMany({
+    where: { userId },
+    include: { contact: { select: { id: true, name: true, city: true, role: true, stack: true } } },
+    orderBy: { contact: { name: "asc" } },
+  });
+  return rows.map((r) => r.contact);
+}
+
+export async function listInvitations(userId: string, prisma: Db = db) {
+  const [received, sent] = await Promise.all([
+    prisma.invitation.findMany({
+      where: { toId: userId, status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+      include: { from: { select: { id: true, name: true, city: true, country: true, stack: true, years: true, role: true } } },
+    }),
+    prisma.invitation.findMany({ where: { fromId: userId, status: "PENDING" }, select: { id: true, toId: true, createdAt: true } }),
+  ]);
+  return {
+    received: received.map((i) => ({ id: i.id, message: i.message, createdAt: i.createdAt.toISOString(), from: i.from })),
+    sent: sent.map((i) => ({ id: i.id, toId: i.toId, createdAt: i.createdAt.toISOString() })),
+  };
+}
+
+export async function getInvitation(userId: string, invitationId: string, prisma: Db = db): Promise<InvitationDetail> {
+  const i = await prisma.invitation.findUnique({
+    where: { id: invitationId },
+    include: { from: { select: { id: true, name: true, city: true, country: true, stack: true, years: true, role: true } } },
+  });
+  if (!i || i.toId !== userId) throw notFound("Invitation introuvable.");
+  let conversationId: string | null = null;
+  if (i.status === "ACCEPTED") {
+    conversationId = (await prisma.conversation.findUnique({ where: { directKey: directKey(i.fromId, i.toId) }, select: { id: true } }))?.id ?? null;
+  }
+  return { id: i.id, status: i.status, message: i.message, createdAt: i.createdAt.toISOString(), from: i.from, conversationId };
+}
+
+export async function sendInvitation(fromId: string, input: { toId: string; message: string }, prisma: Db = db) {
+  const { toId, message } = input;
+  if (toId === fromId) throw new DomainError("self", "Vous ne pouvez pas vous inviter vous-même.");
+  const to = await prisma.user.findUnique({ where: { id: toId }, select: { id: true, name: true } });
+  if (!to) throw notFound("Membre introuvable.");
+  const first = firstName(to.name);
+  if (await areContacts(fromId, toId, prisma)) throw new DomainError("already_contacts", `${first} fait déjà partie de vos contacts.`, 409);
+  if (await isBlocked(prisma, fromId, toId)) throw forbidden("Vous ne pouvez pas inviter ce membre.");
+  const [mine, theirs] = await Promise.all([
+    prisma.invitation.findUnique({ where: { fromId_toId: { fromId, toId } } }),
+    prisma.invitation.findUnique({ where: { fromId_toId: { fromId: toId, toId: fromId } } }),
+  ]);
+  if (theirs?.status === "PENDING") throw new DomainError("invited_you", `${first} vous a déjà invité. Acceptez son invitation pour discuter.`, 409);
+  if (mine?.status === "PENDING") throw new DomainError("already_sent", `Vous avez déjà invité ${first}. Attendez sa réponse.`, 409);
+  if (mine?.status === "DECLINED") throw new DomainError("declined", `${first} n’a pas donné suite à votre invitation.`, 409);
+
+  return prisma.$transaction(async (tx) => {
+    const inv = await tx.invitation.create({ data: { fromId, toId, message } });
+    await notify(tx, { t: "invitation", invitationId: inv.id, recipients: [toId] });
+    return { id: inv.id };
+  });
+}
+
+/** Accepting makes both members contacts and opens their conversation, starting with the invitation's message. */
+export async function answerInvitation(userId: string, invitationId: string, accept: boolean, prisma: Db = db) {
+  const inv = await prisma.invitation.findUnique({ where: { id: invitationId }, include: { to: { select: { name: true } } } });
+  if (!inv || inv.toId !== userId) throw notFound("Invitation introuvable.");
+  if (inv.status !== "PENDING") throw new DomainError("already_answered", "Vous avez déjà répondu à cette invitation.", 409);
+
+  if (!accept) {
+    // The sender is not told about a refusal.
+    await prisma.invitation.update({ where: { id: inv.id }, data: { status: "DECLINED", answeredAt: new Date() } });
+    return { conversationId: null };
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const now = new Date();
+    await tx.invitation.update({ where: { id: inv.id }, data: { status: "ACCEPTED", answeredAt: now } });
+    await tx.contact.createMany({ data: [{ userId: inv.fromId, contactId: inv.toId }, { userId: inv.toId, contactId: inv.fromId }], skipDuplicates: true });
+    const key = directKey(inv.fromId, inv.toId);
+    let conversation = await tx.conversation.findUnique({ where: { directKey: key } });
+    if (!conversation) {
+      conversation = await tx.conversation.create({
+        data: { kind: "DIRECT", directKey: key, lastMessageAt: now, members: { create: [{ userId: inv.fromId, lastReadAt: now }, { userId: inv.toId, lastReadAt: now }] } },
+      });
+    }
+    await tx.message.create({ data: { conversationId: conversation.id, authorId: inv.fromId, body: inv.message, createdAt: inv.createdAt } });
+    await tx.message.create({ data: { conversationId: conversation.id, kind: "SYSTEM", body: `${firstName(inv.to.name)} a accepté l’invitation`, createdAt: now } });
+    await tx.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: now } });
+    await notify(tx, { t: "invitation_answered", invitationId: inv.id, accepted: true, conversationId: conversation.id, recipients: [inv.fromId] });
+    await notify(tx, { t: "conversation", conversationId: conversation.id, recipients: [inv.fromId, inv.toId] });
+    return { conversationId: conversation.id };
+  });
+}
+
+/* Private groups */
+
+async function assertAllContacts(tx: Prisma.TransactionClient | Db, ownerId: string, ids: string[]) {
+  const found = await tx.contact.findMany({ where: { userId: ownerId, contactId: { in: ids } }, select: { contactId: true } });
+  if (found.length !== ids.length) throw forbidden("Vous ne pouvez ajouter que vos contacts.");
+}
+
+export async function createGroup(userId: string, input: { name: string; memberIds: string[] }, prisma: Db = db) {
+  const ids = [...new Set(input.memberIds)].filter((id) => id !== userId);
+  if (ids.length === 0) throw new DomainError("no_members", "Choisissez au moins un participant.");
+  if (ids.length + 1 > GROUP_MAX_MEMBERS) throw new DomainError("too_many", `Un groupe compte ${GROUP_MAX_MEMBERS} membres au plus.`);
+  return prisma.$transaction(async (tx) => {
+    await assertAllContacts(tx, userId, ids);
+    const [owner, added] = await Promise.all([
+      tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
+      tx.user.findMany({ where: { id: { in: ids } }, select: { name: true } }),
+    ]);
+    const group = await tx.conversation.create({
+      data: {
+        kind: "GROUP",
+        name: input.name,
+        createdById: userId,
+        members: { create: [{ userId, role: "OWNER" }, ...ids.map((id) => ({ userId: id }))] },
+      },
+    });
+    await tx.message.create({
+      data: { conversationId: group.id, kind: "SYSTEM", body: `${firstName(owner.name)} a créé le groupe et ajouté ${listNames(added.map((a) => firstName(a.name)))}` },
+    });
+    await notify(tx, { t: "conversation", conversationId: group.id, recipients: [userId, ...ids] });
+    return { id: group.id };
+  });
+}
+
+export async function addGroupMembers(userId: string, conversationId: string, memberIds: string[], prisma: Db = db) {
+  const m = await membership(prisma, userId, conversationId);
+  if (m.conversation.kind !== "GROUP") throw new DomainError("not_group", "On ne peut ajouter des participants qu’à un groupe.");
+  if (m.conversation.createdById !== userId) throw forbidden("Seul le créateur du groupe peut ajouter des participants.");
+  const current = new Set(m.conversation.members.map((x) => x.userId));
+  const ids = [...new Set(memberIds)].filter((id) => !current.has(id));
+  if (ids.length === 0) throw new DomainError("no_new_members", "Ces personnes sont déjà dans le groupe.");
+  if (current.size + ids.length > GROUP_MAX_MEMBERS) throw new DomainError("too_many", `Un groupe compte ${GROUP_MAX_MEMBERS} membres au plus.`);
+
+  return prisma.$transaction(async (tx) => {
+    await assertAllContacts(tx, userId, ids);
+    const [owner, added] = await Promise.all([
+      tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
+      tx.user.findMany({ where: { id: { in: ids } }, select: { name: true } }),
+    ]);
+    await tx.conversationMember.createMany({ data: ids.map((id) => ({ conversationId, userId: id })) });
+    const msg = await tx.message.create({
+      data: { conversationId, kind: "SYSTEM", body: `${firstName(owner.name)} a ajouté ${listNames(added.map((a) => firstName(a.name)))}` },
+    });
+    await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: msg.createdAt } });
+    const everyone = [...current, ...ids];
+    await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients: everyone });
+    await notify(tx, { t: "conversation", conversationId, recipients: ids });
+    return { added: ids.length };
+  });
+}
+
+/* Reports and blocks */
+
+export async function createReport(
+  userId: string,
+  input: { targetType: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION"; targetId: string; reason: string; details?: string; block: boolean },
+  prisma: Db = db,
+) {
+  let blockId: string | null = null;
+  switch (input.targetType) {
+    case "USER": {
+      if (!(await prisma.user.count({ where: { id: input.targetId } }))) throw notFound("Membre introuvable.");
+      blockId = input.targetId;
+      break;
+    }
+    case "MESSAGE": {
+      const msg = await prisma.message.findUnique({ where: { id: input.targetId }, select: { conversationId: true, authorId: true } });
+      if (!msg) throw notFound("Message introuvable.");
+      await membership(prisma, userId, msg.conversationId);
+      blockId = msg.authorId;
+      break;
+    }
+    case "CONVERSATION": {
+      const m = await membership(prisma, userId, input.targetId);
+      blockId = m.conversation.kind === "DIRECT" ? (m.conversation.members.find((x) => x.userId !== userId)?.userId ?? null) : null;
+      break;
+    }
+    case "INVITATION": {
+      const inv = await prisma.invitation.findUnique({ where: { id: input.targetId } });
+      if (!inv || (inv.toId !== userId && inv.fromId !== userId)) throw notFound("Invitation introuvable.");
+      blockId = inv.toId === userId ? inv.fromId : inv.toId;
+      if (input.block && inv.toId === userId && inv.status === "PENDING") {
+        await prisma.invitation.update({ where: { id: inv.id }, data: { status: "DECLINED", answeredAt: new Date() } });
+      }
+      break;
+    }
+  }
+  await prisma.report.create({ data: { reporterId: userId, targetType: input.targetType, targetId: input.targetId, reason: input.reason, details: input.details } });
+  if (input.block && blockId && blockId !== userId) {
+    await prisma.block.upsert({ where: { blockerId_blockedId: { blockerId: userId, blockedId: blockId } }, create: { blockerId: userId, blockedId: blockId }, update: {} });
+  }
+  return { ok: true };
+}
+
+/** Turns a 404 refusal into null, for pages that answer with notFound(). */
+export async function orNotFound<T>(p: Promise<T>): Promise<T | null> {
+  try {
+    return await p;
+  } catch (e) {
+    if (e instanceof DomainError && e.status === 404) return null;
+    throw e;
+  }
+}

@@ -9,7 +9,7 @@ import { member, recommendations, type Member } from "@/lib/data";
 import { initials } from "@/lib/format";
 
 export function Recommendations() {
-  const [sent, setSent] = useState<string[]>(["awa", "yao"]);
+  const [sent, setSent] = useState<string[]>([]);
   const [target, setTarget] = useState<Member | null>(null);
 
   return (

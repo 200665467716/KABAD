@@ -23,11 +23,6 @@ const ROUTES = [
   "/tests/marche-vert",
   "/tests/marche-vert/rapport",
   "/tests/marche-vert/rapports",
-  "/messages",
-  "/messages/invitations/chidi",
-  "/messages/moussa",
-  "/messages/api-lome",
-  "/messages/groupes/nouveau",
   "/soutenir/api-mobile-money",
 ];
 
@@ -46,8 +41,10 @@ test.describe("chaque écran", () => {
   }
 });
 
-test("l’inscription mène au profil puis aux recommandations", async ({ page }) => {
+test("l’inscription crée le compte puis mène au profil et aux recommandations", async ({ page }) => {
   await page.goto("/inscription");
+  await page.getByLabel("Nom complet").fill("Ama Diaka");
+  await page.getByLabel("Adresse e-mail").fill(`ama.${Date.now()}.${Math.floor(Math.random() * 1e6)}@exemple.gh`);
   await page.getByLabel("Mot de passe").fill("court");
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await expect(page.getByText("au moins 12 caractères")).toBeVisible();
@@ -58,14 +55,13 @@ test("l’inscription mène au profil puis aux recommandations", async ({ page }
   await expect(page).toHaveURL(/\/inscription\/recommandations$/);
 });
 
-test("une invitation part avec un premier message limité à 300 caractères", async ({ page }) => {
+test("une invitation demande d’être connecté et limite le premier message à 300 caractères", async ({ page }) => {
   await page.goto("/inscription/recommandations");
   await page.getByRole("button", { name: "Inviter Moussa Traoré" }).click();
-  const box = page.getByLabel("Votre premier message");
-  await box.fill("x".repeat(320));
+  await page.getByLabel("Votre premier message").fill("x".repeat(320));
   await expect(page.getByText("300 / 300")).toBeVisible();
   await page.getByRole("button", { name: "Envoyer l’invitation" }).click();
-  await expect(page.getByText("3 invitations envoyées")).toBeVisible();
+  await expect(page.getByText("Connectez-vous pour continuer.")).toBeVisible();
 });
 
 test("confirmer la dernière séance ouvre les défis à cagnotte", async ({ page }) => {
@@ -79,20 +75,9 @@ test("confirmer la dernière séance ouvre les défis à cagnotte", async ({ pag
   await expect(page.getByRole("link", { name: "Participer au défi" })).toBeVisible();
 });
 
-test("accepter une invitation ouvre la conversation", async ({ page }) => {
-  await page.goto("/messages/invitations/chidi");
-  await page.getByRole("button", { name: "Accepter" }).click();
-  await expect(page.getByText("Invitation acceptée.")).toBeVisible();
-  await page.getByLabel("Répondre à Chidi").fill("Avec plaisir !");
-  await page.getByRole("button", { name: "Envoyer" }).click();
-  await expect(page.getByText("Avec plaisir !")).toBeVisible();
-});
-
-test("un message envoyé apparaît dans la conversation", async ({ page }) => {
-  await page.goto("/messages/moussa");
-  await page.getByLabel("Votre message").fill("Merci, je corrige ce soir.");
-  await page.getByRole("button", { name: "Envoyer" }).click();
-  await expect(page.getByText("Merci, je corrige ce soir.")).toBeVisible();
+test("la messagerie demande d’être connecté", async ({ page }) => {
+  await page.goto("/messages");
+  await expect(page).toHaveURL(/\/connexion\?suite=%2Fmessages$/);
 });
 
 test("le jury note une solution sur 20", async ({ page }) => {

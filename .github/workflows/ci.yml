@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "dev/**"]
   pull_request:
 
 permissions:
@@ -15,7 +15,23 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: kabad
+          POSTGRES_PASSWORD: kabad
+          POSTGRES_DB: kabad
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U kabad" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://kabad:kabad@127.0.0.1:5432/kabad
+      DATABASE_URL_TEST: postgresql://kabad:kabad@127.0.0.1:5432/kabad_test
+      # Throwaway value for the CI database only; production secrets live on the server.
+      REALTIME_SECRET: ci-only-realtime-secret-0123456789abcdef
+      NEXT_PUBLIC_REALTIME_URL: http://127.0.0.1:4001
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,10 +44,14 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - name: Tests d’intégration (PostgreSQL)
+        run: |
+          PGPASSWORD=kabad psql -h 127.0.0.1 -U kabad -d kabad -c "CREATE DATABASE kabad_test"
+          npm run test:integration
       - run: npm run build
       - name: Navigateur pour les tests de parcours
         run: npx playwright install --with-deps chromium
-      - name: Tests de parcours (téléphone et ordinateur)
+      - name: Tests de parcours (téléphone, ordinateur, messagerie en temps réel)
         run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()

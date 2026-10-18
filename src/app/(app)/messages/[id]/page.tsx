@@ -1,19 +1,31 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { conversation, conversations } from "@/lib/data";
+import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
+import { getCurrentUser } from "@/server/auth";
+import { getConversation, orNotFound } from "@/server/messaging";
 import { ConversationView } from "./ConversationView";
 
-export function generateStaticParams() {
-  return conversations.map((c) => ({ id: c.id }));
+export const metadata: Metadata = { title: "Conversation" };
+
+async function ConversationData({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const user = await getCurrentUser();
+  if (!user) redirect(`/connexion?suite=/messages/${id}`);
+  const conversation = await orNotFound(getConversation(user.id, id));
+  if (!conversation) notFound();
+  return <ConversationView me={{ id: user.id, name: user.name }} initial={conversation} />;
 }
 
-export async function generateMetadata({ params }: PageProps<"/messages/[id]">): Promise<Metadata> {
-  const { id } = await params;
-  return { title: conversation(id)?.name ?? "Conversation" };
-}
-
-export default async function ConversationPage({ params }: PageProps<"/messages/[id]">) {
-  const { id } = await params;
-  if (!conversation(id)) notFound();
-  return <ConversationView conversationId={id} />;
+export default function ConversationPage({ params }: PageProps<"/messages/[id]">) {
+  return (
+    <Suspense
+      fallback={
+        <div className="grid h-dvh place-items-center text-muted" role="status">
+          Chargement de la conversation…
+        </div>
+      }
+    >
+      <ConversationData params={params} />
+    </Suspense>
+  );
 }

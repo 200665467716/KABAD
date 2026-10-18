@@ -5,64 +5,92 @@ import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Controls";
 import { Alert } from "@/components/ui/Display";
 import { Checkbox, RadioCard, TextArea } from "@/components/ui/Field";
+import { api, ApiError } from "@/lib/api";
+import { REPORT_REASONS } from "@/lib/schemas";
 
-const REASONS = ["Spam ou arnaque", "Harcèlement ou propos haineux", "Faux profil ou faux statut Senior", "Plagiat dans un défi", "Autre"];
+export type ReportTarget = { type: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION"; id: string };
 
-/** Report a message or a profile. A moderator reviews it within 24 h; the reporter stays anonymous. */
-export function ReportSheet({ open, onClose, subject }: { open: boolean; onClose: () => void; subject: string }) {
-  const [reason, setReason] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState(false);
+/** Report a member, a message, a conversation or an invitation. A moderator reviews it within 24 h; the reporter stays anonymous. */
+export function ReportSheet({ open, onClose, subject, target, onBlocked }: { open: boolean; onClose: () => void; subject: string; target: ReportTarget; onBlocked?: () => void }) {
+  const [reason, setReason] = useState<(typeof REPORT_REASONS)[number] | null>(null);
+  const [details, setDetails] = useState("");
+  const [block, setBlock] = useState(true);
+  const [state, setState] = useState<"form" | "sending" | "sent">("form");
+  const [error, setError] = useState<string | null>(null);
 
   const close = () => {
     onClose();
     setTimeout(() => {
-      setSent(false);
+      setState("form");
       setReason(null);
-      setError(false);
+      setDetails("");
+      setError(null);
     }, 200);
   };
+
+  async function submit() {
+    if (!reason) return setError("Choisissez un motif.");
+    setState("sending");
+    setError(null);
+    try {
+      await api("/api/reports", { body: { targetType: target.type, targetId: target.id, reason, details: details.trim() || undefined, block } });
+      setState("sent");
+      if (block) onBlocked?.();
+    } catch (e) {
+      setState("form");
+      setError(e instanceof ApiError ? e.message : "Le signalement n’est pas parti. Réessayez.");
+    }
+  }
 
   return (
     <Sheet
       open={open}
       onClose={close}
-      title={sent ? "Merci pour votre signalement" : `Signaler ${subject}`}
+      title={state === "sent" ? "Merci pour votre signalement" : `Signaler ${subject}`}
       footer={
-        sent ? (
+        state === "sent" ? (
           <Button size="lg" block variant="secondary" onClick={close}>
             Fermer
           </Button>
         ) : (
-          <Button
-            size="lg"
-            block
-            variant="danger"
-            onClick={() => {
-              if (!reason) return setError(true);
-              setSent(true);
-            }}
-          >
-            Envoyer le signalement
+          <Button size="lg" block variant="danger" onClick={submit} disabled={state === "sending"}>
+            {state === "sending" ? "Envoi…" : "Envoyer le signalement"}
           </Button>
         )
       }
     >
-      {sent ? (
+      {state === "sent" ? (
         <Alert tone="success" role="status">
-          Un modérateur l’examine sous 24 h. Vous recevrez une notification avec sa décision.
+          Un modérateur l’examine sous 24 h.{block ? " Cette personne ne peut plus vous écrire ni vous inviter." : ""}
         </Alert>
       ) : (
         <>
           <fieldset className="grid gap-1.5">
             <legend className="mb-2 text-sm font-bold">Quel est le problème ?</legend>
-            {REASONS.map((r) => (
-              <RadioCard key={r} name="reason" value={r} checked={reason === r} onChange={() => { setReason(r); setError(false); }} heading={<span className="font-normal">{r}</span>} className="py-2.5" />
+            {REPORT_REASONS.map((r) => (
+              <RadioCard
+                key={r}
+                name="reason"
+                value={r}
+                checked={reason === r}
+                onChange={() => {
+                  setReason(r);
+                  setError(null);
+                }}
+                heading={<span className="font-normal">{r}</span>}
+                className="py-2.5"
+              />
             ))}
-            {error && <span className="text-sm font-bold text-danger">Choisissez un motif.</span>}
           </fieldset>
-          <TextArea id="report-details" label="Précisions (facultatif)" rows={3} placeholder="Ce qui s’est passé, en quelques mots" />
-          <Checkbox defaultChecked>Bloquer aussi cette personne</Checkbox>
+          <TextArea id="report-details" label="Précisions (facultatif)" rows={3} maxLength={1000} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Ce qui s’est passé, en quelques mots" />
+          <Checkbox checked={block} onChange={(e) => setBlock(e.target.checked)}>
+            Bloquer aussi cette personne
+          </Checkbox>
+          {error && (
+            <Alert tone="danger" role="alert">
+              {error}
+            </Alert>
+          )}
           <p className="text-xs text-muted">Un modérateur examine chaque signalement sous 24 h. La personne n’est pas informée de votre identité.</p>
         </>
       )}

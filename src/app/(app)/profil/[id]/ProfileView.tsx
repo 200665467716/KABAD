@@ -6,12 +6,14 @@ import { ReportSheet } from "@/components/features/ReportSheet";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
 import { Avatar, Badge, Card, Overline, Stat } from "@/components/ui/Display";
-import { CURRENT_USER_ID, member } from "@/lib/data";
+import { member } from "@/lib/data";
+import { useMe } from "@/lib/use-me";
 import { initials } from "@/lib/format";
 
 export function ProfileView({ memberId }: { memberId: string }) {
   const m = member(memberId);
-  const me = m.id === CURRENT_USER_ID;
+  const { me: current } = useMe();
+  const me = current?.id === m.id;
   const [invite, setInvite] = useState(false);
   const [invited, setInvited] = useState(false);
   const [report, setReport] = useState(false);
@@ -84,7 +86,7 @@ export function ProfileView({ memberId }: { memberId: string }) {
           setInvite(false);
         }}
       />
-      <ReportSheet open={report} onClose={() => setReport(false)} subject="ce profil" />
+      <ReportSheet open={report} onClose={() => setReport(false)} subject="ce profil" target={{ type: "USER", id: m.id }} />
     </>
   );
 }

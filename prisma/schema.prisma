@@ -1,0 +1,182 @@
+// KABAD data model. Messaging is wired first; mentoring, challenges and tests follow.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  JUNIOR
+  SENIOR
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(JUNIOR)
+  city         String   @default("")
+  country      String   @default("")
+  diaspora     Boolean  @default(false)
+  years        Int      @default(0)
+  headline     String   @default("")
+  bio          String   @default("")
+  stack        String[] @default([])
+  createdAt    DateTime @default(now())
+
+  sessions            Session[]
+  invitationsSent     Invitation[]         @relation("InvitationFrom")
+  invitationsReceived Invitation[]         @relation("InvitationTo")
+  contacts            Contact[]            @relation("ContactOwner")
+  contactOf           Contact[]            @relation("ContactTarget")
+  memberships         ConversationMember[]
+  messages            Message[]
+  conversationsCreated Conversation[]      @relation("ConversationCreator")
+  blocks              Block[]              @relation("Blocker")
+  blockedBy           Block[]              @relation("Blocked")
+  reports             Report[]
+}
+
+/// The cookie holds a random token; only its SHA-256 is stored.
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+/// A first contact: one message of 300 characters at most. The conversation opens only once accepted.
+model Invitation {
+  id         String           @id @default(cuid())
+  fromId     String
+  toId       String
+  from       User             @relation("InvitationFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to         User             @relation("InvitationTo", fields: [toId], references: [id], onDelete: Cascade)
+  message    String           @db.VarChar(300)
+  status     InvitationStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  answeredAt DateTime?
+
+  @@unique([fromId, toId])
+  @@index([toId, status])
+}
+
+/// Stored both ways (A→B and B→A) once an invitation is accepted.
+model Contact {
+  userId    String
+  contactId String
+  user      User     @relation("ContactOwner", fields: [userId], references: [id], onDelete: Cascade)
+  contact   User     @relation("ContactTarget", fields: [contactId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, contactId])
+}
+
+enum ConversationKind {
+  DIRECT
+  GROUP
+}
+
+model Conversation {
+  id            String           @id @default(cuid())
+  kind          ConversationKind
+  name          String?          @db.VarChar(60)
+  /// For DIRECT conversations: the two user ids sorted and joined, so a pair has one conversation only.
+  directKey     String?          @unique
+  createdById   String?
+  createdBy     User?            @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime         @default(now())
+  lastMessageAt DateTime         @default(now())
+
+  members  ConversationMember[]
+  messages Message[]
+}
+
+enum MemberRole {
+  OWNER
+  MEMBER
+}
+
+model ConversationMember {
+  conversationId String
+  userId         String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           MemberRole   @default(MEMBER)
+  joinedAt       DateTime     @default(now())
+  lastReadAt     DateTime     @default(now())
+
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+enum MessageKind {
+  TEXT
+  SYSTEM
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  authorId       String?
+  author         User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  kind           MessageKind  @default(TEXT)
+  body           String       @db.VarChar(4000)
+  /// Sent by the client so that a retried send never creates a duplicate.
+  clientId       String?
+  createdAt      DateTime     @default(now())
+
+  @@unique([authorId, clientId])
+  @@index([conversationId, createdAt])
+}
+
+model Block {
+  blockerId String
+  blockedId String
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([blockerId, blockedId])
+}
+
+enum ReportTarget {
+  USER
+  MESSAGE
+  CONVERSATION
+  INVITATION
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+}
+
+model Report {
+  id         String       @id @default(cuid())
+  reporterId String
+  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType ReportTarget
+  targetId   String
+  reason     String       @db.VarChar(80)
+  details    String?      @db.VarChar(1000)
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now())
+
+  @@index([status, createdAt])
+}

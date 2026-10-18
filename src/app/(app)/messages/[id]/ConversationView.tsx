@@ -1,105 +1,320 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { MessageBubble, SystemLine } from "@/components/features/Thread";
 import { ReportSheet } from "@/components/features/ReportSheet";
 import { TopBar } from "@/components/shell/TopBar";
 import { Button, IconButton } from "@/components/ui/Button";
-import { Avatar, DaySeparator } from "@/components/ui/Display";
-import { CURRENT_USER_ID, conversation, member, type Message } from "@/lib/data";
+import { Sheet } from "@/components/ui/Controls";
+import { Alert, Avatar, DaySeparator } from "@/components/ui/Display";
+import { api, ApiError } from "@/lib/api";
 import { initials } from "@/lib/format";
+import type { ChatMessage, Contact, ConversationDetail } from "@/lib/messaging-types";
+import { useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
+import { MESSAGE_MAX_LENGTH } from "@/lib/schemas";
+import { clockTime, dayLabel } from "@/lib/time";
 
-function now() {
-  return new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+type Shown = ChatMessage & { status?: "sending" | "failed" };
+
+const ACCENTS = ["brand", "accent"] as const;
+
+function merge(current: Shown[], incoming: ChatMessage[]): Shown[] {
+  const out = [...current];
+  for (const m of incoming) {
+    const i = out.findIndex((x) => x.id === m.id || (m.clientId && x.clientId === m.clientId));
+    if (i >= 0) out[i] = m;
+    else out.push(m);
+  }
+  return out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-export function ConversationView({ conversationId }: { conversationId: string }) {
-  const c = conversation(conversationId)!;
-  const group = c.kind === "group";
-  const other = group ? null : member(c.memberIds.find((id) => id !== CURRENT_USER_ID)!);
-  const [messages, setMessages] = useState<Message[]>(c.messages);
+export function ConversationView({ me, initial }: { me: { id: string; name: string }; initial: ConversationDetail }) {
+  const [detail, setDetail] = useState(initial);
+  const [messages, setMessages] = useState<Shown[]>(initial.messages);
+  const [hasMore, setHasMore] = useState(initial.hasMore);
   const [draft, setDraft] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState(false);
   const [report, setReport] = useState(false);
-  const end = useRef<HTMLDivElement>(null);
+  const [adding, setAdding] = useState(false);
+  const list = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
+  const keepOffset = useRef<number | null>(null);
+  const group = detail.kind === "GROUP";
+
+  const markRead = useCallback(() => {
+    if (document.visibilityState === "visible") api(`/api/conversations/${detail.id}/read`, { method: "POST" }).catch(() => {});
+  }, [detail.id]);
 
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
+    markRead();
+    const onVisible = () => markRead();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [markRead]);
+
+  // Keep the newest message in view, unless the member scrolled up or older messages were just added on top.
+  useLayoutEffect(() => {
+    const el = list.current;
+    if (!el) return;
+    if (keepOffset.current !== null) {
+      el.scrollTop = el.scrollHeight - keepOffset.current;
+      keepOffset.current = null;
+    } else if (stickToBottom.current) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [messages]);
+
+  useRealtime("message:new", ({ conversationId, message }) => {
+    if (conversationId !== detail.id) return;
+    setMessages((cur) => merge(cur, [message]));
+    if (message.authorId !== me.id) markRead();
+  });
+
+  const reload = useCallback(async () => {
+    try {
+      const fresh = await api<ConversationDetail>(`/api/conversations/${detail.id}`);
+      setDetail(fresh);
+      setMessages((cur) => merge(cur, fresh.messages));
+    } catch {
+      // A later event or reconnection retries.
+    }
+  }, [detail.id]);
+
+  useRealtime("conversation:changed", ({ conversationId }) => {
+    if (conversationId === detail.id) reload();
+  });
+  useRealtimeReconnect(reload);
+  // Catch up on messages sent between the server render and the subscription above.
+  useEffect(() => {
+    let alive = true;
+    api<ConversationDetail>(`/api/conversations/${detail.id}`)
+      .then((fresh) => alive && setMessages((cur) => merge(cur, fresh.messages)))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [detail.id]);
+
+  async function deliver(body: string, clientId: string) {
+    try {
+      const saved = await api<ChatMessage>(`/api/conversations/${detail.id}/messages`, { body: { body, clientId } });
+      setMessages((cur) => merge(cur, [saved]));
+    } catch (e) {
+      setMessages((cur) => cur.map((m) => (m.clientId === clientId ? { ...m, status: "failed" } : m)));
+      if (e instanceof ApiError && e.status !== 0) setError(e.message);
+    }
+  }
 
   function send(e?: FormEvent) {
     e?.preventDefault();
-    const text = draft.trim();
-    if (!text) return;
-    setMessages((m) => [...m, { id: `local-${m.length}`, authorId: CURRENT_USER_ID, text, time: now() }]);
+    const body = draft.trim();
+    if (!body) return;
+    if (Array.from(body).length > MESSAGE_MAX_LENGTH) return setError(`Un message fait ${MESSAGE_MAX_LENGTH} caractères au plus.`);
+    setError(null);
+    const clientId = crypto.randomUUID();
+    stickToBottom.current = true;
+    setMessages((cur) => [...cur, { id: `tmp-${clientId}`, clientId, authorId: me.id, authorName: me.name, body, system: false, createdAt: new Date().toISOString(), status: "sending" }]);
     setDraft("");
+    deliver(body, clientId);
+  }
+
+  function retry(m: Shown) {
+    setMessages((cur) => cur.map((x) => (x.clientId === m.clientId ? { ...x, status: "sending" } : x)));
+    deliver(m.body, m.clientId!);
+  }
+
+  async function loadOlder() {
+    const first = messages.find((m) => !m.id.startsWith("tmp-"));
+    if (!first) return;
+    try {
+      const page = await api<ConversationDetail>(`/api/conversations/${detail.id}?avant=${encodeURIComponent(first.createdAt)}`);
+      if (list.current) keepOffset.current = list.current.scrollHeight - list.current.scrollTop;
+      setMessages((cur) => merge(cur, page.messages));
+      setHasMore(page.hasMore);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Impossible de charger les messages précédents.");
+    }
   }
 
   function onKey(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) send(e);
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) send(e);
   }
 
-  const memberNames = c.memberIds.map((id) => (id === CURRENT_USER_ID ? "Vous" : member(id).name.split(" ")[0])).join(", ");
+  const others = detail.members.filter((m) => m.id !== me.id);
+  const memberNames = ["Vous", ...others.map((m) => m.name.split(" ")[0])].join(", ");
+  const tone = (authorId: string | null) => ACCENTS[Math.max(0, others.findIndex((o) => o.id === authorId)) % 2];
+  const length = Array.from(draft).length;
 
   return (
-    <div className="flex h-dvh flex-col lg:h-dvh">
+    <div className="flex h-dvh flex-col">
       <TopBar
         back="/messages"
         leading={
           group ? (
-            <Avatar initials={initials(c.name)} size="sm" square tone="neutral" />
-          ) : (
-            <Link href={`/profil/${other!.id}`} aria-label={`Profil de ${other!.name}`}>
-              <Avatar initials={initials(other!.name)} size="sm" />
+            <Avatar initials={initials(detail.title)} size="sm" square tone="neutral" />
+          ) : detail.other ? (
+            <Link href={`/profil/${detail.other.id}`} aria-label={`Profil de ${detail.other.name}`}>
+              <Avatar initials={initials(detail.other.name)} size="sm" />
             </Link>
-          )
+          ) : null
         }
-        title={<span className="text-lg lg:text-2xl">{c.name}</span>}
-        subtitle={group ? memberNames : `${other!.role === "senior" ? "Senior · " : ""}${other!.city}`}
+        title={<span className="text-lg lg:text-2xl">{detail.title}</span>}
+        subtitle={group ? memberNames : detail.other ? `${detail.other.role === "SENIOR" ? "Senior · " : ""}${detail.other.city}` : undefined}
         actions={
-          group && c.createdBy === CURRENT_USER_ID ? (
-            <IconButton icon="userPlus" label="Ajouter un participant" />
-          ) : (
+          <>
+            {group && detail.isOwner && <IconButton icon="userPlus" label="Ajouter des participants" onClick={() => setAdding(true)} />}
             <IconButton icon="more" label="Signaler la conversation" onClick={() => setReport(true)} />
-          )
+          </>
         }
       />
-      <main className="mx-auto grid w-full max-w-[760px] flex-1 content-end gap-3 overflow-y-auto px-4 py-3 lg:px-10" aria-live="polite">
-        <DaySeparator>Aujourd’hui</DaySeparator>
-        <div className="grid gap-2.5">
-          {messages.map((m) => {
-            if (m.system) return <SystemLine key={m.id}>{m.text}</SystemLine>;
-            const mine = m.authorId === CURRENT_USER_ID;
-            if (group && !mine) {
-              const a = member(m.authorId);
-              return (
-                <div key={m.id} className="grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2">
-                  <Avatar initials={initials(a.name)} size="sm" />
-                  <MessageBubble text={m.text} code={m.code} time={m.time} author={a.name} authorTone={a.id === "chidi" ? "accent" : "brand"} />
-                </div>
-              );
-            }
-            return <MessageBubble key={m.id} text={m.text} code={m.code} time={m.time} mine={mine} />;
+
+      <div
+        ref={list}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+        }}
+        className="flex-1 overflow-y-auto"
+      >
+        <main className="mx-auto grid min-h-full w-full max-w-[760px] content-end gap-2.5 px-4 py-3 lg:px-10" aria-live="polite" aria-label="Messages">
+          {hasMore && (
+            <Button variant="ghost" size="sm" onClick={loadOlder} className="justify-self-center">
+              Charger les messages précédents
+            </Button>
+          )}
+          {messages.length === 0 && <p className="justify-self-center text-sm text-muted">Écrivez le premier message.</p>}
+          {messages.map((m, i) => {
+            const prev = messages[i - 1];
+            const newDay = !prev || dayLabel(prev.createdAt) !== dayLabel(m.createdAt);
+            const mine = m.authorId === me.id;
+            return (
+              <Fragment key={m.clientId ?? m.id}>
+                {newDay && <DaySeparator>{dayLabel(m.createdAt)}</DaySeparator>}
+                {m.system ? (
+                  <SystemLine>{m.body}</SystemLine>
+                ) : group && !mine ? (
+                  <div className="grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2">
+                    <Avatar initials={initials(m.authorName ?? "?")} size="sm" />
+                    <MessageBubble text={m.body} time={clockTime(m.createdAt)} author={m.authorName ?? "Membre"} authorTone={tone(m.authorId)} />
+                  </div>
+                ) : (
+                  <MessageBubble text={m.body} time={clockTime(m.createdAt)} mine={mine} status={m.status} onRetry={() => retry(m)} />
+                )}
+              </Fragment>
+            );
           })}
-        </div>
-        <div ref={end} />
-      </main>
+        </main>
+      </div>
+
       <form onSubmit={send} className="sticky bottom-0 border-t border-line bg-raised">
-        <div className="mx-auto flex max-w-[760px] items-end gap-2 px-3 pt-2 pb-[max(12px,env(safe-area-inset-bottom,0px))] lg:px-10">
-          <IconButton icon="code" label="Joindre un fichier ou du code" />
-          <textarea
-            rows={1}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={onKey}
-            aria-label={group ? "Message au groupe" : "Votre message"}
-            placeholder={group ? "Message au groupe" : "Votre message"}
-            className="max-h-30 min-h-11 min-w-0 flex-1 resize-none rounded-[22px] border border-line-strong bg-bg px-3 py-2.5 text-base leading-6"
-          />
-          <Button type="submit" iconOnly icon="send" aria-label="Envoyer" className="rounded-full" disabled={!draft.trim()} />
+        <div className="mx-auto grid max-w-[760px] gap-2 px-3 pt-2 pb-[max(12px,env(safe-area-inset-bottom,0px))] lg:px-10">
+          {(error || blocked) && (
+            <Alert tone={blocked ? "info" : "danger"} role="alert">
+              {blocked ? "Vous avez bloqué ce membre. Il ne peut plus vous écrire." : error}
+            </Alert>
+          )}
+          <div className="flex items-end gap-2">
+            <textarea
+              rows={Math.min(5, Math.max(1, draft.split("\n").length))}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={onKey}
+              maxLength={MESSAGE_MAX_LENGTH}
+              disabled={blocked && !group}
+              aria-label={group ? "Message au groupe" : "Votre message"}
+              placeholder={group ? "Message au groupe" : "Votre message"}
+              className="min-h-11 min-w-0 flex-1 resize-none rounded-[22px] border border-line-strong bg-bg px-4 py-2.5 text-base leading-6"
+            />
+            <Button type="submit" iconOnly icon="send" aria-label="Envoyer" className="rounded-full" disabled={!draft.trim() || (blocked && !group)} />
+          </div>
+          {length > MESSAGE_MAX_LENGTH - 500 && (
+            <span className="justify-self-end text-xs text-subtle tabular">
+              {length} / {MESSAGE_MAX_LENGTH}
+            </span>
+          )}
         </div>
       </form>
-      <ReportSheet open={report} onClose={() => setReport(false)} subject="cette conversation" />
+
+      <ReportSheet open={report} onClose={() => setReport(false)} subject="cette conversation" target={{ type: "CONVERSATION", id: detail.id }} onBlocked={() => setBlocked(true)} />
+      {group && detail.isOwner && <AddMembersSheet open={adding} onClose={() => setAdding(false)} conversationId={detail.id} memberIds={detail.members.map((m) => m.id)} onAdded={reload} />}
     </div>
+  );
+}
+
+function AddMembersSheet({ open, onClose, conversationId, memberIds, onAdded }: { open: boolean; onClose: () => void; conversationId: string; memberIds: string[]; onAdded: () => void }) {
+  const [contacts, setContacts] = useState<Contact[] | null>(null);
+  const [chosen, setChosen] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    api<{ contacts: Contact[] }>("/api/contacts")
+      .then((d) => alive && setContacts(d.contacts))
+      .catch(() => alive && setError("Impossible de charger vos contacts."));
+    return () => {
+      alive = false;
+    };
+  }, [open]);
+
+  const available = (contacts ?? []).filter((c) => !memberIds.includes(c.id));
+
+  async function add() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/api/groups/${conversationId}/members`, { body: { memberIds: chosen } });
+      setChosen([]);
+      onAdded();
+      onClose();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Les participants n’ont pas été ajoutés.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Ajouter des participants"
+      footer={
+        <Button size="lg" block onClick={add} disabled={chosen.length === 0 || busy}>
+          {busy ? "Ajout…" : chosen.length > 1 ? `Ajouter ${chosen.length} participants` : "Ajouter au groupe"}
+        </Button>
+      }
+    >
+      <p className="text-sm text-muted">Groupe privé : vous seul ajoutez des participants, choisis parmi vos contacts.</p>
+      {contacts === null && !error && <p className="text-sm text-muted">Chargement de vos contacts…</p>}
+      {contacts !== null && available.length === 0 && <p className="text-sm text-muted">Tous vos contacts sont déjà dans ce groupe.</p>}
+      {available.length > 0 && (
+        <ul className="m-0 list-none divide-y divide-line rounded-lg border border-line p-0">
+          {available.map((c) => {
+            const on = chosen.includes(c.id);
+            return (
+              <li key={c.id}>
+                <label className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5">
+                  <Avatar initials={initials(c.name)} size="sm" />
+                  <span className="grid">
+                    <span className="text-sm font-bold">{c.name}</span>
+                    <span className="text-xs text-muted">{c.city}</span>
+                  </span>
+                  <input type="checkbox" checked={on} onChange={() => setChosen((x) => (on ? x.filter((y) => y !== c.id) : [...x, c.id]))} className="size-5.5 accent-[var(--brand)]" aria-label={`Ajouter ${c.name}`} />
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {error && (
+        <Alert tone="danger" role="alert">
+          {error}
+        </Alert>
+      )}
+    </Sheet>
   );
 }

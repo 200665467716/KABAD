@@ -1,16 +1,26 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { invitations } from "@/lib/data";
+import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
+import { getCurrentUser } from "@/server/auth";
+import { getInvitation, orNotFound } from "@/server/messaging";
 import { InvitationView } from "./InvitationView";
 
 export const metadata: Metadata = { title: "Invitation" };
 
-export function generateStaticParams() {
-  return invitations.map((i) => ({ id: i.id }));
+async function InvitationData({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const user = await getCurrentUser();
+  if (!user) redirect(`/connexion?suite=/messages/invitations/${id}`);
+  const invitation = await orNotFound(getInvitation(user.id, id));
+  if (!invitation) notFound();
+  if (invitation.status === "ACCEPTED" && invitation.conversationId) redirect(`/messages/${invitation.conversationId}`);
+  return <InvitationView invitation={invitation} />;
 }
 
-export default async function InvitationPage({ params }: PageProps<"/messages/invitations/[id]">) {
-  const { id } = await params;
-  if (!invitations.some((i) => i.id === id)) notFound();
-  return <InvitationView invitationId={id} />;
+export default function InvitationPage({ params }: PageProps<"/messages/invitations/[id]">) {
+  return (
+    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement de l’invitation…</p>}>
+      <InvitationData params={params} />
+    </Suspense>
+  );
 }

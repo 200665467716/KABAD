@@ -2,41 +2,57 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useState } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Controls";
 import { Avatar, CardLink, PersonRow } from "@/components/ui/Display";
-import { conversations, member } from "@/lib/data";
+import { api } from "@/lib/api";
 import { initials } from "@/lib/format";
-import { useInvitations } from "@/lib/use-invitations";
+import type { ConversationSummary, ReceivedInvitation } from "@/lib/messaging-types";
+import { useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
+import { shortTime } from "@/lib/time";
 
-export function Inbox() {
+export function Inbox({ me, initialConversations, initialInvitations }: { me: string; initialConversations: ConversationSummary[]; initialInvitations: ReceivedInvitation[] }) {
   const router = useRouter();
   const params = useSearchParams();
   const tab = params.get("onglet") === "invitations" ? "inv" : "conv";
-  const { pending, accepted } = useInvitations();
+  const [conversations, setConversations] = useState(initialConversations);
+  const [invitations, setInvitations] = useState(initialInvitations);
 
-  const acceptedConvs = accepted.map((id) => {
-    const m = member(id);
-    return { id: `nouveau-${id}`, name: m.name, initials: initials(m.name), group: false, last: "Invitation acceptée. Dites bonjour !", when: "À l’instant", unread: 0, href: `/messages/invitations/${id}` };
-  });
-  const rows = [
-    ...acceptedConvs,
-    ...conversations.map((c) => {
-      const last = [...c.messages].reverse().find((m) => !m.system)!;
-      const author = last.authorId === "kossi" ? "Vous" : member(last.authorId).name.split(" ")[0];
-      return {
-        id: c.id,
-        name: c.kind === "group" ? `Groupe ${c.name}` : c.name,
-        initials: c.kind === "group" ? initials(c.name) : initials(c.name),
-        group: c.kind === "group",
-        last: c.kind === "group" || last.authorId === "kossi" ? `${author} : ${last.text}` : last.text,
-        when: c.when,
-        unread: c.unread,
-        href: `/messages/${c.id}`,
+  const refresh = useCallback(async () => {
+    try {
+      const [c, i] = await Promise.all([
+        api<{ conversations: ConversationSummary[] }>("/api/conversations"),
+        api<{ received: ReceivedInvitation[] }>("/api/invitations"),
+      ]);
+      setConversations(c.conversations);
+      setInvitations(i.received);
+    } catch {
+      // Keep what is on screen; the next event or reconnection will try again.
+    }
+  }, []);
+
+  useRealtime("message:new", ({ conversationId, message }) => {
+    if (!conversations.some((c) => c.id === conversationId)) {
+      refresh();
+      return;
+    }
+    setConversations((list) => {
+      const target = list.find((c) => c.id === conversationId)!;
+      const updated: ConversationSummary = {
+        ...target,
+        lastMessageAt: message.createdAt,
+        unread: message.authorId !== me && !message.system ? target.unread + 1 : target.unread,
+        last: { body: message.body, authorId: message.authorId, authorName: message.authorName, system: message.system },
       };
-    }),
-  ];
+      return [updated, ...list.filter((c) => c.id !== conversationId)];
+    });
+  });
+  useRealtime("conversation:changed", () => refresh());
+  useRealtime("conversation:read", ({ conversationId }) => setConversations((list) => list.map((c) => (c.id === conversationId ? { ...c, unread: 0 } : c))));
+  useRealtime("invitation:new", () => refresh());
+  useRealtimeReconnect(refresh);
 
   return (
     <>
@@ -56,43 +72,57 @@ export function Inbox() {
           onChange={(v) => router.replace(v === "inv" ? "/messages?onglet=invitations" : "/messages", { scroll: false })}
           items={[
             { value: "conv", label: "Discussions" },
-            { value: "inv", label: "Invitations", count: pending.length },
+            { value: "inv", label: "Invitations", count: invitations.length },
           ]}
         />
       </TopBar>
       <Page narrow>
         {tab === "conv" ? (
-          <ul className="m-0 list-none divide-y divide-line rounded-lg border border-line bg-raised p-0">
-            {rows.map((r) => (
-              <li key={r.id}>
-                <Link href={r.href} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-ink no-underline hover:bg-sunken/50">
-                  <Avatar initials={r.initials} square={r.group} tone={r.group ? "neutral" : "brand"} />
-                  <span className="grid min-w-0 gap-0.5">
-                    <span className="font-bold">{r.name}</span>
-                    <span className="truncate text-sm text-muted">{r.last}</span>
-                  </span>
-                  <span className="grid justify-items-end gap-1">
-                    <span className="text-xs text-subtle tabular">{r.when}</span>
-                    {r.unread > 0 && <span className="h-5 min-w-5 rounded-full bg-brand px-1.5 text-center text-xs leading-5 text-on-brand tabular">{r.unread}</span>}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : pending.length === 0 ? (
+          conversations.length === 0 ? (
+            <div className="grid justify-items-center gap-3 py-10 text-center">
+              <p className="text-muted">Pas encore de conversation. Invitez un membre depuis son profil : la discussion s’ouvre quand il accepte.</p>
+              <ButtonLink href="/mentorat/mentors" variant="secondary">
+                Trouver des membres
+              </ButtonLink>
+            </div>
+          ) : (
+            <ul className="m-0 list-none divide-y divide-line rounded-lg border border-line bg-raised p-0" aria-live="polite">
+              {conversations.map((c) => {
+                const group = c.kind === "GROUP";
+                const author = c.last && !c.last.system && (group || c.last.authorId === me) ? `${c.last.authorId === me ? "Vous" : (c.last.authorName ?? "").split(" ")[0]} : ` : "";
+                return (
+                  <li key={c.id}>
+                    <Link href={`/messages/${c.id}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-ink no-underline hover:bg-sunken/50">
+                      <Avatar initials={initials(c.title)} square={group} tone={group ? "neutral" : "brand"} />
+                      <span className="grid min-w-0 gap-0.5">
+                        <span className="font-bold">{group ? `Groupe ${c.title}` : c.title}</span>
+                        <span className={c.unread > 0 ? "truncate text-sm text-ink" : "truncate text-sm text-muted"}>{c.last ? `${author}${c.last.body.split("\n")[0]}` : "Aucun message"}</span>
+                      </span>
+                      <span className="grid justify-items-end gap-1">
+                        <span className="text-xs text-subtle tabular">{shortTime(c.lastMessageAt)}</span>
+                        {c.unread > 0 && (
+                          <span className="h-5 min-w-5 rounded-full bg-brand px-1.5 text-center text-xs leading-5 text-on-brand tabular" aria-label={`${c.unread} non lus`}>
+                            {c.unread}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : invitations.length === 0 ? (
           <p className="py-10 text-center text-muted">Aucune invitation en attente.</p>
         ) : (
           <>
             <p className="text-sm text-muted">Lisez le premier message. La conversation s’ouvre si vous acceptez.</p>
-            {pending.map((i) => {
-              const m = member(i.fromId);
-              return (
-                <CardLink key={i.id} href={`/messages/invitations/${i.id}`} className="gap-2.5">
-                  <PersonRow avatar={<Avatar initials={initials(m.name)} />} name={m.name} meta={`${m.city} · ${m.stack.join(", ")}`} />
-                  <p className="rounded-md bg-sunken px-3 py-2.5 text-sm">{i.message}</p>
-                </CardLink>
-              );
-            })}
+            {invitations.map((i) => (
+              <CardLink key={i.id} href={`/messages/invitations/${i.id}`} className="gap-2.5">
+                <PersonRow avatar={<Avatar initials={initials(i.from.name)} />} name={i.from.name} meta={`${i.from.city} · ${i.from.stack.join(", ")}`} />
+                <p className="rounded-md bg-sunken px-3 py-2.5 text-sm">{i.message}</p>
+              </CardLink>
+            ))}
           </>
         )}
       </Page>

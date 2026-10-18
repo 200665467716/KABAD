@@ -1,7 +1,24 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
+const alias = { "@": fileURLToPath(new URL("./src", import.meta.url)) };
+
 export default defineConfig({
-  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  test: { include: ["src/**/*.test.ts"], environment: "node" },
+  resolve: { alias },
+  test: {
+    projects: [
+      { resolve: { alias }, test: { name: "unit", include: ["src/**/*.test.ts"], environment: "node" } },
+      {
+        resolve: { alias },
+        test: {
+          name: "integration",
+          include: ["tests/integration/**/*.test.ts"],
+          environment: "node",
+          globalSetup: ["tests/integration/global-setup.ts"],
+          // One database: files run one after the other.
+          fileParallelism: false,
+        },
+      },
+    ],
+  },
 });

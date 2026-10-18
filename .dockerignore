@@ -3,3 +3,9 @@ node_modules
 .git
 test-results
 playwright-report
+.env
+.env.*
+!.env.example
+src/generated
+tests
+e2e

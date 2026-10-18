@@ -1,31 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { AuthFrame } from "@/components/shell/AuthFrame";
+import { Alert } from "@/components/ui/Display";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/Field";
-import { GithubMark } from "@/components/ui/Icon";
+import { api, ApiError } from "@/lib/api";
 
-const MAX_TRIES = 5;
+/** Only same-site paths are accepted as a destination after sign-in. */
+function safeNext(raw: string | null) {
+  return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/accueil";
+}
 
 export function SignInForm() {
   const router = useRouter();
-  const [failures, setFailures] = useState(0);
+  const params = useSearchParams();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
-    // Example account until authentication is wired in.
-    if (data.get("email") === "kossi.mensah@exemple.tg" && data.get("password") === "kabad-demo-2026") {
-      router.push("/accueil");
-      return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/api/auth/login", { body: { email: String(data.get("email") ?? ""), password: String(data.get("password") ?? "") } });
+      router.replace(safeNext(params.get("suite")));
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Connexion impossible. Réessayez.");
+      setBusy(false);
     }
-    setFailures((f) => f + 1);
   }
 
-  const left = MAX_TRIES - failures;
   return (
     <form onSubmit={submit} noValidate>
       <AuthFrame
@@ -42,41 +51,23 @@ export function SignInForm() {
         }
       >
         <div className="grid gap-4">
-          <TextField id="email" name="email" type="email" label="Adresse e-mail" autoComplete="email" defaultValue="kossi.mensah@exemple.tg" />
-          <div className="grid gap-1">
-            <TextField
-              id="password"
-              name="password"
-              type="password"
-              label="Mot de passe"
-              autoComplete="current-password"
-              hint="Compte de démonstration : kabad-demo-2026"
-              error={failures > 0 ? (left > 0 ? `E-mail ou mot de passe incorrect. Il vous reste ${left} essai${left > 1 ? "s" : ""}.` : "Trop d’essais. Réessayez dans 15 minutes ou recevez un lien de connexion.") : undefined}
-            />
-            <Link href="#" className="justify-self-end text-sm font-bold text-brand-text">
-              Mot de passe oublié ?
-            </Link>
-          </div>
-          <Button type="submit" size="lg" block disabled={left <= 0}>
-            Se connecter
+          <TextField id="email" name="email" type="email" label="Adresse e-mail" autoComplete="email" defaultValue="kossi.mensah@exemple.tg" required />
+          <TextField id="password" name="password" type="password" label="Mot de passe" autoComplete="current-password" hint="Comptes de démonstration : mot de passe kabad-demo-2026" required />
+          {error && (
+            <Alert tone="danger" role="alert">
+              {error}
+            </Alert>
+          )}
+          <Button type="submit" size="lg" block disabled={busy}>
+            {busy ? "Connexion…" : "Se connecter"}
           </Button>
         </div>
-        <div className="flex items-center gap-3" aria-hidden="true">
-          <hr className="flex-1 border-line" />
-          <span className="text-xs font-bold text-subtle">OU</span>
-          <hr className="flex-1 border-line" />
-        </div>
-        <div className="grid gap-2">
-          <Button variant="secondary" block onClick={() => router.push("/accueil")}>
-            <span className="inline-flex items-center gap-2">
-              <GithubMark />
-              Continuer avec GitHub
-            </span>
-          </Button>
-          <Button variant="ghost" block icon="mail">
-            Recevoir un lien de connexion
-          </Button>
-        </div>
+        <details className="rounded-md bg-sunken px-4 py-3 text-sm">
+          <summary className="cursor-pointer font-bold">Comptes de démonstration</summary>
+          <p className="mt-2 text-muted">
+            Kossi : kossi.mensah@exemple.tg · Moussa : moussa.traore@exemple.fr · Yao : yao.koffi@exemple.tg · Chidi : chidi.okafor@exemple.ng. Ouvrez deux navigateurs pour voir les messages arriver en direct.
+          </p>
+        </details>
       </AuthFrame>
     </form>
   );

@@ -4,26 +4,37 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { AuthFrame } from "@/components/shell/AuthFrame";
+import { Alert } from "@/components/ui/Display";
 import { Button } from "@/components/ui/Button";
 import { Checkbox, TextField } from "@/components/ui/Field";
-import { GithubMark } from "@/components/ui/Icon";
+import { api, ApiError } from "@/lib/api";
+import { signupSchema } from "@/lib/schemas";
 
-type Errors = Partial<Record<"name" | "email" | "password" | "terms", string>>;
+type Errors = Partial<Record<"name" | "email" | "password" | "terms" | "form", string>>;
 
 export function SignUpForm() {
   const router = useRouter();
   const [errors, setErrors] = useState<Errors>({});
+  const [busy, setBusy] = useState(false);
 
-  function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
+    const input = { name: String(data.get("name") ?? ""), email: String(data.get("email") ?? ""), password: String(data.get("password") ?? "") };
     const next: Errors = {};
-    if (String(data.get("name") ?? "").trim().length < 2) next.name = "Indiquez votre nom complet.";
-    if (!/^\S+@\S+\.\S+$/.test(String(data.get("email") ?? ""))) next.email = "Cette adresse e-mail n’est pas valide.";
-    if (String(data.get("password") ?? "").length < 12) next.password = "Le mot de passe doit faire au moins 12 caractères.";
+    const parsed = signupSchema.safeParse(input);
+    if (!parsed.success) for (const issue of parsed.error.issues) next[issue.path[0] as keyof Errors] ??= issue.message;
     if (!data.get("terms")) next.terms = "Acceptez les conditions pour continuer.";
     setErrors(next);
-    if (Object.keys(next).length === 0) router.push("/inscription/profil");
+    if (Object.keys(next).length > 0) return;
+    setBusy(true);
+    try {
+      await api("/api/auth/signup", { body: input });
+      router.push("/inscription/profil");
+    } catch (err) {
+      setErrors({ form: err instanceof ApiError ? err.message : "Le compte n’a pas été créé. Réessayez." });
+      setBusy(false);
+    }
   }
 
   return (
@@ -35,8 +46,8 @@ export function SignUpForm() {
         lead="Quelques informations pour commencer. Vous compléterez votre profil juste après."
         footer={
           <>
-            <Button type="submit" size="lg" block>
-              Continuer
+            <Button type="submit" size="lg" block disabled={busy}>
+              {busy ? "Création du compte…" : "Continuer"}
             </Button>
             <p className="text-center text-sm text-muted">
               Déjà membre ?{" "}
@@ -47,22 +58,9 @@ export function SignUpForm() {
           </>
         }
       >
-        <div className="grid gap-2">
-          <Button variant="secondary" block onClick={() => router.push("/inscription/profil")}>
-            <span className="inline-flex items-center gap-2">
-              <GithubMark />
-              Continuer avec GitHub
-            </span>
-          </Button>
-          <div className="my-2 flex items-center gap-3" aria-hidden="true">
-            <hr className="flex-1 border-line" />
-            <span className="text-xs font-bold text-subtle">OU AVEC VOTRE E-MAIL</span>
-            <hr className="flex-1 border-line" />
-          </div>
-        </div>
         <div className="grid gap-4">
-          <TextField id="name" name="name" label="Nom complet" autoComplete="name" defaultValue="Kossi Mensah" error={errors.name} />
-          <TextField id="email" name="email" type="email" label="Adresse e-mail" autoComplete="email" defaultValue="kossi.mensah@exemple.tg" error={errors.email} />
+          <TextField id="name" name="name" label="Nom complet" autoComplete="name" error={errors.name} />
+          <TextField id="email" name="email" type="email" label="Adresse e-mail" autoComplete="email" error={errors.email} />
           <TextField id="password" name="password" type="password" label="Mot de passe" autoComplete="new-password" hint="12 caractères minimum." error={errors.password} />
           <div className="grid gap-1">
             <Checkbox name="terms" defaultChecked>
@@ -70,6 +68,11 @@ export function SignUpForm() {
             </Checkbox>
             {errors.terms && <span className="text-sm font-bold text-danger">{errors.terms}</span>}
           </div>
+          {errors.form && (
+            <Alert tone="danger" role="alert">
+              {errors.form}
+            </Alert>
+          )}
         </div>
       </AuthFrame>
     </form>
