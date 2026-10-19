@@ -52,7 +52,7 @@ Les secrets (`POSTGRES_PASSWORD`, `REALTIME_SECRET`) se mettent dans un fichier 
 ## Pile technique
 
 - **Next.js 16** (App Router, Cache Components), **React 19**, **TypeScript**, **Tailwind CSS 4**. Toutes sous licence MIT.
-- **Polices** servies par `next/font` : Ojuju (titres), Fira Sans (texte), Overpass Mono (code), Danfo (grands moments). Toutes sous OFL et complètes pour les langues d’Afrique de l’Ouest et centrale (ɛ ɔ ŋ ɓ ɗ ƙ ẹ ọ ṣ ɖ ƒ ɣ ʋ).
+- **Polices** servies par `next/font` : Inter (titres et texte) et JetBrains Mono (code). Toutes deux sous OFL et complètes pour les langues d’Afrique de l’Ouest et centrale (ɛ ɔ ŋ ɓ ɗ ƙ ẹ ọ ṣ ɖ ƒ ɣ ʋ).
 - **PWA** : `src/app/manifest.ts` et icônes dans `public/icons/`.
 - **Données** : PostgreSQL 16 et Prisma 7 (Apache-2.0). **Temps réel** : Socket.IO (MIT). Jetons : jose (MIT), mots de passe : bcryptjs (MIT), validation : Zod (MIT).
 - **Déploiement** : `Dockerfile` (cibles `web`, `realtime`, `migrate`) et `compose.yaml` pour le serveur cloud Systalink. Les images se construisent dans la CI, jamais sur le serveur.
