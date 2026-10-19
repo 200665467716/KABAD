@@ -1,29 +1,25 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ButtonLink } from "@/components/ui/Button";
+import { connection } from "next/server";
+import { Suspense } from "react";
 import { Avatar, AvatarGroup, Badge, Card } from "@/components/ui/Display";
-import { Wordmark } from "@/components/ui/Logo";
-import { challenge, challenges, member, recentContributions } from "@/lib/data";
 import { formatFCFA, formatNumber, initials } from "@/lib/format";
+import { agoLabel, longDate } from "@/lib/time";
+import { getChallenge, recentContributions } from "@/server/challenges";
+import { orNotFound } from "@/server/messaging";
 import { ContributionForm } from "./ContributionForm";
+import { SponsorShell } from "./SponsorShell";
 
-export function generateStaticParams() {
-  return challenges.filter((c) => c.kind === "cagnotte" && c.status === "open").map((c) => ({ id: c.id }));
-}
+export const metadata: Metadata = { title: "Soutenir un défi", description: "Contribuez à la cagnotte d’un défi KABAD : 60 % au gagnant, 30 % à son mentor, 10 % à la plateforme." };
 
-export async function generateMetadata({ params }: PageProps<"/soutenir/[id]">): Promise<Metadata> {
+async function SponsorData({ params }: { params: Promise<{ id: string }> }) {
+  await connection();
   const { id } = await params;
-  const c = challenge(id);
-  return { title: c ? `Soutenir « ${c.title} »` : "Soutenir un défi", description: c?.description };
-}
-
-export default async function SponsorPage({ params }: PageProps<"/soutenir/[id]">) {
-  const { id } = await params;
-  const c = challenge(id);
-  if (!c || c.kind !== "cagnotte" || c.status !== "open" || !c.pot) notFound();
-  const jury = c.juryIds.map(member);
-
+  const c = await orNotFound(getChallenge(null, id));
+  if (!c || c.kind !== "CAGNOTTE") notFound();
+  const jury = c.jury;
+  const recent = await recentContributions(c.id);
+  const open = c.status === "OPEN";
   const shares = [
     { dot: "bg-brand", title: "60 % · Le gagnant", text: "Versés sur son Mobile Money après les résultats du jury et 48 h de contestation." },
     { dot: "bg-accent", title: "30 % · Son mentor", text: "Le senior qui a accompagné le gagnant. Transmettre devient un vrai revenu." },
@@ -31,28 +27,17 @@ export default async function SponsorPage({ params }: PageProps<"/soutenir/[id]"
   ];
 
   return (
-    <div className="min-h-dvh bg-bg">
-      <header className="border-b border-line bg-raised pt-[env(safe-area-inset-top,0px)]">
-        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-4 px-4 lg:px-10">
-          <Link href="/" className="text-ink no-underline">
-            <Wordmark />
-          </Link>
-          <ButtonLink href="/" variant="ghost" size="sm">
-            Découvrir KABAD
-          </ButtonLink>
-        </div>
-      </header>
-
+    <SponsorShell>
       <main>
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-start gap-8 px-4 py-8 lg:gap-16 lg:px-10 lg:py-18">
           <div className="grid min-w-0 flex-[999_1_480px] gap-5">
             <div className="flex flex-wrap gap-1.5">
               <Badge tone="accent">Défi à cagnotte</Badge>
-              <Badge>Ouvert jusqu’au {c.closes.split(" à ")[0]}</Badge>
+              <Badge>{open ? `Ouvert jusqu’au ${longDate(c.closesAt)}` : "Clôturé"}</Badge>
             </div>
             <h1 className="font-display text-[36px] leading-10 font-bold tracking-[-0.035em] lg:text-[56px] lg:leading-[60px]">{c.title}</h1>
             <p className="max-w-[60ch] text-lg text-muted">
-              {c.participants} jeunes développeurs d’Afrique construisent une API qui encaisse un paiement mobile money sans jamais débiter deux fois. Chacun travaille seul, accompagné par un mentor senior. Votre contribution récompense le meilleur et son mentor.
+              {c.description} Chaque participant travaille seul, accompagné par un mentor senior. Votre contribution récompense le meilleur et son mentor.
             </p>
             <dl className="flex flex-wrap gap-x-8 gap-y-3">
               <div className="grid">
@@ -78,7 +63,7 @@ export default async function SponsorPage({ params }: PageProps<"/soutenir/[id]"
             </div>
           </div>
           <aside className="w-full min-w-0 flex-[1_1_360px] lg:max-w-[440px]">
-            <ContributionForm collected={c.pot} contributors={c.contributors ?? 0} companies={c.companies ?? 0} />
+            <ContributionForm open={open} collected={c.pot} contributors={c.contributors} companies={c.companies} />
           </aside>
         </div>
 
@@ -115,27 +100,29 @@ export default async function SponsorPage({ params }: PageProps<"/soutenir/[id]"
               Contributions récentes
             </h2>
             <div className="grid gap-3 md:grid-cols-3">
-              {recentContributions.map((r) => (
-                <Card key={r.who} className="gap-1.5 px-4 py-3.5">
+              {recent.map((r, i) => (
+                <Card key={i} className="gap-1.5 px-4 py-3.5">
                   <div className="flex justify-between gap-2">
-                    <span className="font-bold">{r.who}</span>
+                    <span className="font-bold">{r.name}</span>
                     <span className="font-bold tabular">{formatNumber(r.amount)}</span>
                   </div>
-                  <span className="text-xs text-muted">{r.when}</span>
+                  <span className="text-xs text-muted">{agoLabel(r.createdAt)}</span>
                 </Card>
               ))}
+              {recent.length === 0 && <p className="text-muted">Soyez le premier à contribuer.</p>}
             </div>
             <p className="text-xs text-muted">Montants en F CFA. Total collecté : {formatFCFA(c.pot)}.</p>
           </div>
         </section>
       </main>
+    </SponsorShell>
+  );
+}
 
-      <footer className="border-t border-line py-7">
-        <div className="mx-auto flex max-w-[1200px] flex-wrap justify-between gap-2 px-4 text-sm text-muted lg:px-10">
-          <span>KABAD · par les devs, pour les devs</span>
-          <span>kabad.app</span>
-        </div>
-      </footer>
-    </div>
+export default function SponsorPage({ params }: PageProps<"/soutenir/[id]">) {
+  return (
+    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement de la cagnotte…</p>}>
+      <SponsorData params={params} />
+    </Suspense>
   );
 }

@@ -7,7 +7,7 @@ import { signupSchema } from "@/lib/schemas";
 
 export const POST = route(async (request) => {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-  rateLimit(`signup:${ip}`, 10, 60 * 60_000, "Trop de comptes créés depuis cette connexion.");
+  await rateLimit(`signup:${ip}`, 10, 60 * 60_000, "Trop de comptes créés depuis cette connexion.");
   const { name, email, password } = await readJson(request, signupSchema);
   const normalized = email.trim().toLowerCase();
   if (await db.user.findUnique({ where: { email: normalized }, select: { id: true } })) {

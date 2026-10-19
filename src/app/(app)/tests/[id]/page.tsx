@@ -1,31 +1,29 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { AppTile } from "@/components/features/AppTile";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink } from "@/components/ui/Button";
-import { Overline } from "@/components/ui/Display";
+import { Alert, Overline } from "@/components/ui/Display";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { member, test, tests } from "@/lib/data";
+import { getTestApp } from "@/server/community-tests";
+import { orNotFound } from "@/server/messaging";
+import { pageUser } from "@/server/page";
 
-export function generateStaticParams() {
-  return tests.map((t) => ({ id: t.id }));
-}
+export const metadata: Metadata = { title: "Test" };
 
-export async function generateMetadata({ params }: PageProps<"/tests/[id]">): Promise<Metadata> {
+async function TestData({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return { title: test(id)?.name ?? "Test" };
-}
-
-export default async function TestPage({ params }: PageProps<"/tests/[id]">) {
-  const { id } = await params;
-  const t = test(id);
+  const user = await pageUser(`/tests/${id}`);
+  const t = await orNotFound(getTestApp(user.id, id));
   if (!t) notFound();
-  const owner = member(t.ownerId);
+  const mine = t.owner.id === user.id;
   const proofs: Array<[IconName, string]> = [
-    ["image", `${t.steps.length} captures d’écran, une par étape`],
+    ["image", `${t.steps.length} capture${t.steps.length > 1 ? "s" : ""} d’écran, une par étape`],
     ["question", `${t.questions.length} question${t.questions.length > 1 ? "s" : ""} sur ce que vous avez vu`],
     ["message", "Vos remarques, en quelques lignes"],
   ];
+  const canTest = !mine && (t.myReport === null || t.myReport === "REFUSED") && t.slotsLeft > 0;
   return (
     <>
       <TopBar back="/tests" plain />
@@ -35,18 +33,21 @@ export default async function TestPage({ params }: PageProps<"/tests/[id]">) {
           <div className="grid gap-0.5">
             <h1 className="font-display text-[26px] leading-[30px] font-bold tracking-[-0.03em]">{t.name}</h1>
             <span className="text-sm text-muted">
-              par {owner.name} · {t.platform} · {t.minutes} min
+              par {t.owner.name} · {t.platform === "WEB" ? "Web" : "Android"} · {t.minutes} min
             </span>
           </div>
         </div>
         <p>{t.pitch}</p>
+        {t.myReport === "SUBMITTED" && <Alert tone="info" title="Rapport envoyé.">{t.owner.name.split(" ")[0]} le lit puis le valide.</Alert>}
+        {t.myReport === "VALIDATED" && <Alert tone="success" title="Rapport validé.">Ce test compte sur votre profil. Merci !</Alert>}
+        {t.myReport === "REFUSED" && <Alert tone="danger" title="Rapport refusé.">Vous pouvez refaire le test et envoyer un nouveau rapport.</Alert>}
         <section className="grid gap-3" aria-labelledby="scenario">
           <Overline as="h2" id="scenario">
             Le scénario
           </Overline>
           <ol className="m-0 grid list-none gap-3 p-0">
             {t.steps.map((s, i) => (
-              <li key={s} className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-3">
+              <li key={i} className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-3">
                 <span className="grid size-7 place-items-center rounded-full bg-brand-soft text-sm font-bold text-brand-text">{i + 1}</span>
                 <span className="pt-0.5 text-sm">{s}</span>
               </li>
@@ -67,11 +68,27 @@ export default async function TestPage({ params }: PageProps<"/tests/[id]">) {
         </section>
       </Page>
       <ActionBar className="grid-cols-[auto_minmax(0,1fr)]">
-        <ButtonLink href="#" variant="secondary" icon="external">
+        <ButtonLink href={t.url} variant="secondary" icon="external" target="_blank" rel="noreferrer">
           Ouvrir l’app
         </ButtonLink>
-        <ButtonLink href={`/tests/${t.id}/rapport`}>Commencer le test</ButtonLink>
+        {mine ? (
+          <ButtonLink href={`/tests/${t.id}/rapports`}>Voir les rapports</ButtonLink>
+        ) : canTest ? (
+          <ButtonLink href={`/tests/${t.id}/rapport`}>Commencer le test</ButtonLink>
+        ) : (
+          <ButtonLink href="/tests" variant="secondary">
+            {t.slotsLeft === 0 && !t.myReport ? "Toutes les places sont prises" : "Retour aux tests"}
+          </ButtonLink>
+        )}
       </ActionBar>
     </>
+  );
+}
+
+export default function TestPage({ params }: PageProps<"/tests/[id]">) {
+  return (
+    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement du test…</p>}>
+      <TestData params={params} />
+    </Suspense>
   );
 }

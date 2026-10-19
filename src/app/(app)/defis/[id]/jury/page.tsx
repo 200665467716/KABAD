@@ -1,17 +1,28 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { challenge, challenges } from "@/lib/data";
+import { Suspense } from "react";
+import { DomainError } from "@/server/errors";
+import { nextForJury } from "@/server/challenges";
+import { pageUser } from "@/server/page";
 import { JuryForm } from "./JuryForm";
 
 export const metadata: Metadata = { title: "Évaluation du jury" };
 
-export function generateStaticParams() {
-  return challenges.filter((c) => c.status === "jury").map((c) => ({ id: c.id }));
+async function JuryData({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const user = await pageUser(`/defis/${id}/jury`);
+  const item = await nextForJury(user.id, id).catch((e) => {
+    if (e instanceof DomainError && (e.status === 403 || e.status === 404)) return null;
+    throw e;
+  });
+  if (!item) notFound();
+  return <JuryForm challengeId={id} item={item} />;
 }
 
-export default async function JuryPage({ params }: PageProps<"/defis/[id]/jury">) {
-  const { id } = await params;
-  const c = challenge(id);
-  if (!c || c.status !== "jury") notFound();
-  return <JuryForm challengeTitle={c.title} total={c.participants} />;
+export default function JuryPage({ params }: PageProps<"/defis/[id]/jury">) {
+  return (
+    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement de la solution…</p>}>
+      <JuryData params={params} />
+    </Suspense>
+  );
 }

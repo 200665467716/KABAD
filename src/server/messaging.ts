@@ -9,6 +9,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
+import { pushNotifications } from "./notifications";
 import { notify } from "./realtime-events";
 import { GROUP_MAX_MEMBERS } from "@/lib/schemas";
 import type { ChatMessage, ConversationDetail, ConversationSummary, InvitationDetail } from "@/lib/messaging-types";
@@ -201,7 +202,10 @@ export async function getInvitation(userId: string, invitationId: string, prisma
 export async function sendInvitation(fromId: string, input: { toId: string; message: string }, prisma: Db = db) {
   const { toId, message } = input;
   if (toId === fromId) throw new DomainError("self", "Vous ne pouvez pas vous inviter vous-même.");
-  const to = await prisma.user.findUnique({ where: { id: toId }, select: { id: true, name: true } });
+  const [to, from] = await Promise.all([
+    prisma.user.findUnique({ where: { id: toId }, select: { id: true, name: true } }),
+    prisma.user.findUniqueOrThrow({ where: { id: fromId }, select: { name: true } }),
+  ]);
   if (!to) throw notFound("Membre introuvable.");
   const first = firstName(to.name);
   if (await areContacts(fromId, toId, prisma)) throw new DomainError("already_contacts", `${first} fait déjà partie de vos contacts.`, 409);
@@ -217,6 +221,7 @@ export async function sendInvitation(fromId: string, input: { toId: string; mess
   return prisma.$transaction(async (tx) => {
     const inv = await tx.invitation.create({ data: { fromId, toId, message } });
     await notify(tx, { t: "invitation", invitationId: inv.id, recipients: [toId] });
+    await pushNotifications(tx, [{ userId: toId, actor: from.name, text: "vous invite à échanger.", href: `/messages/invitations/${inv.id}`, icon: "user", tone: "brand" }]);
     return { id: inv.id };
   });
 }
@@ -249,6 +254,7 @@ export async function answerInvitation(userId: string, invitationId: string, acc
     await tx.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: now } });
     await notify(tx, { t: "invitation_answered", invitationId: inv.id, accepted: true, conversationId: conversation.id, recipients: [inv.fromId] });
     await notify(tx, { t: "conversation", conversationId: conversation.id, recipients: [inv.fromId, inv.toId] });
+    await pushNotifications(tx, [{ userId: inv.fromId, actor: inv.to.name, text: "a accepté votre invitation. Vous pouvez discuter.", href: `/messages/${conversation.id}`, icon: "user", tone: "success" }]);
     return { conversationId: conversation.id };
   });
 }
@@ -310,6 +316,59 @@ export async function addGroupMembers(userId: string, conversationId: string, me
     await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients: everyone });
     await notify(tx, { t: "conversation", conversationId, recipients: ids });
     return { added: ids.length };
+  });
+}
+
+/** The owner removes a participant. The removed member loses access at once. */
+export async function removeGroupMember(userId: string, conversationId: string, memberId: string, prisma: Db = db) {
+  const m = await membership(prisma, userId, conversationId);
+  if (m.conversation.kind !== "GROUP") throw new DomainError("not_group", "On ne retire des participants que d’un groupe.");
+  if (m.conversation.createdById !== userId) throw forbidden("Seul le créateur du groupe peut retirer des participants.");
+  if (memberId === userId) throw new DomainError("self", "Pour partir, quittez le groupe.");
+  const everyone = m.conversation.members.map((x) => x.userId);
+  if (!everyone.includes(memberId)) throw notFound("Ce membre ne fait pas partie du groupe.");
+
+  return prisma.$transaction(async (tx) => {
+    const [owner, removed] = await Promise.all([
+      tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
+      tx.user.findUniqueOrThrow({ where: { id: memberId }, select: { name: true } }),
+    ]);
+    await tx.conversationMember.delete({ where: { conversationId_userId: { conversationId, userId: memberId } } });
+    const msg = await tx.message.create({ data: { conversationId, kind: "SYSTEM", body: `${firstName(owner.name)} a retiré ${firstName(removed.name)}` } });
+    await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: msg.createdAt } });
+    const remaining = everyone.filter((id) => id !== memberId);
+    await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients: remaining });
+    await notify(tx, { t: "conversation", conversationId, recipients: everyone });
+    return { ok: true };
+  });
+}
+
+/** A member leaves a group. If the creator leaves, the longest-standing member takes over; the last one out deletes the group. */
+export async function leaveGroup(userId: string, conversationId: string, prisma: Db = db) {
+  const m = await membership(prisma, userId, conversationId);
+  if (m.conversation.kind !== "GROUP") throw new DomainError("not_group", "On ne peut quitter qu’un groupe.");
+  const everyone = m.conversation.members.map((x) => x.userId);
+
+  return prisma.$transaction(async (tx) => {
+    await tx.conversationMember.delete({ where: { conversationId_userId: { conversationId, userId } } });
+    const remaining = everyone.filter((id) => id !== userId);
+    if (remaining.length === 0) {
+      await tx.conversation.delete({ where: { id: conversationId } });
+      return { ok: true };
+    }
+    const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+    let body = `${firstName(me.name)} a quitté le groupe`;
+    if (m.conversation.createdById === userId) {
+      const heir = await tx.conversationMember.findFirstOrThrow({ where: { conversationId }, orderBy: { joinedAt: "asc" }, include: { user: { select: { name: true } } } });
+      await tx.conversationMember.update({ where: { conversationId_userId: { conversationId, userId: heir.userId } }, data: { role: "OWNER" } });
+      await tx.conversation.update({ where: { id: conversationId }, data: { createdById: heir.userId } });
+      body += `. ${firstName(heir.user.name)} gère maintenant le groupe`;
+    }
+    const msg = await tx.message.create({ data: { conversationId, kind: "SYSTEM", body } });
+    await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: msg.createdAt } });
+    await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients: remaining });
+    await notify(tx, { t: "conversation", conversationId, recipients: everyone });
+    return { ok: true };
   });
 }
 

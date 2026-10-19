@@ -1,73 +1,54 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { CodeExcerpt } from "@/components/features/CodeExcerpt";
 import { Page } from "@/components/shell/TopBar";
 import { ToggleChip } from "@/components/ui/Controls";
-import { Avatar, Badge, Card } from "@/components/ui/Display";
-import { capsules, member, type Capsule } from "@/lib/data";
+import { Avatar, Badge } from "@/components/ui/Display";
 import { formatNumber, initials } from "@/lib/format";
+import type { CapsuleView } from "@/lib/domain-types";
 
-const THEMES: Array<"Tout" | Capsule["theme"]> = ["Tout", "Back-end", "Mobile", "Carrière"];
+export const THEME_LABEL: Record<CapsuleView["theme"], string> = { BACKEND: "Back-end", MOBILE: "Mobile", CAREER: "Carrière" };
+const THEMES = ["ALL", "BACKEND", "MOBILE", "CAREER"] as const;
 
-function Code({ source }: { source: string }) {
-  // Minimal highlighting for keywords and strings, enough for a short capsule excerpt.
-  const parts = source.split(/('[^']*'|\/\/.*$|\b(?:const|await|if|return)\b)/gm);
-  return (
-    <pre className="m-0 overflow-x-auto bg-code px-4 py-3.5 font-mono text-[13px] leading-5 text-on-code">
-      {parts.map((p, i) =>
-        /^(const|await|if|return)$/.test(p) ? (
-          <span key={i} className="text-[var(--maize-300)]">{p}</span>
-        ) : p.startsWith("'") ? (
-          <span key={i} className="text-[var(--palm-300)]">{p}</span>
-        ) : p.startsWith("//") ? (
-          <span key={i} className="text-[var(--neutral-400)]">{p}</span>
-        ) : (
-          p
-        ),
-      )}
-    </pre>
-  );
-}
-
-export function CapsuleList() {
-  const [theme, setTheme] = useState<(typeof THEMES)[number]>("Tout");
-  const list = capsules.filter((c) => theme === "Tout" || c.theme === theme);
+export function CapsuleList({ capsules }: { capsules: CapsuleView[] }) {
+  const [theme, setTheme] = useState<(typeof THEMES)[number]>("ALL");
+  const list = capsules.filter((c) => theme === "ALL" || c.theme === theme);
   return (
     <Page>
       <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Thèmes">
         {THEMES.map((t) => (
           <ToggleChip key={t} pressed={theme === t} onClick={() => setTheme(t)}>
-            {t}
+            {t === "ALL" ? "Tout" : THEME_LABEL[t]}
           </ToggleChip>
         ))}
       </div>
-      <p className="text-sm text-muted">Ce que les seniors ont appris, en moins de 5 minutes. Les thèmes sont proposés automatiquement, puis vérifiés par l’auteur.</p>
+      <p className="text-sm text-muted">Ce que les seniors ont appris, en moins de 5 minutes.</p>
       <div className="grid gap-3 md:grid-cols-2">
-        {list.map((c) => {
-          const a = member(c.authorId);
-          return (
-            <Card key={c.id} interactive className="content-start gap-0 overflow-hidden p-0">
-              {c.code && <Code source={c.code} />}
-              <div className="grid gap-2 p-4">
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge tone="brand">{c.theme}</Badge>
-                  {c.tags.map((t) => (
-                    <Badge key={t}>{t}</Badge>
-                  ))}
-                </div>
-                <h2 className="font-display text-lg font-bold">{c.title}</h2>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 text-sm text-muted">
-                    <Avatar initials={initials(a.name)} size="sm" />
-                    {a.name} · {c.minutes} min
-                  </span>
-                  <span className="text-xs text-muted tabular">{formatNumber(c.reads)} lectures</span>
-                </div>
+        {list.map((c) => (
+          <Link key={c.id} href={`/capsules/${c.id}`} className="grid content-start overflow-hidden rounded-lg border border-line bg-raised text-ink no-underline shadow-sm transition-colors hover:border-line-strong">
+            {c.code && <CodeExcerpt source={c.code} />}
+            <div className="grid gap-2 p-4">
+              <div className="flex flex-wrap gap-1.5">
+                <Badge tone="brand">{THEME_LABEL[c.theme]}</Badge>
+                {c.tags.map((t) => (
+                  <Badge key={t}>{t}</Badge>
+                ))}
               </div>
-            </Card>
-          );
-        })}
+              <h2 className="font-display text-lg font-bold">{c.title}</h2>
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2 text-sm text-muted">
+                  <Avatar initials={initials(c.author.name)} size="sm" />
+                  {c.author.name} · {c.minutes} min
+                </span>
+                <span className="text-xs text-muted tabular">{formatNumber(c.reads)} lectures</span>
+              </div>
+            </div>
+          </Link>
+        ))}
       </div>
+      {list.length === 0 && <p className="py-8 text-center text-muted">Aucune capsule dans ce thème pour l’instant.</p>}
     </Page>
   );
 }

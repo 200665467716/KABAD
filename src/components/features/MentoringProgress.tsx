@@ -1,13 +1,10 @@
-"use client";
-
 import { Meter } from "@/components/ui/Display";
 import { formatDuration } from "@/lib/format";
 import { REQUIRED_MENTORING_MINUTES } from "@/lib/mentoring";
-import { usePairSessions } from "@/lib/use-pair";
+import type { Eligibility } from "@/lib/domain-types";
 
 /** Confirmed mentoring time against the minimum required for cash-prize challenges. */
-export function MentoringProgress({ variant = "compact" }: { variant?: "compact" | "pair" }) {
-  const { eligibility: e } = usePairSessions();
+export function MentoringProgress({ eligibility: e, variant = "compact" }: { eligibility: Eligibility; variant?: "compact" | "pair" }) {
   if (variant === "pair") {
     return (
       <div className="grid gap-1">
@@ -31,9 +28,4 @@ export function MentoringProgress({ variant = "compact" }: { variant?: "compact"
       <Meter value={e.progress} tone={e.eligible ? "success" : "accent"} label="Mentorat attesté" />
     </div>
   );
-}
-
-export function MentoringTotal() {
-  const { eligibility } = usePairSessions();
-  return <>{formatDuration(eligibility.confirmed)}</>;
 }

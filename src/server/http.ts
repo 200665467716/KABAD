@@ -23,13 +23,16 @@ export async function readJson<T>(request: Request, schema: ZodType<T>): Promise
   return schema.parse(body);
 }
 
-/** Wraps a route handler: domain refusals and validation errors become clear JSON answers. */
-export function route<A extends unknown[]>(handler: (request: Request, ...rest: A) => Promise<Response>) {
+/**
+ * Wraps a route handler: domain refusals and validation errors become clear JSON answers.
+ * `sameOrigin: false` is for server-to-server calls (webhooks), which authenticate otherwise.
+ */
+export function route<A extends unknown[]>(handler: (request: Request, ...rest: A) => Promise<Response>, opts: { sameOrigin?: boolean } = {}) {
   return async (request: Request, ...rest: A): Promise<Response> => {
     // API answers depend on the session: never prerender them.
     await connection();
     try {
-      assertSameOrigin(request);
+      if (opts.sameOrigin !== false) assertSameOrigin(request);
       return await handler(request, ...rest);
     } catch (e) {
       unstable_rethrow(e);
@@ -43,3 +46,5 @@ export function route<A extends unknown[]>(handler: (request: Request, ...rest: 
     }
   };
 }
+
+export const clientIp = (request: Request) => request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined;

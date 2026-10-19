@@ -96,8 +96,18 @@ export function SideNav() {
         <Link href="/notifications" className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline", path === "/notifications" ? "bg-brand-soft text-brand-text" : "text-muted hover:bg-sunken hover:text-ink")}>
           <Icon name="bell" />
           Notifications
-          <span className="ml-auto size-2 rounded-full bg-danger" aria-label="4 nouvelles" />
+          {me && me.unreadNotifications > 0 ? (
+            <span className="ml-auto h-5 min-w-5 rounded-full bg-danger px-1.5 text-center text-xs leading-5 text-on-danger tabular" aria-label={`${me.unreadNotifications} non lues`}>
+              {me.unreadNotifications > 99 ? "99+" : me.unreadNotifications}
+            </span>
+          ) : null}
         </Link>
+        {me?.isAdmin && (
+          <Link href="/admin" className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline", path === "/admin" ? "bg-brand-soft text-brand-text" : "text-muted hover:bg-sunken hover:text-ink")}>
+            <Icon name="lock" />
+            Équipe KABAD
+          </Link>
+        )}
         {me ? (
           <div className="flex items-center gap-1">
             <Link href={`/profil/${me.id}`} className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 text-ink no-underline hover:bg-sunken">

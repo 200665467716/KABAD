@@ -8,6 +8,7 @@ export type RealtimeEvents = {
   "message:new": (e: { conversationId: string; message: ChatMessage }) => void;
   "conversation:changed": (e: { conversationId: string }) => void;
   "conversation:read": (e: { conversationId: string }) => void;
+  "notification:new": () => void;
   "invitation:new": (e: { invitationId: string }) => void;
   "invitation:answered": (e: { invitationId: string; accepted: boolean; conversationId: string | null }) => void;
 };

@@ -7,8 +7,8 @@ import { ToggleChip } from "@/components/ui/Controls";
 import { Avatar, Badge, Card, PersonRow } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
-import { seniors } from "@/lib/data";
 import { initials } from "@/lib/format";
+import type { Mentor } from "@/lib/domain-types";
 
 const FILTERS = [
   { id: "open", label: "Disponible" },
@@ -18,13 +18,13 @@ const FILTERS = [
 ] as const;
 type FilterId = (typeof FILTERS)[number]["id"];
 
-export function MentorSearch() {
+export function MentorSearch({ mentors }: { mentors: Mentor[] }) {
   const [query, setQuery] = useState("");
   const [on, setOn] = useState<Record<FilterId, boolean>>({ open: true, ts: false, diaspora: false, mobile: false });
 
   const list = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("fr");
-    return seniors().filter((m) => {
+    return mentors.filter((m) => {
       if (on.open && !m.openSlots) return false;
       if (on.ts && !m.stack.includes("TypeScript")) return false;
       if (on.diaspora && !m.diaspora) return false;
@@ -32,7 +32,7 @@ export function MentorSearch() {
       if (!q) return true;
       return [m.name, m.city, m.country, ...m.stack].some((v) => v.toLocaleLowerCase("fr").includes(q));
     });
-  }, [query, on]);
+  }, [mentors, query, on]);
 
   return (
     <Page>
@@ -55,7 +55,7 @@ export function MentorSearch() {
       <div className="grid gap-3 md:grid-cols-2">
         {list.map((m) => (
           <Card key={m.id} className="content-start gap-3 px-4 py-3.5">
-            <PersonRow avatar={<Avatar initials={initials(m.name)} size="lg" />} name={m.name} badge={<Badge tone="brand">Senior</Badge>} meta={`${m.city}${m.diaspora ? " · Diaspora" : ""} · ${m.years} ans · ${m.stats?.hours ?? 0} h confirmées`} />
+            <PersonRow avatar={<Avatar initials={initials(m.name)} size="lg" />} name={m.name} badge={<Badge tone="brand">Senior</Badge>} meta={`${m.city}${m.diaspora ? " · Diaspora" : ""} · ${m.years} ans · ${m.stats.hours} h confirmées`} />
             <p className="text-sm">{m.bio}</p>
             <div className="flex items-center justify-between gap-2 border-t border-line pt-2.5">
               <span className="flex items-center gap-1.5 text-sm font-bold">

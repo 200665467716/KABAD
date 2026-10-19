@@ -4,11 +4,11 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { api, ApiError } from "./api";
 import { useRealtime, useRealtimeReconnect } from "./realtime-client";
 
-export type Me = { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string; unreadMessages: number };
+export type Me = { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string; isAdmin: boolean; unreadMessages: number; unreadNotifications: number };
 
-const MeContext = createContext<{ me: Me | null; ready: boolean }>({ me: null, ready: false });
+const MeContext = createContext<{ me: Me | null; ready: boolean; refresh: () => void }>({ me: null, ready: false, refresh: () => {} });
 
-/** Keeps the unread count in the navigation up to date while the member is signed in. */
+/** Keeps the unread counts in the navigation up to date while the member is signed in. */
 function LiveUnread({ refresh }: { refresh: () => void }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const soon = useCallback(() => {
@@ -18,6 +18,7 @@ function LiveUnread({ refresh }: { refresh: () => void }) {
   useRealtime("message:new", soon);
   useRealtime("conversation:read", soon);
   useRealtime("conversation:changed", soon);
+  useRealtime("notification:new", soon);
   useRealtimeReconnect(soon);
   return null;
 }
@@ -48,7 +49,7 @@ export function MeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <MeContext.Provider value={{ me, ready }}>
+    <MeContext.Provider value={{ me, ready, refresh }}>
       {me && <LiveUnread refresh={refresh} />}
       {children}
     </MeContext.Provider>

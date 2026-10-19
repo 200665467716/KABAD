@@ -91,6 +91,9 @@ async function handle(event) {
     case "read":
       io.to(to).emit("conversation:read", { conversationId: event.conversationId });
       break;
+    case "notification":
+      io.to(to).emit("notification:new", {});
+      break;
   }
 }
 
