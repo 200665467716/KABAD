@@ -165,10 +165,10 @@
   --color-code: var(--neutral-950);
   --color-on-code: var(--neutral-25);
 
-  --font-display: var(--font-ojuju), "Fira Sans", system-ui, sans-serif;
-  --font-sans: var(--font-fira), "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: var(--font-overpass-mono), ui-monospace, Menlo, monospace;
-  --font-celebrate: var(--font-danfo), var(--font-ojuju), serif;
+  --font-display: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, Menlo, Consolas, monospace;
+  --font-celebrate: var(--font-inter), system-ui, sans-serif;
 
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);

@@ -34,7 +34,7 @@ export default async function ResultsPage({ params }: PageProps<"/defis/[id]/res
         {iWon && (
           <section className="grid gap-1.5 rounded-lg bg-accent p-4 text-on-accent">
             <p className="text-xs font-bold tracking-[0.08em] uppercase">Vous avez gagné</p>
-            <p className="font-celebrate text-[34px] leading-10 tabular">{formatFCFA(split.winner)}</p>
+            <p className="font-celebrate text-[34px] font-extrabold tracking-[-0.03em] leading-10 tabular">{formatFCFA(split.winner)}</p>
             <p className="text-sm">Note moyenne du jury : {c.ranking[0].mark.toLocaleString("fr-FR")} sur 20. Bravo Kossi.</p>
           </section>
         )}
