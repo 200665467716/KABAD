@@ -176,7 +176,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
           const el = e.currentTarget;
           stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
         }}
-        className="flex-1 overflow-y-auto"
+        // Scrolling up to the first message must not trigger the phone's pull-to-refresh.
+        className="flex-1 overflow-y-auto overscroll-contain"
       >
         <main className="mx-auto grid min-h-full w-full max-w-[760px] content-end gap-2.5 px-4 py-3 lg:px-10" aria-live="polite" aria-label="Messages">
           {hasMore && (
