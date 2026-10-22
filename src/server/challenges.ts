@@ -214,6 +214,7 @@ export async function closeChallenge(adminId: string, challengeId: string, prism
   await requireAdmin(adminId, prisma);
   const { count } = await prisma.challenge.updateMany({ where: { id: challengeId, status: "OPEN" }, data: { status: "JURY", closesAt: new Date() } });
   if (!count) throw new DomainError("not_open", "Ce défi n’est pas ouvert.", 409);
+  await prisma.adminAction.create({ data: { adminId, action: "challenge:close", targetId: challengeId } });
   return { ok: true };
 }
 
@@ -262,6 +263,7 @@ export async function publishResults(adminId: string, challengeId: string, prism
       notes.push({ userId: winner.userId, actor: `Défi « ${c.title} »`, text: " : vous avez gagné ! L’équipe KABAD vous contacte pour le lot.", href: `/defis/${challengeId}/resultats`, icon: "trophy", tone: "accent" });
     }
     await pushNotifications(tx, notes);
+    await tx.adminAction.create({ data: { adminId, action: "challenge:publish", targetId: challengeId } });
     return { winnerId: winner.userId };
   });
 }
@@ -277,6 +279,7 @@ export async function markPayoutSent(adminId: string, payoutId: string, referenc
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.payout.updateMany({ where: { id: payoutId, status: "PENDING" }, data: { status: "SENT", reference, sentAt: new Date() } });
     if (!count) throw new DomainError("already_sent", "Ce versement est déjà marqué comme envoyé.", 409);
+    await tx.adminAction.create({ data: { adminId, action: "payout:sent", targetId: payoutId, details: `${p.amount} F CFA · réf. ${reference}` } });
     if (p.beneficiaryId) {
       await pushNotifications(tx, [{ userId: p.beneficiaryId, actor: "KABAD", text: `a versé ${formatFCFA(p.amount)} sur votre Mobile Money pour le défi « ${p.challenge.title} ».`, href: `/defis/${p.challenge.id}/resultats`, icon: "wallet", tone: "accent" }]);
     }
@@ -340,7 +343,18 @@ export async function verifySenior(adminId: string, userId: string, prisma: Db =
   if (!u || u.role !== "SENIOR") throw notFound("Senior introuvable.");
   return prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: userId }, data: { seniorVerifiedAt: new Date() } });
+    await tx.adminAction.create({ data: { adminId, action: "senior:verify", targetId: userId } });
     await pushNotifications(tx, [{ userId, actor: "KABAD", text: "a vérifié votre statut Senior. Vous pouvez accompagner des juniors.", href: `/profil/${userId}`, icon: "check", tone: "success" }]);
     return { ok: true };
   });
+}
+
+/** A participant's own marks and the jurors' comments, shown once the results are out. Jurors stay anonymous. */
+export async function myFeedback(userId: string, challengeId: string, prisma: Db = db) {
+  const sub = await prisma.submission.findUnique({ where: { challengeId_userId: { challengeId, userId } }, include: { scores: true, challenge: { select: { status: true } } } });
+  if (!sub || sub.challenge.status !== "DONE" || sub.scores.length === 0) return null;
+  return {
+    mark: averageMark(sub.scores.map(totalScore)),
+    comments: sub.scores.map((s) => s.comment).filter((c): c is string => Boolean(c)),
+  };
 }

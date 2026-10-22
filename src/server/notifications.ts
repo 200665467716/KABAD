@@ -6,7 +6,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { notify } from "./realtime-events";
 
-export type NotificationIcon = "clock" | "user" | "message" | "trophy" | "check" | "wallet";
+export type NotificationIcon = "clock" | "user" | "message" | "trophy" | "check" | "wallet" | "info" | "users" | "radio";
 export type NotificationTone = "brand" | "success" | "accent" | "neutral";
 
 export type NotificationInput = { userId: string; actor: string; text: string; href: string; icon: NotificationIcon; tone: NotificationTone };

@@ -8,6 +8,8 @@ export type ChatMessage = {
   system: boolean;
   createdAt: string;
   clientId: string | null;
+  /** Removed by the moderation team: the body is a notice, not the original text. */
+  hidden?: boolean;
 };
 
 export type ConversationSummary = {
@@ -23,6 +25,8 @@ export type ConversationSummary = {
 };
 
 export type ConversationDetail = {
+  /** Direct conversations only: a block in place stops new messages. */
+  blocked: "by_me" | "by_them" | null;
   id: string;
   kind: "DIRECT" | "GROUP";
   title: string;

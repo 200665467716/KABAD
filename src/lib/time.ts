@@ -86,3 +86,9 @@ export function isToday(iso: string, now = new Date()): boolean {
   const day = (x: Date) => x.toLocaleDateString("fr-FR", { timeZone: TZ });
   return day(new Date(iso)) === day(now);
 }
+
+/** "2026-10-18T19:00" in the browser's time zone, for a datetime-local field. */
+export function localInputValue(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}

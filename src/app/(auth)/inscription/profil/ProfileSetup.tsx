@@ -10,7 +10,7 @@ import { Checkbox, RadioCard, Select, TextArea, TextField } from "@/components/u
 import { api, ApiError } from "@/lib/api";
 import { COUNTRIES, STACK_CHOICES } from "@/lib/schemas";
 
-type Initial = { role: "JUNIOR" | "SENIOR"; country: string; city: string; diaspora: boolean; stack: string[]; profileLink: string; headline: string; bio: string; years: number };
+type Initial = { role: "JUNIOR" | "SENIOR"; country: string; city: string; diaspora: boolean; stack: string[]; profileLink: string; headline: string; bio: string; years: number; mentorCapacity: number; verified: boolean };
 
 export function ProfileSetup({ initial, editing, profileHref }: { initial: Initial; editing: boolean; profileHref: string }) {
   const router = useRouter();
@@ -39,6 +39,7 @@ export function ProfileSetup({ initial, editing, profileHref }: { initial: Initi
           headline: String(data.get("headline") ?? ""),
           bio: String(data.get("bio") ?? ""),
           years: Number(data.get("years") || 0),
+          ...(role === "SENIOR" ? { mentorCapacity: Number(data.get("capacity") ?? 1) } : {}),
         },
       });
       router.push(editing ? profileHref : "/inscription/recommandations");
@@ -94,6 +95,18 @@ export function ProfileSetup({ initial, editing, profileHref }: { initial: Initi
           </div>
         </fieldset>
         <TextArea id="bio" name="bio" label="En quelques mots (facultatif)" rows={3} maxLength={600} defaultValue={initial.bio} placeholder="Ce que vous construisez, ce que vous cherchez." />
+        {role === "SENIOR" && (
+          <Select id="capacity" name="capacity" label="Binômes que vous accompagnez en même temps" defaultValue={String(initial.mentorCapacity || 1)}>
+            {[0, 1, 2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>
+                {n === 0 ? "Aucun pour l’instant" : n}
+              </option>
+            ))}
+          </Select>
+        )}
+        {role === "SENIOR" && initial.role === "SENIOR" && initial.verified && (
+          <p className="text-xs text-muted">Si vous changez le lien de votre profil, l’équipe vérifie à nouveau votre statut Senior.</p>
+        )}
         <TextField
           id="profile-link"
           name="link"

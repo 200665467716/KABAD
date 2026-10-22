@@ -36,10 +36,11 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   const [hasMore, setHasMore] = useState(initial.hasMore);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [blocked, setBlocked] = useState(false);
+  const [blockedNow, setBlocked] = useState(false);
   const [report, setReport] = useState(false);
   const [adding, setAdding] = useState(false);
   const [people, setPeople] = useState(false);
+  const [reportMessage, setReportMessage] = useState<string | null>(null);
   const router = useRouter();
   const list = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
@@ -144,10 +145,14 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   }
 
   function onKey(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) send(e);
+    // On a phone, Enter makes a new line (code needs several); the send button sends.
+    const touch = window.matchMedia("(pointer: coarse)").matches;
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && !touch) send(e);
   }
 
   const others = detail.members.filter((m) => m.id !== me.id);
+  // Blocking only stops a direct conversation; in a group, the report goes to the team.
+  const blocked = !group && (blockedNow || detail.blocked !== null);
   const memberNames = ["Vous", ...others.map((m) => m.name.split(" ")[0])].join(", ");
   const tone = (authorId: string | null) => ACCENTS[Math.max(0, others.findIndex((o) => o.id === authorId)) % 2];
   const length = Array.from(draft).length;
@@ -204,10 +209,10 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
                 ) : group && !mine ? (
                   <div className="grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2">
                     <Avatar initials={initials(m.authorName ?? "?")} size="sm" />
-                    <MessageBubble text={m.body} time={clockTime(m.createdAt)} author={m.authorName ?? "Membre"} authorTone={tone(m.authorId)} />
+                    <MessageBubble text={m.body} hidden={m.hidden} time={clockTime(m.createdAt)} author={m.authorName ?? "Membre"} authorTone={tone(m.authorId)} onReport={() => setReportMessage(m.id)} />
                   </div>
                 ) : (
-                  <MessageBubble text={m.body} time={clockTime(m.createdAt)} mine={mine} status={m.status} onRetry={() => retry(m)} />
+                  <MessageBubble text={m.body} hidden={m.hidden} time={clockTime(m.createdAt)} mine={mine} status={m.status} onRetry={() => retry(m)} onReport={mine ? undefined : () => setReportMessage(m.id)} />
                 )}
               </Fragment>
             );
@@ -219,7 +224,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
         <div className="mx-auto grid max-w-[760px] gap-2 px-3 pt-2 pb-[max(12px,env(safe-area-inset-bottom,0px))] lg:px-10">
           {(error || blocked) && (
             <Alert tone={blocked ? "info" : "danger"} role="alert">
-              {blocked ? "Vous avez bloqué ce membre. Il ne peut plus vous écrire." : error}
+              {blocked ? (detail.blocked === "by_them" ? "Vous ne pouvez plus écrire à ce membre." : "Vous avez bloqué ce membre. Débloquez-le depuis « Mon compte » pour reprendre la discussion.") : error}
             </Alert>
           )}
           <div className="flex items-end gap-2">
@@ -244,7 +249,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
         </div>
       </form>
 
-      <ReportSheet open={report} onClose={() => setReport(false)} subject="cette conversation" target={{ type: "CONVERSATION", id: detail.id }} onBlocked={() => setBlocked(true)} />
+      <ReportSheet open={report} onClose={() => setReport(false)} subject="cette conversation" target={{ type: "CONVERSATION", id: detail.id }} onBlocked={() => !group && setBlocked(true)} />
+      <ReportSheet open={reportMessage !== null} onClose={() => setReportMessage(null)} subject="ce message" target={{ type: "MESSAGE", id: reportMessage ?? "" }} onBlocked={() => !group && setBlocked(true)} />
       {group && <MembersSheet open={people} onClose={() => setPeople(false)} detail={detail} meId={me.id} onChanged={reload} onLeft={() => router.replace("/messages")} />}
       {group && detail.isOwner && <AddMembersSheet open={adding} onClose={() => setAdding(false)} conversationId={detail.id} memberIds={detail.members.map((m) => m.id)} onAdded={reload} />}
     </div>

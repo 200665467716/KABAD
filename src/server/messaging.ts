@@ -90,11 +90,15 @@ export async function listConversations(userId: string, prisma: Db = db): Promis
 
 
 
-const toChat = (m: { id: string; authorId: string | null; author: { name: string } | null; body: string; kind: string; createdAt: Date; clientId: string | null }): ChatMessage => ({
+export const HIDDEN_MESSAGE = "Message retiré par la modération.";
+
+const toChat = (m: { id: string; authorId: string | null; author: { name: string } | null; body: string; kind: string; createdAt: Date; clientId: string | null; hiddenAt?: Date | null }): ChatMessage => ({
   id: m.id,
   authorId: m.authorId,
   authorName: m.author?.name ?? null,
-  body: m.body,
+  // The content of a removed message is never sent to the members.
+  body: m.hiddenAt ? HIDDEN_MESSAGE : m.body,
+  hidden: Boolean(m.hiddenAt),
   system: m.kind === "SYSTEM",
   createdAt: m.createdAt.toISOString(),
   clientId: m.clientId,
@@ -114,7 +118,9 @@ export async function getConversation(userId: string, conversationId: string, op
     include: { author: { select: { name: true } } },
   });
   const other = c.kind === "DIRECT" ? c.members.find((x) => x.userId !== userId)?.user : undefined;
+  const blocks = other ? await prisma.block.findMany({ where: { OR: [{ blockerId: userId, blockedId: other.id }, { blockerId: other.id, blockedId: userId }] }, select: { blockerId: true } }) : [];
   return {
+    blocked: blocks.length === 0 ? null : blocks.some((b) => b.blockerId === userId) ? "by_me" : "by_them",
     id: c.id,
     kind: c.kind,
     title: c.kind === "GROUP" ? (c.name ?? "Groupe") : (other?.name ?? "Conversation"),
@@ -395,7 +401,7 @@ export async function leaveGroup(userId: string, conversationId: string, prisma:
 
 export async function createReport(
   userId: string,
-  input: { targetType: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION"; targetId: string; reason: string; details?: string; block: boolean },
+  input: { targetType: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION" | "ROOM"; targetId: string; reason: string; details?: string; block: boolean },
   prisma: Db = db,
 ) {
   let blockId: string | null = null;
@@ -426,8 +432,18 @@ export async function createReport(
       }
       break;
     }
+    case "ROOM": {
+      const room = await prisma.voiceRoom.findUnique({ where: { id: input.targetId }, select: { hostId: true } });
+      if (!room) throw notFound("Salon introuvable.");
+      blockId = room.hostId;
+      break;
+    }
   }
-  await prisma.report.create({ data: { reporterId: userId, targetType: input.targetType, targetId: input.targetId, reason: input.reason, details: input.details } });
+  // Two reports on the same thing by the same member count once.
+  const already = await prisma.report.count({ where: { reporterId: userId, targetType: input.targetType, targetId: input.targetId, status: "OPEN" } });
+  if (!already) {
+    await prisma.report.create({ data: { reporterId: userId, targetType: input.targetType, targetId: input.targetId, targetUserId: blockId, reason: input.reason, details: input.details } });
+  }
   if (input.block && blockId && blockId !== userId) await block(userId, blockId, prisma);
   return { ok: true };
 }

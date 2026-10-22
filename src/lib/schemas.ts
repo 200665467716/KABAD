@@ -57,7 +57,7 @@ export const addMembersSchema = z.object({
 export const REPORT_REASONS = ["Spam ou arnaque", "Harcèlement ou propos haineux", "Faux profil ou faux statut Senior", "Plagiat dans un défi", "Autre"] as const;
 
 export const reportSchema = z.object({
-  targetType: z.enum(["USER", "MESSAGE", "CONVERSATION", "INVITATION"]),
+  targetType: z.enum(["USER", "MESSAGE", "CONVERSATION", "INVITATION", "ROOM"]),
   targetId: id,
   reason: z.enum(REPORT_REASONS, "Choisissez un motif."),
   details: z.string().max(1000).optional(),
@@ -87,6 +87,7 @@ export const profileSchema = z
     headline: z.string().trim().max(80).optional(),
     bio: z.string().trim().max(600).optional(),
     years: z.number().int().min(0).max(50).optional(),
+    mentorCapacity: z.number().int().min(0, "0 au moins.").max(5, "5 binômes au plus en même temps.").optional(),
   })
   .refine((p) => p.role !== "SENIOR" || p.profileLink.length > 0, { message: "Un profil GitHub ou LinkedIn est obligatoire pour vérifier votre statut Senior.", path: ["profileLink"] });
 
@@ -204,3 +205,43 @@ export const resetPasswordSchema = z.object({ token: z.string().min(20).max(100)
 export const verifyEmailSchema = z.object({ token: z.string().min(20).max(100) });
 export const changePasswordSchema = z.object({ current: z.string().max(200).default(""), next: newPassword });
 export const deleteAccountSchema = z.object({ password: z.string().max(200).optional(), confirm: z.literal("SUPPRIMER", "Écrivez SUPPRIMER pour confirmer.") });
+
+/* Team tools */
+
+export const adminReportSchema = z.object({
+  decision: z.enum(["dismiss", "hide", "warn", "suspend"]),
+  note: z.string().trim().max(250).optional(),
+});
+
+export const adminMemberSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("verify") }),
+  z.object({ action: z.literal("reinstate") }),
+  z.object({ action: z.literal("reject"), reason: trimmed(5, 250, "Expliquez en quelques mots.", "250 caractères au plus.") }),
+  z.object({ action: z.literal("suspend"), reason: trimmed(5, 250, "Indiquez le motif de la suspension.", "250 caractères au plus.") }),
+]);
+
+export const challengeCreateSchema = z.object({
+  title: trimmed(5, 120, "Donnez un titre au défi.", "120 caractères au plus."),
+  kind: z.enum(["CAGNOTTE", "SPONSORISE", "LOT"]),
+  level: z.enum(["Débutant", "Intermédiaire", "Avancé"]),
+  stack: trimmed(2, 60, "Indiquez la technologie attendue.", "60 caractères au plus."),
+  description: trimmed(30, 2000, "Décrivez le défi (30 caractères au moins).", "2 000 caractères au plus."),
+  closesAt: z.iso.datetime({ offset: true, message: "Indiquez la date de clôture." }),
+  requiresMentoring: z.boolean(),
+  prizeLabel: z.string().trim().max(120).optional(),
+  sponsorName: z.string().trim().max(120).optional(),
+  sponsorAmount: z.number().int().min(0).max(100_000_000).optional(),
+  jurorIds: z.array(id).length(3, "Choisissez exactement trois jurés."),
+});
+
+/* Voice rooms */
+
+export const roomSchema = z.object({
+  title: trimmed(5, 100, "Donnez un titre au salon (5 caractères au moins).", "100 caractères au plus."),
+  description: trimmed(10, 600, "Dites en une phrase de quoi vous allez parler.", "600 caractères au plus."),
+  now: z.boolean(),
+  startsAt: z.iso.datetime({ offset: true, message: "Indiquez la date et l’heure." }).optional(),
+});
+export const roomHandSchema = z.object({ up: z.boolean() });
+export const roomSpeakerSchema = z.object({ userId: id, speak: z.boolean() });
+export const roomMemberSchema = z.object({ userId: id });

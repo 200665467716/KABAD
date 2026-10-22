@@ -12,7 +12,7 @@ import { longDate } from "@/lib/time";
 import type { Eligibility, MentorRequestView, PairView } from "@/lib/domain-types";
 import { eligibility, listRequests, myPairs } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
-import { NextSessionPlanner, ReceivedRequests } from "./MentoringActions";
+import { EndPairButton, NextSessionPlanner, ReceivedRequests, SentRequestList } from "./MentoringActions";
 
 export const metadata: Metadata = { title: "Mentorat" };
 
@@ -69,6 +69,7 @@ function PairPanel({ pair, eligibility: e }: { pair: PairView; eligibility: Elig
           }
         />
         <SessionJournal sessions={pair.sessions} />
+        <EndPairButton pairId={pair.id} other={other.name} />
         <CapsulesLink />
       </section>
     </>
@@ -77,11 +78,7 @@ function PairPanel({ pair, eligibility: e }: { pair: PairView; eligibility: Elig
 
 function SentRequests({ sent }: { sent: MentorRequestView[] }) {
   if (sent.length === 0) return null;
-  return (
-    <Alert tone="info" title={`Demande envoyée à ${sent.map((r) => r.mentor.name).join(", ")}.`}>
-      Vous recevrez une notification dès la réponse. Sans réponse sous 72 h, choisissez un autre mentor.
-    </Alert>
-  );
+  return <SentRequestList sent={sent} />;
 }
 
 async function MentoringData() {
@@ -117,10 +114,20 @@ async function MentoringData() {
         {pairs.length === 0 && (
           <div className="grid content-start gap-3 lg:col-span-2">
             <SentRequests sent={requests.sent} />
-            {user.role === "SENIOR" ? (
+            {user.role === "SENIOR" && !user.seniorVerifiedAt ? (
+              <Card className="gap-2">
+                <h2 className="font-display text-lg font-bold">Statut Senior en cours de vérification</h2>
+                <p className="text-sm text-muted">L’équipe KABAD vérifie votre profil GitHub ou LinkedIn. Dès que c’est fait, vous apparaissez dans « Trouver un mentor » et vous recevez une notification.</p>
+                <ButtonLink href="/inscription/profil" variant="secondary" className="justify-self-start">
+                  Vérifier mon profil
+                </ButtonLink>
+              </Card>
+            ) : user.role === "SENIOR" ? (
               <Card className="gap-2">
                 <h2 className="font-display text-lg font-bold">Aucun binôme pour l’instant</h2>
-                <p className="text-sm text-muted">Les juniors vous trouvent dans « Trouver un mentor ». Vous recevrez leurs demandes ici.</p>
+                <p className="text-sm text-muted">
+                  {user.mentorCapacity > 0 ? "Les juniors vous trouvent dans « Trouver un mentor ». Vous recevrez leurs demandes ici." : "Vous avez indiqué 0 place : les juniors ne peuvent pas vous écrire. Changez-le dans votre profil."}
+                </p>
               </Card>
             ) : (
               <Card className="gap-3">

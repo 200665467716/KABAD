@@ -1,96 +1,198 @@
 # KABAD
 
-La communauté des développeurs d’Afrique et de la diaspora : mentorat sur projet concret, défis de code, tests communautaires et messagerie.
+La communauté des développeurs d’Afrique et de la diaspora : mentorat sur projet concret, défis de code, tests communautaires, messagerie et salons vocaux.
 Projet de l’équipe KABAD pour la Coupe d’Afrique des Développeurs (CADEV) de Systalink.
 
-> **État actuel.** La messagerie est réelle : comptes, invitations, conversations à deux, groupes privés et signalements sont enregistrés dans PostgreSQL et arrivent en temps réel.
-> Le mentorat, les défis et les tests communautaires utilisent encore des données d’exemple (`src/lib/data.ts`).
+Tout fonctionne sur de vraies données : comptes, mentorat, défis et jury, cagnottes et versements, tests communautaires, messagerie en temps réel, salons vocaux, modération et tableau de bord de l’équipe. Seul le **paiement en ligne des contributions** n’est pas branché : le prestataire reste à choisir.
 
-## Démarrer
+## Lancer KABAD sur son ordinateur
 
-Il faut Node.js 22 et PostgreSQL 16.
+Il faut **Node.js 22**, **PostgreSQL 16 ou plus** et **Git**. Comptez 15 minutes la première fois.
+
+### 1. Récupérer le code
 
 ```bash
-cp .env.example .env          # puis mettre un REALTIME_SECRET long et aléatoire : openssl rand -hex 32
+git clone https://github.com/200665467716/KABAD.git
+cd KABAD
+git checkout dev/Emmerson
 npm ci
-npm run db:migrate            # crée les tables
-npm run db:seed               # 8 membres de démonstration, conversations et un groupe
-npm run realtime              # service temps réel sur http://localhost:4001 (laisser tourner)
-npm run dev                   # dans un autre terminal : http://localhost:3000
 ```
 
-Comptes de démonstration (mot de passe `kabad-demo-2026` pour tous) : `kossi.mensah@exemple.tg`, `moussa.traore@exemple.fr`, `yao.koffi@exemple.tg`, `chidi.okafor@exemple.ng`…
-Ouvrez deux navigateurs (ou une fenêtre privée), connectez-vous avec deux comptes : les messages arrivent sans recharger.
+### 2. Préparer la base de données
 
-## Messagerie
+Créez un utilisateur et deux bases (la seconde sert aux tests). Dans `psql`, connecté avec l’utilisateur `postgres` :
 
-- **Invitation d’abord** : on écrit à quelqu’un en lui envoyant une invitation avec un premier message (300 caractères au plus). La conversation s’ouvre quand il accepte ; vous devenez contacts. Un refus est discret et définitif.
-- **Groupes privés** : seul le créateur ajoute des participants, choisis parmi ses contacts (50 membres au plus).
-- **Règles vérifiées par le serveur** (`src/server/messaging.ts`) : seuls les membres lisent et écrivent, un blocage coupe les messages et les invitations, un message envoyé deux fois n’est enregistré qu’une fois.
-- **Temps réel** : l’application écrit dans PostgreSQL et envoie `pg_notify` dans la même transaction. Le service `realtime/server.mjs` (Socket.IO) écoute, relit le message et le pousse aux membres concernés. Il n’écrit jamais dans la base. Le navigateur s’y connecte avec un jeton de 10 minutes signé par l’application.
-- **Sessions** : cookie `httpOnly` et `SameSite=Lax`, seule l’empreinte SHA-256 du jeton est stockée ; mots de passe hachés avec bcrypt.
+```sql
+CREATE ROLE kabad WITH LOGIN PASSWORD 'kabad' CREATEDB;
+CREATE DATABASE kabad OWNER kabad;
+CREATE DATABASE kabad_test OWNER kabad;
+```
+
+Sous Windows, `psql` se trouve dans `C:\Program Files\PostgreSQL\<version>\bin\psql.exe`. Le droit `CREATEDB` est nécessaire : `prisma migrate dev` crée une base temporaire.
+
+### 3. Configurer
+
+```bash
+cp .env.example .env        # PowerShell : Copy-Item .env.example .env
+```
+
+Dans `.env`, remplacez `REALTIME_SECRET` par une longue chaîne aléatoire (`openssl rand -hex 32`, ou 64 caractères au hasard). Les autres valeurs conviennent pour le local.
+
+### 4. Créer les tables et les données de démonstration
+
+```bash
+npm run db:migrate
+npm run db:seed
+```
+
+### 5. Démarrer les services
+
+Ouvrez trois terminaux :
+
+| Terminal | Commande | Rôle |
+| --- | --- | --- |
+| 1 | `npm run realtime` | Messages et notifications en direct (port 4001) |
+| 2 | `livekit-server --dev` | Audio des salons vocaux (port 7880) |
+| 3 | `npm run dev` | L’application : http://localhost:3000 |
+
+**LiveKit** : téléchargez `livekit-server` (version 1.13.10) depuis https://github.com/livekit/livekit/releases, ou lancez-le avec Docker :
+`docker run --rm -p 7880:7880 -p 7881:7881 -p 7882:7882/udp livekit/livekit-server:v1.13.10 --dev --bind 0.0.0.0`.
+Sans LiveKit, tout fonctionne sauf l’audio des salons.
+
+### 6. Se connecter
+
+Mot de passe **`kabad-demo-2026`** pour tous les comptes :
+
+| Compte | E-mail | Pour tester |
+| --- | --- | --- |
+| Kossi Mensah, junior | `kossi.mensah@exemple.tg` | Binôme avec Awa, défis, invitations reçues, groupe « API Lomé » |
+| Awa Diop, senior | `awa.diop@exemple.sn` | Mentore Kossi, app « Marché Vert » avec rapports à lire |
+| Moussa Traoré, senior | `moussa.traore@exemple.fr` | Juré du défi « Raccourcisseur », demande de mentorat de Fatou, salon programmé |
+| Yao Koffi, junior | `yao.koffi@exemple.tg` | Contact de Kossi |
+| Chidi Okafor, junior | `chidi.okafor@exemple.ng` | Invitation en attente vers Kossi |
+| Fatou Sow, junior | `fatou.sow@exemple.ci` | Invitation et demande de mentorat en attente |
+| Nadia Bello, senior | `nadia.bello@exemple.ca` | Mentor disponible |
+| Ibrahim Kaboré, senior | `ibrahim.kabore@exemple.bf` | Mentor complet |
+| **Équipe KABAD** | `equipe@kabad.app` | **Tableau de bord** `/admin` : signalements, membres, défis, versements, journal |
+
+Ouvrez deux navigateurs (ou une fenêtre privée) avec deux comptes pour voir les messages et les salons vocaux en direct.
+
+**E-mails** : en local, les e-mails (confirmation d’adresse, mot de passe oublié) s’affichent dans le terminal de `npm run dev`. En production, renseignez `SMTP_URL`.
+
+### Problèmes courants
+
+- **`P1000: Authentication failed`** : l’utilisateur ou le mot de passe de `DATABASE_URL` ne correspond pas à PostgreSQL. Refaites l’étape 2, ou adaptez `DATABASE_URL`.
+- **`Seed refusé`** : les données de démonstration ne s’installent que sur une base locale (`127.0.0.1` ou `localhost`).
+- **Pas de messages en direct** : le terminal 1 (`npm run realtime`) doit tourner.
+
+## Ce que fait KABAD
+
+- **Comptes** : inscription avec e-mail à confirmer, connexion GitHub (facultative), mot de passe oublié, changement de mot de passe, déconnexion de tous les appareils, export et suppression du compte.
+- **Membres** : annuaire avec recherche par nom, ville, pays et technologie ; invitation avec un premier message ; la conversation s’ouvre si l’invitation est acceptée.
+- **Messagerie** : conversations à deux et groupes privés en temps réel ; participants, départ et retrait ; signalement d’un message ; blocage et déblocage.
+- **Mentorat** : demande à un senior vérifié, binôme, séances notées et confirmées à deux, prochaine séance, fin de binôme. Les défis à cagnotte demandent 6 h confirmées.
+- **Défis** : soumission, jury anonyme de trois seniors (un juré ne note jamais son propre mentoré), résultats, partage 60/30/10 et versements après 48 h de contestation.
+- **Tests communautaires** : publier son app avec un scénario et des questions de contrôle ; rapports avec captures, validés ou refusés par le porteur.
+- **Salons vocaux** : salons en direct ou programmés, avec scène et auditoire ; lever la main ; l’hôte fait monter sur scène, renvoie dans l’auditoire ou retire. Seuls l’hôte et les intervenants peuvent parler, et c’est le serveur audio qui l’impose.
+- **Modération** : signalements traités par l’équipe (classer, retirer un message, fermer un salon, avertir, suspendre), vérification des seniors, journal de toutes les actions.
+
+## Sécurité
+
+- **Sessions** : cookie `httpOnly`, `SameSite=Lax` et `Secure` en production. Seule l’empreinte SHA-256 du jeton est stockée. Les mots de passe sont hachés avec bcrypt.
+- **Règles côté serveur** : chaque règle est vérifiée par le serveur (`src/server/*.ts`), jamais seulement par l’écran.
+- **Requêtes et limites** : contrôle de l’origine des requêtes, limites de débit stockées dans PostgreSQL (communes à toutes les instances), et IP lue derrière le proxy de confiance (`TRUSTED_PROXY_HOPS`).
+- **En-têtes** : politique de sécurité du contenu (CSP) et HSTS en HTTPS.
+- **Envois de fichiers** : leur taille est bornée à la lecture, et les captures sont servies avec `nosniff`.
+- **Temps réel** : jeton de 10 minutes. La connexion est fermée à son expiration, à la déconnexion et en cas de suspension.
+- **Administrateurs** : il n’y a pas d’administrateur par défaut en production. On en nomme un sur le serveur : `npm run admin:promote -- adresse@exemple.org`.
 
 ## Vérifications
 
 | Commande | Rôle |
 | --- | --- |
-| `npm run lint` | ESLint (règles Next.js et accessibilité) |
+| `npm run lint` | ESLint : règles Next.js et accessibilité |
 | `npm run typecheck` | Types des routes et TypeScript strict |
-| `npm test` | Tests unitaires Vitest des règles métier (partage 60/30/10, éligibilité au mentorat, jury, invitations) |
-| `npm run test:integration` | Règles de la messagerie sur une vraie base PostgreSQL (`DATABASE_URL_TEST`, vidée par les tests) |
-| `npm run test:e2e` | Playwright : chaque écran sur téléphone et ordinateur, et la messagerie à plusieurs navigateurs en temps réel. Remet les données de démonstration à zéro |
+| `npm test` | Tests unitaires des règles métier |
+| `npm run test:integration` | Règles et failles corrigées, sur une vraie base PostgreSQL (`DATABASE_URL_TEST`, vidée par les tests) |
+| `npm run test:e2e` | Playwright : chaque écran sur téléphone et ordinateur, les parcours, la messagerie en temps réel, les salons vocaux avec un vrai serveur audio. Il faut `LIVEKIT_BIN` (chemin de `livekit-server`), ou `livekit-server` dans le `PATH`. |
 | `npm run licenses` | Échoue si une dépendance est sous GPL, AGPL ou LGPL |
 
-La CI GitHub Actions (`.github/workflows/ci.yml`) lance tout cela, avec un PostgreSQL, à chaque push et pull request.
+La CI GitHub Actions (`.github/workflows/ci.yml`) lance tout cela avec PostgreSQL et LiveKit, à chaque push sur `main` et `dev/**`, et à chaque pull request.
 
 ## Mise en production
 
-`compose.yaml` décrit la pile complète : PostgreSQL, les migrations, l’application web et le service temps réel.
-Les secrets (`POSTGRES_PASSWORD`, `REALTIME_SECRET`) se mettent dans un fichier `.env` sur le serveur, jamais dans le dépôt.
-`NEXT_PUBLIC_REALTIME_URL` (adresse publique du service temps réel) est fixée à la construction de l’image web.
+`compose.yaml` décrit la pile : PostgreSQL, les migrations, l’application, le service temps réel et LiveKit.
+
+- Les secrets (`POSTGRES_PASSWORD`, `REALTIME_SECRET`, `LIVEKIT_API_SECRET`, `SMTP_URL`) vont dans un `.env` **sur le serveur**, jamais dans le dépôt.
+- Les ports 3000, 4001 et 7880 n’écoutent que sur la machine : un reverse proxy HTTPS (Caddy ou Nginx) est placé devant.
+- LiveKit a aussi besoin du port TCP 7881 et des ports UDP 50000 à 60000 ouverts.
+- `NEXT_PUBLIC_REALTIME_URL` et `NEXT_PUBLIC_LIVEKIT_URL` (adresses publiques en `https://` et `wss://`) sont fixées à la construction de l’image web.
 
 ## Pile technique
 
-- **Next.js 16** (App Router, Cache Components), **React 19**, **TypeScript**, **Tailwind CSS 4**. Toutes sous licence MIT.
-- **Polices** servies par `next/font` : Inter (titres et texte) et JetBrains Mono (code). Toutes deux sous OFL et complètes pour les langues d’Afrique de l’Ouest et centrale (ɛ ɔ ŋ ɓ ɗ ƙ ẹ ọ ṣ ɖ ƒ ɣ ʋ).
-- **PWA** : `src/app/manifest.ts` et icônes dans `public/icons/`.
-- **Données** : PostgreSQL 16 et Prisma 7 (Apache-2.0). **Temps réel** : Socket.IO (MIT). Jetons : jose (MIT), mots de passe : bcryptjs (MIT), validation : Zod (MIT).
-- **Déploiement** : `Dockerfile` (cibles `web`, `realtime`, `migrate`) et `compose.yaml` pour le serveur cloud Systalink. Les images se construisent dans la CI, jamais sur le serveur.
+- **Next.js 16** (App Router, Cache Components), **React 19**, **TypeScript**, **Tailwind CSS 4**.
+- **Données** : PostgreSQL et Prisma 7.
+- **Temps réel** : Socket.IO, alimenté par `pg_notify`.
+- **Audio des salons** : LiveKit, serveur auto-hébergé et client `livekit-client`.
+- **Polices** : Inter (texte et titres) et JetBrains Mono (code), servies par `next/font`. Elles couvrent les lettres des langues d’Afrique de l’Ouest et centrale (ɛ ɔ ŋ ɓ ɗ ƙ ẹ ọ ṣ ɖ ƒ ɣ ʋ).
+- **PWA** : `src/app/manifest.ts` et `public/icons/`.
 
 ## Organisation
 
 ```
 src/
   app/
-    page.tsx                 Bienvenue
-    (auth)/                  Inscription en 3 étapes, connexion
-    (app)/                   Application connectée (navigation latérale + barre du bas)
-      accueil, notifications, profil/[id]
-      mentorat, mentorat/mentors, mentorat/demande/[id], mentorat/seances/[id], capsules
-      defis, defis/[id], defis/[id]/soumettre, defis/[id]/jury, defis/[id]/resultats
-      tests, tests/[id], tests/[id]/rapport, tests/[id]/rapports
-      messages, messages/[id], messages/invitations/[id], messages/groupes/nouveau
-    soutenir/[id]            Page publique du sponsor (sans compte)
-    api/                     Routes de l’API : comptes, conversations, invitations, groupes, signalements
-  components/
-    ui/                      Design system : boutons, champs, badges, avatars, alertes, partage 60/30/10…
-    shell/                   Barre de titre, navigation, cadre d’inscription
-    features/                Invitation, signalement, fil de messages, progression du mentorat…
-  proxy.ts                   Envoie vers la connexion les visiteurs sans session
-  server/                    Côté serveur uniquement : base, sessions, règles de la messagerie
-  lib/                       Règles métier testées, formats, schémas de validation, client temps réel
-prisma/                      Schéma, migrations, données de démonstration
-realtime/server.mjs          Service temps réel (Socket.IO)
-tests/integration/           Tests de la messagerie sur PostgreSQL
-e2e/                         Tests de parcours Playwright
+    (auth)/        Inscription, connexion, e-mail à confirmer, mot de passe oublié
+    (app)/         Application connectée : accueil, membres, messages, mentorat, capsules,
+                   défis, tests, salons, notifications, profil, compte, admin
+    soutenir/[id]  Page publique d’une cagnotte
+    conditions/    Conditions d’utilisation et charte (version de travail)
+    api/           Routes de l’API
+  components/      Design system (ui), cadre (shell), blocs métier (features)
+  server/          Côté serveur uniquement : règles de chaque module, sécurité, LiveKit, e-mails
+  lib/             Règles partagées, formats, schémas de validation, client temps réel
+  proxy.ts         Envoie vers la connexion les visiteurs sans session
+prisma/            Schéma, migrations, données de démonstration
+realtime/          Service temps réel
+scripts/           Nommer un administrateur
+tests/integration/ Tests sur PostgreSQL
+e2e/               Tests de parcours Playwright
 ```
-
-## Design system
-
-Les couleurs, l’échelle de texte et les rayons sont des variables CSS dans `src/app/globals.css`, exposées à Tailwind.
-Tout est calé sur une grille de 4 px : chaque interligne est un multiple de 4. Le thème sombre suit le réglage du téléphone.
 
 ## Licences
 
-- `sharp` (optimisation d’images de Next.js) dépend de libvips, sous LGPL. Il est remplacé par un module vide (`tools/no-sharp`) et l’optimisation d’images est désactivée.
-- Deux outils de construction sont sous MPL-2.0, une licence à copyleft faible : `lightningcss` (Tailwind) et `axe-core` (règles d’accessibilité d’ESLint). Ils ne sont pas livrés avec l’application, mais nous le signalons aux organisateurs.
+Le concours CADEV interdit les licences GPL, AGPL et LGPL. `npm run licenses` le vérifie à chaque CI.
+
+### Livré avec l’application
+
+| Licence | Composants |
+| --- | --- |
+| MIT | Next.js, React, Tailwind CSS, Socket.IO, jose, bcryptjs, Zod, pg et la grande majorité des dépendances |
+| Apache-2.0 | Prisma (client et adaptateur PostgreSQL), `livekit-client` |
+| Apache-2.0 et BSD-3-Clause | `@bufbuild/protobuf` (utilisé par `livekit-client`) |
+| MIT-0 | `nodemailer` (e-mails) |
+| ISC, BSD-2-Clause, BSD-3-Clause, 0BSD, Unlicense | Petites dépendances |
+| CC-BY-4.0 | `caniuse-lite` : données de compatibilité des navigateurs utilisées par Next.js (une licence de données, pas de code) |
+| OFL-1.1 | Polices Inter et JetBrains Mono |
+
+### Services séparés, non intégrés au code
+
+| Licence | Composants |
+| --- | --- |
+| Apache-2.0 | Serveur **LiveKit** (`livekit/livekit-server`), lancé à côté de l’application |
+| PostgreSQL License | **PostgreSQL** |
+
+### Outils de développement, jamais livrés
+
+| Licence | Composants |
+| --- | --- |
+| MPL-2.0 (copyleft faible, fichier par fichier) | `lightningcss` (compilation du CSS de Tailwind), `axe-core` (règles d’accessibilité d’ESLint) |
+| EPL-2.0 (copyleft faible) | `elkjs`, utilisé par Prisma Studio, l’outil de consultation de la base |
+| Python-2.0 | `argparse` (dépendance d’ESLint) |
+| CC-BY-3.0 | `spdx-exceptions`, `spdx-ranges` (données de licences du vérificateur) |
+
+Nous signalons les licences à copyleft faible (MPL-2.0, EPL-2.0) aux organisateurs, bien qu’elles ne concernent que des outils de construction.
+
+### Remplacé pour respecter la règle
+
+`sharp` (optimisation d’images de Next.js) dépend de libvips, sous LGPL. Il est remplacé par un module vide (`tools/no-sharp`) et l’optimisation d’images est désactivée.

@@ -17,6 +17,9 @@ export type MemberCard = {
 
 export type Recommendation = MemberCard & { why: string };
 
+/** A member in the directory, with where the viewer stands with them. */
+export type DirectoryEntry = MemberCard & { relation: "contact" | "invited" | "invited_you" | "none"; conversationId: string | null; invitationId: string | null };
+
 export type MentorStats = { pairs: number; hours: number; judged: number };
 
 export type Mentor = MemberCard & { stats: MentorStats; openSlots: number; replyTime: string };
@@ -157,4 +160,25 @@ export type TestReportView = {
   status: "SUBMITTED" | "VALIDATED" | "REFUSED";
   refusalReason: string | null;
   screenshots: number;
+};
+
+export type RoomSummary = {
+  id: string;
+  title: string;
+  description: string;
+  status: "SCHEDULED" | "LIVE" | "ENDED";
+  startsAt: string;
+  host: { id: string; name: string };
+  listeners: number;
+  speakers: string[];
+  interested: number;
+  remindMe: boolean;
+};
+
+export type RoomPerson = { id: string; name: string; role: "HOST" | "SPEAKER" | "LISTENER"; handRaised: boolean };
+
+export type RoomDetail = RoomSummary & {
+  me: { role: "HOST" | "SPEAKER" | "LISTENER" | null; inRoom: boolean; removed: boolean; handRaised: boolean };
+  stage: RoomPerson[];
+  audience: RoomPerson[];
 };

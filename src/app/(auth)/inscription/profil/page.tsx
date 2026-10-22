@@ -12,7 +12,7 @@ async function ProfileSetupData() {
   return (
     <ProfileSetup
       editing={editing}
-      initial={{ role: u.role, country: u.country, city: u.city, diaspora: u.diaspora, stack: u.stack, profileLink: u.profileLink, headline: u.headline, bio: u.bio, years: u.years }}
+      initial={{ role: u.role, country: u.country, city: u.city, diaspora: u.diaspora, stack: u.stack, profileLink: u.profileLink, headline: u.headline, bio: u.bio, years: u.years, mentorCapacity: u.mentorCapacity, verified: u.seniorVerifiedAt !== null }}
       profileHref={`/profil/${u.id}`}
     />
   );

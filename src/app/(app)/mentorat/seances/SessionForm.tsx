@@ -9,7 +9,7 @@ import { Select, TextArea, TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
 import { formatDuration } from "@/lib/format";
 import type { SessionView } from "@/lib/domain-types";
-import { localInputValue } from "../MentoringActions";
+import { localInputValue } from "@/lib/time";
 
 const DURATIONS = [30, 45, 60, 75, 90, 105, 120, 150, 180, 240];
 

@@ -7,7 +7,7 @@ import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 import { formatFCFA, initials } from "@/lib/format";
 import { longDate } from "@/lib/time";
-import { CONTEST_HOURS, getResults } from "@/server/challenges";
+import { CONTEST_HOURS, getResults, myFeedback } from "@/server/challenges";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 
@@ -20,6 +20,7 @@ async function ResultsData({ params }: { params: Promise<{ id: string }> }) {
   const user = await pageUser(`/defis/${id}/resultats`);
   const c = await orNotFound(getResults(id));
   if (!c) notFound();
+  const feedback = await myFeedback(user.id, id);
   const top = c.ranking[0];
   const iWon = top?.userId === user.id;
   const winnerPayout = c.payouts.find((p) => p.role === "WINNER");
@@ -45,6 +46,25 @@ async function ResultsData({ params }: { params: Promise<{ id: string }> }) {
             <p className="text-sm">
               Note moyenne du jury : {top.mark.toLocaleString("fr-FR")} sur 20. Bravo {top.name.split(" ")[0]}.
             </p>
+          </section>
+        )}
+
+        {feedback && (
+          <section className="grid gap-2" aria-labelledby="feedback">
+            <Overline as="h2" id="feedback">
+              Votre note : {feedback.mark.toLocaleString("fr-FR")} sur 20
+            </Overline>
+            {feedback.comments.length > 0 ? (
+              <ul className="m-0 grid list-none gap-2 p-0">
+                {feedback.comments.map((comment, i) => (
+                  <li key={i} className="rounded-md bg-sunken px-3.5 py-3 text-sm">
+                    « {comment} »
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">Le jury n’a pas laissé de commentaire.</p>
+            )}
           </section>
         )}
 

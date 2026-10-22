@@ -77,7 +77,7 @@ export function SideNav() {
         <Wordmark />
       </Link>
       <nav aria-label="Navigation principale" className="grid gap-0.5">
-        {[...items, { href: "/capsules", label: "Capsules", icon: "capsule" as IconName, match: ["/capsules"] }].map((it) => {
+        {[...items, { href: "/membres", label: "Membres", icon: "users" as IconName, match: ["/membres"] }, { href: "/salons", label: "Salons vocaux", icon: "radio" as IconName, match: ["/salons"] }, { href: "/capsules", label: "Capsules", icon: "capsule" as IconName, match: ["/capsules"] }].map((it) => {
           const active = it.href === "/mentorat" ? path === "/mentorat" || (path.startsWith("/mentorat/") && !path.startsWith("/capsules")) : isActive(path, it);
           return (
             <Link

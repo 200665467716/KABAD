@@ -22,6 +22,13 @@ export const SESSION_MAX_AGE_DAYS = 14;
 export const DAILY_MINUTES_MAX = 4 * 60;
 /** After a refusal, the same mentor can be asked again only after this delay. */
 export const REQUEST_AGAIN_AFTER_DAYS = 30;
+/** A request with no answer after this delay lapses, so the junior can turn to another mentor. */
+export const REQUEST_EXPIRES_DAYS = 7;
+
+/** Lapsed requests are closed when read: no background job needed. */
+async function expireRequests(prisma: Db) {
+  await prisma.mentorRequest.updateMany({ where: { status: "PENDING", createdAt: { lt: new Date(Date.now() - REQUEST_EXPIRES_DAYS * 86_400_000) } }, data: { status: "DECLINED", answeredAt: new Date() } });
+}
 const directKey = (a: string, b: string) => [a, b].sort().join(":");
 
 const sessionInclude = { notedBy: { select: { id: true, name: true } } } as const;
@@ -72,6 +79,7 @@ export async function requestMentoring(menteeId: string, input: { mentorId: stri
   const mentor = await prisma.user.findUnique({ where: { id: input.mentorId }, select: { id: true, name: true, role: true, seniorVerifiedAt: true, mentorCapacity: true } });
   if (!mentor || mentor.role !== "SENIOR" || !mentor.seniorVerifiedAt) throw notFound("Mentor introuvable.");
   const first = firstName(mentor.name);
+  await expireRequests(prisma);
   const [pair, pending, blocked] = await Promise.all([
     prisma.pair.findUnique({ where: { mentorId_menteeId: { mentorId: mentor.id, menteeId } } }),
     prisma.mentorRequest.count({ where: { mentorId: mentor.id, menteeId, status: "PENDING" } }),
@@ -96,6 +104,7 @@ export async function requestMentoring(menteeId: string, input: { mentorId: stri
 const requestInclude = { mentee: { select: { id: true, name: true, city: true } }, mentor: { select: { id: true, name: true } } } as const;
 
 export async function listRequests(userId: string, prisma: Db = db): Promise<{ received: MentorRequestView[]; sent: MentorRequestView[] }> {
+  await expireRequests(prisma);
   const rows = await prisma.mentorRequest.findMany({
     where: { status: "PENDING", OR: [{ mentorId: userId }, { menteeId: userId }] },
     include: requestInclude,
@@ -105,7 +114,27 @@ export async function listRequests(userId: string, prisma: Db = db): Promise<{ r
   return { received: rows.filter((r) => r.mentorId === userId).map(view), sent: rows.filter((r) => r.menteeId === userId).map(view) };
 }
 
+export async function cancelRequest(menteeId: string, requestId: string, prisma: Db = db) {
+  const { count } = await prisma.mentorRequest.deleteMany({ where: { id: requestId, menteeId, status: "PENDING" } });
+  if (!count) throw notFound("Demande introuvable ou déjà traitée.");
+  return { ok: true };
+}
+
+/** Either member ends the pair. Sessions stay in the history and keep counting. */
+export async function endPair(userId: string, pairId: string, prisma: Db = db) {
+  const p = await pairOf(prisma, userId, pairId);
+  if (!p.active) return { ok: true };
+  const me = p.mentorId === userId ? p.mentor : p.mentee;
+  const other = p.mentorId === userId ? p.mentee : p.mentor;
+  return prisma.$transaction(async (tx) => {
+    await tx.pair.update({ where: { id: p.id }, data: { active: false, nextSessionAt: null } });
+    await pushNotifications(tx, [{ userId: other.id, actor: me.name, text: `a mis fin au binôme sur « ${p.project} ». Vos séances confirmées restent comptées.`, href: "/mentorat", icon: "user", tone: "neutral" }]);
+    return { ok: true };
+  });
+}
+
 export async function answerRequest(mentorId: string, requestId: string, accept: boolean, prisma: Db = db) {
+  await expireRequests(prisma);
   const r = await prisma.mentorRequest.findUnique({ where: { id: requestId }, include: requestInclude });
   if (!r || r.mentorId !== mentorId) throw notFound("Demande introuvable.");
   if (r.status !== "PENDING") throw new DomainError("already_answered", "Vous avez déjà répondu à cette demande.", 409);

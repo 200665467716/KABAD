@@ -288,6 +288,14 @@ async function main() {
   }
   await report("tontine-app", "kossi", "VALIDATED", [["Quel jour tombe le premier rappel ?", "Le 1er du mois", true]], "Clair. Le rappel arrive bien.", 60 * 24 * 3);
 
+  /* Voice rooms */
+  await db.voiceRoom.create({
+    data: { id: "salon-entretiens", title: "Réussir son premier entretien tech à l’étranger", description: "Moussa raconte ses entretiens à Paris et répond à vos questions. Levez la main pour parler.", hostId: "moussa", startsAt: daysFromNow(1, 19, 0), participants: { create: { userId: "moussa", role: "HOST", leftAt: now } }, interests: { create: [{ userId: "yao" }, { userId: "chidi" }] } },
+  });
+  await db.voiceRoom.create({
+    data: { id: "salon-webhooks", title: "Webhooks : les erreurs qui coûtent cher", description: "Retour d’expérience d’Awa sur les paiements mobile money.", hostId: "awa", status: "ENDED", startsAt: daysFromNow(-3, 18, 0), startedAt: daysFromNow(-3, 18, 0), endedAt: daysFromNow(-3, 19, 10), participants: { create: { userId: "awa", role: "HOST", leftAt: daysFromNow(-3, 19, 10) } } },
+  });
+
   /* Kossi's notifications */
   const n = (actor: string, text: string, href: string, icon: string, tone: string, ago: number, read = false) => ({ userId: "kossi", actor, text, href, icon, tone, createdAt: minutesAgo(ago), readAt: read ? minutesAgo(ago - 1) : null });
   await db.notification.createMany({

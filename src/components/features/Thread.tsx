@@ -31,8 +31,12 @@ export function MessageBubble({
   authorTone,
   status,
   onRetry,
+  hidden,
+  onReport,
 }: {
   text: string;
+  hidden?: boolean;
+  onReport?: () => void;
   time?: string;
   mine?: boolean;
   author?: string;
@@ -50,10 +54,15 @@ export function MessageBubble({
       )}
     >
       {author && <span className={cn("text-xs font-bold", authorTone === "accent" ? "text-accent-text" : "text-brand-text")}>{author}</span>}
-      <MessageBody text={text} />
+      {hidden ? <p className="text-sm italic opacity-80">{text}</p> : <MessageBody text={text} />}
       <span className="justify-self-end text-xs opacity-80 tabular">
         {status === "sending" ? "Envoi…" : status === "failed" ? "Non envoyé" : time}
       </span>
+      {onReport && !hidden && (
+        <button type="button" onClick={onReport} className="justify-self-start text-xs text-muted underline-offset-2 hover:underline">
+          Signaler ce message
+        </button>
+      )}
       {status === "failed" && onRetry && (
         <button type="button" onClick={onRetry} className="justify-self-end text-xs font-bold underline">
           Réessayer

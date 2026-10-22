@@ -1,11 +1,11 @@
-import { requireUser } from "@/server/auth";
-import { verifySenior } from "@/server/challenges";
+import { requireVerifiedUser } from "@/server/auth";
 import { route } from "@/server/http";
+import { startRoom } from "@/server/rooms";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export const POST = route(async (_request: Request, { params }: Ctx) => {
-  const user = await requireUser();
+  const user = await requireVerifiedUser();
   const { id } = await params;
-  return Response.json(await verifySenior(user.id, id));
+  return Response.json(await startRoom(user.id, id));
 });

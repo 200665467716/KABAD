@@ -15,6 +15,9 @@ export const config = {
   // Every screen of the signed-in app. Public: the welcome page, sign-up step 1, sign-in, sponsor pages.
   matcher: [
     "/accueil",
+    "/membres",
+    "/compte",
+    "/salons/:path*",
     "/notifications",
     "/admin/:path*",
     "/profil/:path*",

@@ -41,7 +41,7 @@ export function NewGroupForm({ contacts }: { contacts: Contact[] }) {
         {contacts.length === 0 ? (
           <div className="grid justify-items-start gap-3">
             <p className="text-muted">Un groupe se crée avec vos contacts. Invitez d’abord des membres : ils deviennent vos contacts quand ils acceptent.</p>
-            <ButtonLink href="/mentorat/mentors" variant="secondary">
+            <ButtonLink href="/membres" variant="secondary">
               Trouver des membres
             </ButtonLink>
           </div>
