@@ -12,7 +12,11 @@ export type RealtimeEvent =
   | { t: "conversation"; conversationId: string; recipients: string[] }
   | { t: "invitation"; invitationId: string; recipients: string[] }
   | { t: "invitation_answered"; invitationId: string; accepted: boolean; conversationId?: string; recipients: string[] }
-  | { t: "read"; conversationId: string; recipients: string[] };
+  | { t: "read"; conversationId: string; recipients: string[] }
+  | { t: "notification"; recipients: string[] }
+  | { t: "room"; roomId: string; recipients: string[] }
+  /** Closes the member's open sockets: sign-out everywhere, suspension. */
+  | { t: "revoke"; recipients: string[] };
 
 export async function notify(tx: Prisma.TransactionClient, event: RealtimeEvent) {
   if (event.recipients.length === 0) return;

@@ -1,21 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { AuthFrame } from "@/components/shell/AuthFrame";
 import { Alert } from "@/components/ui/Display";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
+import { GithubMark } from "@/components/ui/Icon";
+import { safeNext } from "@/lib/safe-next";
+import { hardNavigate } from "@/lib/hard-navigate";
 
-/** Only same-site paths are accepted as a destination after sign-in. */
-function safeNext(raw: string | null) {
-  return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/accueil";
-}
-
-export function SignInForm() {
-  const router = useRouter();
+export function SignInForm({
+  github,
+  demo,
+}: {
+  github: boolean;
+  demo: boolean;
+}) {
   const params = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -26,11 +29,20 @@ export function SignInForm() {
     setBusy(true);
     setError(null);
     try {
-      await api("/api/auth/login", { body: { email: String(data.get("email") ?? ""), password: String(data.get("password") ?? "") } });
-      router.replace(safeNext(params.get("suite")));
-      router.refresh();
+      await api("/api/auth/login", {
+        body: {
+          email: String(data.get("email") ?? ""),
+          password: String(data.get("password") ?? ""),
+        },
+      });
+      // A full load starts this member's session with nothing left from a previous one.
+      hardNavigate(safeNext(params.get("suite")));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Connexion impossible. Réessayez.");
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Connexion impossible. Réessayez.",
+      );
       setBusy(false);
     }
   }
@@ -51,8 +63,48 @@ export function SignInForm() {
         }
       >
         <div className="grid gap-4">
-          <TextField id="email" name="email" type="email" label="Adresse e-mail" autoComplete="email" defaultValue="kossi.mensah@exemple.tg" required />
-          <TextField id="password" name="password" type="password" label="Mot de passe" autoComplete="current-password" hint="Comptes de démonstration : mot de passe kabad-demo-2026" required />
+          {params.get("erreur") === "github" && (
+            <Alert tone="danger" role="alert">
+              La connexion avec GitHub n’a pas abouti. Réessayez, ou
+              connectez-vous avec votre e-mail.
+            </Alert>
+          )}
+          {github && (
+            <>
+              <a
+                href={`/api/auth/github?suite=${encodeURIComponent(safeNext(params.get("suite")))}`}
+                className="inline-flex h-13 items-center justify-center gap-2 rounded-md border border-line-strong bg-raised px-5 font-bold text-ink no-underline hover:bg-sunken"
+              >
+                <GithubMark size={20} />
+                Continuer avec GitHub
+              </a>
+              <p className="text-center text-sm text-muted">
+                ou avec votre e-mail
+              </p>
+            </>
+          )}
+          <TextField
+            id="email"
+            name="email"
+            type="email"
+            label="Adresse e-mail"
+            autoComplete="email"
+            required
+          />
+          <TextField
+            id="password"
+            name="password"
+            type="password"
+            label="Mot de passe"
+            autoComplete="current-password"
+            required
+          />
+          <Link
+            href="/mot-de-passe-oublie"
+            className="justify-self-end text-sm font-bold text-brand-text"
+          >
+            Mot de passe oublié ?
+          </Link>
           {error && (
             <Alert tone="danger" role="alert">
               {error}
@@ -62,12 +114,19 @@ export function SignInForm() {
             {busy ? "Connexion…" : "Se connecter"}
           </Button>
         </div>
-        <details className="rounded-md bg-sunken px-4 py-3 text-sm">
-          <summary className="cursor-pointer font-bold">Comptes de démonstration</summary>
-          <p className="mt-2 text-muted">
-            Kossi : kossi.mensah@exemple.tg · Moussa : moussa.traore@exemple.fr · Yao : yao.koffi@exemple.tg · Chidi : chidi.okafor@exemple.ng. Ouvrez deux navigateurs pour voir les messages arriver en direct.
-          </p>
-        </details>
+        {demo && (
+          <details className="rounded-md bg-sunken px-4 py-3 text-sm">
+            <summary className="cursor-pointer font-bold">
+              Comptes de démonstration
+            </summary>
+            <p className="mt-2 text-muted">
+              Mot de passe : kabad-demo-2026. Kossi : kossi.mensah@exemple.tg ·
+              Moussa : moussa.traore@exemple.fr · Yao : yao.koffi@exemple.tg ·
+              Awa (senior) : awa.diop@exemple.sn · Équipe : equipe@kabad.app.
+              Ouvrez deux navigateurs pour voir les messages arriver en direct.
+            </p>
+          </details>
+        )}
       </AuthFrame>
     </form>
   );

@@ -8,6 +8,8 @@ export type RealtimeEvents = {
   "message:new": (e: { conversationId: string; message: ChatMessage }) => void;
   "conversation:changed": (e: { conversationId: string }) => void;
   "conversation:read": (e: { conversationId: string }) => void;
+  "notification:new": () => void;
+  "room:changed": (e: { roomId: string }) => void;
   "invitation:new": (e: { invitationId: string }) => void;
   "invitation:answered": (e: { invitationId: string; accepted: boolean; conversationId: string | null }) => void;
 };
@@ -28,6 +30,12 @@ function getSocket() {
     },
   });
   return socket;
+}
+
+/** Closes the socket at sign-out, so the next member using this tab never receives the previous one's events. */
+export function disconnectRealtime() {
+  socket?.disconnect();
+  socket = null;
 }
 
 /** Subscribes to a realtime event while the component is mounted. */

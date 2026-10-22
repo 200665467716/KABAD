@@ -48,3 +48,5 @@ next-env.d.ts
 # prisma client
 /src/generated/
 !.env.example
+/e2e/.auth/
+/.livekit/

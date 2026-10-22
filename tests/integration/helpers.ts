@@ -6,7 +6,7 @@ export const prisma = createPrisma(process.env.DATABASE_URL_TEST);
 
 export async function resetDb() {
   await prisma.$executeRawUnsafe(
-    `TRUNCATE "Report", "Block", "Message", "ConversationMember", "Conversation", "Contact", "Invitation", "Session", "User" CASCADE`,
+    `TRUNCATE "User", "Challenge", "RateLimit" CASCADE`,
   );
 }
 

@@ -63,8 +63,12 @@ export function SignUpForm() {
           <TextField id="email" name="email" type="email" label="Adresse e-mail" autoComplete="email" error={errors.email} />
           <TextField id="password" name="password" type="password" label="Mot de passe" autoComplete="new-password" hint="12 caractères minimum." error={errors.password} />
           <div className="grid gap-1">
-            <Checkbox name="terms" defaultChecked>
-              J’accepte les <a href="#" className="text-brand-text">conditions d’utilisation</a> et la <a href="#" className="text-brand-text">charte de la communauté</a>.
+            <Checkbox name="terms">
+              J’accepte les{" "}
+              <a href="/conditions" target="_blank" className="text-brand-text">
+                conditions d’utilisation et la charte de la communauté
+              </a>
+              .
             </Checkbox>
             {errors.terms && <span className="text-sm font-bold text-danger">{errors.terms}</span>}
           </div>

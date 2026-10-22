@@ -30,11 +30,23 @@ services:
       target: web
       args:
         NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:?NEXT_PUBLIC_REALTIME_URL manquant}
+        NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:?NEXT_PUBLIC_LIVEKIT_URL manquant}
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://kabad:${POSTGRES_PASSWORD}@db:5432/kabad
       REALTIME_SECRET: ${REALTIME_SECRET:?REALTIME_SECRET manquant}
-    ports: ["3000:3000"]
+      APP_URL: ${APP_URL:?APP_URL manquant}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      # Number of reverse proxies in front of the app; the visitor's IP is read from their headers.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+      LIVEKIT_URL: http://livekit:7880
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?LIVEKIT_API_KEY manquant}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?LIVEKIT_API_SECRET manquant}
+    # Reachable only from this server: the HTTPS reverse proxy (Caddy, Nginx) sits in front.
+    ports: ["127.0.0.1:3000:3000"]
     depends_on:
       migrate: { condition: service_completed_successfully }
 
@@ -46,9 +58,29 @@ services:
       REALTIME_SECRET: ${REALTIME_SECRET}
       REALTIME_ALLOWED_ORIGINS: ${REALTIME_ALLOWED_ORIGINS:?REALTIME_ALLOWED_ORIGINS manquant}
       REALTIME_PORT: 4001
-    ports: ["4001:4001"]
+    ports: ["127.0.0.1:4001:4001"]
     depends_on:
       migrate: { condition: service_completed_successfully }
+
+  # Audio of the voice rooms. UDP 50000-60000 carries the sound (WebRTC); 7881 is the TCP fallback.
+  # Put wss:// in front of 7880 with the reverse proxy (NEXT_PUBLIC_LIVEKIT_URL).
+  livekit:
+    image: livekit/livekit-server:v1.13.10
+    restart: unless-stopped
+    command: ["--bind", "0.0.0.0"]
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+      LIVEKIT_CONFIG: |
+        port: 7880
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50000
+          port_range_end: 60000
+          use_external_ip: true
+    ports:
+      - "127.0.0.1:7880:7880"
+      - "7881:7881"
+      - "50000-60000:50000-60000/udp"
 
 volumes:
   db-data:

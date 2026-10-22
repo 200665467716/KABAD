@@ -1,35 +1,58 @@
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Display";
 import { RadioCard, TextArea, TextField } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
-import { member, test } from "@/lib/data";
+import { api, ApiError } from "@/lib/api";
+import type { TestAppDetail } from "@/lib/domain-types";
 
-type Shot = { name: string; url: string };
+type Shot = { file: File; url: string };
+const MAX_BYTES = 2 * 1024 * 1024;
+const TYPES = ["image/png", "image/jpeg", "image/webp"];
 
-export function ReportForm({ testId }: { testId: string }) {
-  const t = test(testId)!;
-  const owner = member(t.ownerId).name.split(" ")[0];
+export function ReportForm({ app: t }: { app: TestAppDetail }) {
+  const owner = t.owner.name.split(" ")[0];
   const [shots, setShots] = useState<Shot[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [device, setDevice] = useState("");
+  const [remarks, setRemarks] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
 
+  // Local previews are released when the form goes away.
+  useEffect(() => () => shots.forEach((s) => URL.revokeObjectURL(s.url)), [shots]);
+
   function addShots(e: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith("image/"));
-    setShots((s) => [...s, ...files.map((f) => ({ name: f.name, url: URL.createObjectURL(f) }))].slice(0, t.steps.length));
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
+    const bad = files.find((f) => !TYPES.includes(f.type) || f.size > MAX_BYTES);
+    if (bad) return setError(`« ${bad.name} » n’est pas accepté : une image PNG, JPEG ou WebP de 2 Mo au plus.`);
+    setError(null);
+    setShots((s) => [...s, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))].slice(0, t.steps.length));
   }
 
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
     if (shots.length < t.steps.length) return setError(`Ajoutez ${t.steps.length} captures, une par étape du scénario.`);
     if (t.questions.some((_, i) => !answers[i]?.trim())) return setError("Répondez aux questions de contrôle.");
+    if (!device.trim()) return setError("Indiquez l’appareil utilisé.");
+    const form = new FormData();
+    form.set("report", JSON.stringify({ device, answers: t.questions.map((_, i) => answers[i]), remarks }));
+    shots.forEach((s) => form.append("shot", s.file));
+    setBusy(true);
     setError(null);
-    setSent(true);
+    try {
+      await api(`/api/tests/${t.id}/reports`, { body: form });
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Le rapport n’a pas été envoyé. Réessayez.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -45,22 +68,27 @@ export function ReportForm({ testId }: { testId: string }) {
             <section className="grid gap-2" aria-labelledby="shots">
               <div className="flex items-baseline justify-between">
                 <h2 id="shots" className="text-sm font-bold">
-                  Captures d’écran
+                  Captures d’écran, une par étape
                 </h2>
                 <span className="text-xs text-muted tabular">
                   {shots.length} sur {t.steps.length}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {shots.map((s) => (
-                  // eslint-disable-next-line @next/next/no-img-element -- local previews from the user's own files
-                  <img key={s.url} src={s.url} alt={s.name} className="h-26 w-16 rounded-md border border-line object-cover" />
+                {shots.map((s, i) => (
+                  <span key={s.url} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- local previews from the member's own files */}
+                    <img src={s.url} alt={`Capture de l’étape ${i + 1}`} className="h-26 w-16 rounded-md border border-line object-cover" />
+                    <button type="button" onClick={() => setShots((x) => x.filter((y) => y !== s))} aria-label={`Retirer la capture de l’étape ${i + 1}`} className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-ink text-bg">
+                      <Icon name="close" size={16} />
+                    </button>
+                  </span>
                 ))}
                 {shots.length < t.steps.length && (
                   <label className="grid h-26 w-16 cursor-pointer place-items-center content-center gap-1 rounded-md border-[1.5px] border-dashed border-line-strong bg-raised text-center text-[11px] leading-[14px] font-bold text-muted focus-within:outline-2 focus-within:outline-focus">
                     <Icon name="plus" size={18} />
                     Étape {shots.length + 1}
-                    <input type="file" accept="image/*" multiple className="sr-only" onChange={addShots} />
+                    <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" onChange={addShots} />
                   </label>
                 )}
               </div>
@@ -76,10 +104,11 @@ export function ReportForm({ testId }: { testId: string }) {
                   ))}
                 </fieldset>
               ) : (
-                <TextField key={q.q} id={`q${i}`} label={`${i + 1}. ${q.q}`} value={answers[i] ?? ""} onChange={(e) => setAnswers((a) => ({ ...a, [i]: e.target.value }))} />
+                <TextField key={q.q} id={`q${i}`} label={`${i + 1}. ${q.q}`} value={answers[i] ?? ""} maxLength={60} onChange={(e) => setAnswers((a) => ({ ...a, [i]: e.target.value }))} />
               ),
             )}
-            <TextArea id="remarks" label="Vos remarques" rows={4} placeholder="Ce qui vous a bloqué, ce qui était clair…" />
+            <TextField id="device" label="Appareil utilisé" placeholder="Par exemple : Android, Tecno Spark 10" value={device} maxLength={40} onChange={(e) => setDevice(e.target.value)} />
+            <TextArea id="remarks" label="Vos remarques" rows={4} placeholder="Ce qui vous a bloqué, ce qui était clair…" value={remarks} maxLength={2000} onChange={(e) => setRemarks(e.target.value)} />
             {error && (
               <Alert tone="danger" role="alert">
                 {error}
@@ -95,8 +124,8 @@ export function ReportForm({ testId }: { testId: string }) {
           </ButtonLink>
         ) : (
           <>
-            <Button type="submit" size="lg" block>
-              Envoyer le rapport
+            <Button type="submit" size="lg" block disabled={busy}>
+              {busy ? "Envoi…" : "Envoyer le rapport"}
             </Button>
             <p className="text-center text-xs text-muted">{owner} valide votre rapport après l’avoir lu.</p>
           </>

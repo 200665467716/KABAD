@@ -1,58 +1,72 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { api, ApiError } from "./api";
 import { useRealtime, useRealtimeReconnect } from "./realtime-client";
 
-export type Me = { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string; unreadMessages: number };
+export type Me = { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string; isAdmin: boolean; emailVerified: boolean; unreadMessages: number; unreadNotifications: number };
 
-const MeContext = createContext<{ me: Me | null; ready: boolean }>({ me: null, ready: false });
+/*
+ * The signed-in member, kept outside React. Screens read it with useSyncExternalStore, whose server snapshot
+ * is "nobody": while a streamed part of the page is being hydrated, React renders it exactly as the server
+ * did, then updates it. Without this, the navigation could hydrate with the member already loaded and no
+ * longer match the HTML sent by the server.
+ */
+type State = { me: Me | null; ready: boolean };
+const EMPTY: State = { me: null, ready: false };
+let state: State = EMPTY;
+const listeners = new Set<() => void>();
 
-/** Keeps the unread count in the navigation up to date while the member is signed in. */
-function LiveUnread({ refresh }: { refresh: () => void }) {
+function set(next: State) {
+  state = next;
+  listeners.forEach((l) => l());
+}
+
+async function load() {
+  try {
+    set({ me: await api<Me>("/api/me"), ready: true });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) set({ me: null, ready: true });
+    else set({ ...state, ready: true });
+  }
+}
+
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+};
+
+/** Keeps the unread counts in the navigation up to date while the member is signed in. */
+function LiveUnread() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const soon = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(refresh, 300);
-  }, [refresh]);
+    timer.current = setTimeout(load, 300);
+  }, []);
   useRealtime("message:new", soon);
   useRealtime("conversation:read", soon);
   useRealtime("conversation:changed", soon);
+  useRealtime("notification:new", soon);
   useRealtimeReconnect(soon);
   return null;
 }
 
 export function MeProvider({ children }: { children: ReactNode }) {
-  const [me, setMe] = useState<Me | null>(null);
-  const [ready, setReady] = useState(false);
-
-  const refresh = useCallback(async () => {
-    try {
-      setMe(await api<Me>("/api/me"));
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) setMe(null);
-    } finally {
-      setReady(true);
-    }
-  }, []);
-
+  const { me } = useMe();
   useEffect(() => {
-    let alive = true;
-    api<Me>("/api/me")
-      .then((d) => alive && setMe(d))
-      .catch(() => alive && setMe(null))
-      .finally(() => alive && setReady(true));
-    return () => {
-      alive = false;
-    };
+    load();
   }, []);
-
   return (
-    <MeContext.Provider value={{ me, ready }}>
-      {me && <LiveUnread refresh={refresh} />}
+    <>
+      {me && <LiveUnread />}
       {children}
-    </MeContext.Provider>
+    </>
   );
 }
 
-export const useMe = () => useContext(MeContext);
+export function useMe() {
+  const s = useSyncExternalStore(subscribe, () => state, () => EMPTY);
+  return { me: s.me, ready: s.ready, refresh: load };
+}

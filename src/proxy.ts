@@ -12,5 +12,21 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/messages/:path*"],
+  // Every screen of the signed-in app. Public: the welcome page, sign-up step 1, sign-in, sponsor pages.
+  matcher: [
+    "/accueil",
+    "/membres",
+    "/compte",
+    "/salons/:path*",
+    "/notifications",
+    "/admin/:path*",
+    "/profil/:path*",
+    "/mentorat/:path*",
+    "/capsules/:path*",
+    "/defis/:path*",
+    "/tests/:path*",
+    "/messages/:path*",
+    "/inscription/profil",
+    "/inscription/recommandations",
+  ],
 };

@@ -19,13 +19,36 @@ export default defineConfig({
     // Set CHROMIUM_PATH to reuse a browser already installed on the machine.
     launchOptions: process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : undefined,
   },
+  // Screens first (read only), then the journeys that change data, one after the other.
   projects: [
-    { name: "telephone", testIgnore: /messagerie/, use: { ...devices["Pixel 7"], browserName: "chromium" } },
-    { name: "ordinateur", testIgnore: /messagerie/, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 860 } } },
-    // Messaging writes to the database: one worker, in order.
-    { name: "messagerie", testMatch: /messagerie/, fullyParallel: false, use: { ...devices["Pixel 7"], browserName: "chromium" } },
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    { name: "telephone", testMatch: /ecrans/, dependencies: ["setup"], use: { ...devices["Pixel 7"], browserName: "chromium" } },
+    { name: "ordinateur", testMatch: /ecrans/, dependencies: ["setup"], use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 860 } } },
+    { name: "parcours", testMatch: /parcours/, dependencies: ["telephone", "ordinateur"], fullyParallel: false, use: { ...devices["Pixel 7"], browserName: "chromium" } },
+    { name: "messagerie", testMatch: /messagerie/, dependencies: ["parcours"], fullyParallel: false, use: { ...devices["Pixel 7"], browserName: "chromium" } },
+    // Voice rooms: a fake microphone plays a tone, and the browser never asks for permission.
+    {
+      name: "salons",
+      testMatch: /salons/,
+      dependencies: ["messagerie"],
+      fullyParallel: false,
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: {
+          ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
+          args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--autoplay-policy=no-user-gesture-required"],
+        },
+      },
+    },
   ],
   webServer: [
+    // LiveKit for the voice rooms: LIVEKIT_BIN points to the livekit-server binary (see README).
+    {
+      command: `${process.env.LIVEKIT_BIN ?? "livekit-server"} --dev --bind 127.0.0.1`,
+      url: "http://127.0.0.1:7880",
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
     {
       command: "node realtime/server.mjs",
       url: `http://127.0.0.1:${REALTIME_PORT}/health`,

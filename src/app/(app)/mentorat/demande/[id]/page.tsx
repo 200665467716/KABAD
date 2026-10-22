@@ -1,16 +1,25 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { seniors } from "@/lib/data";
+import { Suspense } from "react";
+import { getProfile } from "@/server/members";
+import { orNotFound } from "@/server/messaging";
+import { pageUser } from "@/server/page";
 import { RequestForm } from "./RequestForm";
 
 export const metadata: Metadata = { title: "Demande de mentorat" };
 
-export function generateStaticParams() {
-  return seniors().map((m) => ({ id: m.id }));
+async function RequestData({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const user = await pageUser(`/mentorat/demande/${id}`);
+  const mentor = await orNotFound(getProfile(user.id, id));
+  if (!mentor || !mentor.verified || mentor.id === user.id) notFound();
+  return <RequestForm mentor={mentor} />;
 }
 
-export default async function RequestPage({ params }: PageProps<"/mentorat/demande/[id]">) {
-  const { id } = await params;
-  if (!seniors().some((m) => m.id === id)) notFound();
-  return <RequestForm mentorId={id} />;
+export default function RequestPage({ params }: PageProps<"/mentorat/demande/[id]">) {
+  return (
+    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement…</p>}>
+      <RequestData params={params} />
+    </Suspense>
+  );
 }

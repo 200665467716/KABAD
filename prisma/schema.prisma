@@ -1,4 +1,4 @@
-// KABAD data model. Messaging is wired first; mentoring, challenges and tests follow.
+// KABAD data model: members, messaging, mentoring, challenges and their prize pots, community tests.
 
 generator client {
   provider = "prisma-client"
@@ -15,31 +15,66 @@ enum Role {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  role         Role     @default(JUNIOR)
-  city         String   @default("")
-  country      String   @default("")
-  diaspora     Boolean  @default(false)
-  years        Int      @default(0)
-  headline     String   @default("")
-  bio          String   @default("")
-  stack        String[] @default([])
-  createdAt    DateTime @default(now())
+  id               String    @id @default(cuid())
+  email            String    @unique
+  /// Null for accounts created with GitHub only.
+  passwordHash     String?
+  githubId         Int?      @unique
+  githubLogin      String?
+  /// GitHub or LinkedIn profile, required to verify a senior.
+  profileLink      String    @default("")
+  isAdmin          Boolean   @default(false)
+  /// Set by a KABAD admin after checking the GitHub or LinkedIn profile. Only verified seniors mentor and judge.
+  seniorVerifiedAt DateTime?
+  /// Set when the member opens the link sent by e-mail. Until then they read but cannot contact anyone.
+  emailVerifiedAt  DateTime?
+  /// Set by a KABAD admin. A suspended member cannot sign in; their sessions are closed.
+  suspendedAt      DateTime?
+  suspensionReason String?   @db.VarChar(300)
+  /// How many pairs a senior accepts at the same time.
+  mentorCapacity   Int       @default(0)
+  replyTime        String    @default("")
+  name             String
+  role             Role      @default(JUNIOR)
+  city             String    @default("")
+  country          String    @default("")
+  diaspora         Boolean   @default(false)
+  years            Int       @default(0)
+  headline         String    @default("")
+  bio              String    @default("")
+  stack            String[]  @default([])
+  createdAt        DateTime  @default(now())
 
-  sessions            Session[]
-  invitationsSent     Invitation[]         @relation("InvitationFrom")
-  invitationsReceived Invitation[]         @relation("InvitationTo")
-  contacts            Contact[]            @relation("ContactOwner")
-  contactOf           Contact[]            @relation("ContactTarget")
-  memberships         ConversationMember[]
-  messages            Message[]
-  conversationsCreated Conversation[]      @relation("ConversationCreator")
-  blocks              Block[]              @relation("Blocker")
-  blockedBy           Block[]              @relation("Blocked")
-  reports             Report[]
+  sessions             Session[]
+  invitationsSent      Invitation[]         @relation("InvitationFrom")
+  invitationsReceived  Invitation[]         @relation("InvitationTo")
+  contacts             Contact[]            @relation("ContactOwner")
+  contactOf            Contact[]            @relation("ContactTarget")
+  memberships          ConversationMember[]
+  messages             Message[]
+  conversationsCreated Conversation[]       @relation("ConversationCreator")
+  blocks               Block[]              @relation("Blocker")
+  blockedBy            Block[]              @relation("Blocked")
+  reports              Report[]
+  requestsSent         MentorRequest[]      @relation("RequestMentee")
+  requestsReceived     MentorRequest[]      @relation("RequestMentor")
+  pairsAsMentor        Pair[]               @relation("PairMentor")
+  pairsAsMentee        Pair[]               @relation("PairMentee")
+  sessionsNoted        MentoringSession[]
+  capsules             Capsule[]
+  juries               ChallengeJuror[]
+  submissions          Submission[]
+  scores               JuryScore[]
+  payouts              Payout[]
+  testApps             TestApp[]
+  testReports          TestReport[]
+  notifications        Notification[]
+  emailTokens          EmailToken[]
+  adminActions         AdminAction[]        @relation("AdminActor")
+  reportsResolved      Report[]             @relation("ReportResolver")
+  roomsHosted          VoiceRoom[]          @relation("RoomHost")
+  roomSeats            RoomParticipant[]
+  roomInterests        RoomInterest[]
 }
 
 /// The cookie holds a random token; only its SHA-256 is stored.
@@ -140,6 +175,8 @@ model Message {
   /// Sent by the client so that a retried send never creates a duplicate.
   clientId       String?
   createdAt      DateTime     @default(now())
+  /// Hidden by the moderation team: the members see that a message was removed, not its content.
+  hiddenAt       DateTime?
 
   @@unique([authorId, clientId])
   @@index([conversationId, createdAt])
@@ -156,6 +193,7 @@ model Block {
 }
 
 enum ReportTarget {
+  ROOM
   USER
   MESSAGE
   CONVERSATION
@@ -168,15 +206,440 @@ enum ReportStatus {
 }
 
 model Report {
-  id         String       @id @default(cuid())
-  reporterId String
-  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
-  targetType ReportTarget
-  targetId   String
-  reason     String       @db.VarChar(80)
-  details    String?      @db.VarChar(1000)
-  status     ReportStatus @default(OPEN)
-  createdAt  DateTime     @default(now())
+  id           String       @id @default(cuid())
+  reporterId   String
+  reporter     User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  /// The member the report is about, when there is one: lets the team see repeat offenders.
+  targetUserId String?
+  targetType   ReportTarget
+  targetId     String
+  reason       String       @db.VarChar(80)
+  details      String?      @db.VarChar(1000)
+  status       ReportStatus @default(OPEN)
+  createdAt    DateTime     @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+  resolvedBy   User?        @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  /// What the team decided, shown in the moderation history.
+  resolution   String?      @db.VarChar(300)
 
   @@index([status, createdAt])
+  @@index([targetUserId])
+}
+
+/**
+ * Mentoring
+ */
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model MentorRequest {
+  id         String        @id @default(cuid())
+  menteeId   String
+  mentorId   String
+  mentee     User          @relation("RequestMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  mentor     User          @relation("RequestMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  project    String        @db.VarChar(120)
+  situation  String        @db.VarChar(1000)
+  repo       String?       @db.VarChar(200)
+  topics     String[]      @default([])
+  status     RequestStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+  answeredAt DateTime?
+
+  @@index([mentorId, status])
+  @@index([menteeId, status])
+}
+
+/// A senior and a junior working on one real project. No imposed rhythm.
+model Pair {
+  id            String             @id @default(cuid())
+  mentorId      String
+  menteeId      String
+  mentor        User               @relation("PairMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee        User               @relation("PairMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  project       String             @db.VarChar(120)
+  repo          String?            @db.VarChar(200)
+  active        Boolean            @default(true)
+  nextSessionAt DateTime?
+  createdAt     DateTime           @default(now())
+  sessions      MentoringSession[]
+
+  @@unique([mentorId, menteeId])
+  @@index([menteeId])
+}
+
+/// Counts toward cash-prize challenges only once both members confirm it.
+model MentoringSession {
+  id                String   @id @default(cuid())
+  pairId            String
+  pair              Pair     @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  startsAt          DateTime
+  minutes           Int
+  topic             String   @db.VarChar(120)
+  done              String   @db.VarChar(1000)
+  next              String   @db.VarChar(500)
+  notedById         String
+  notedBy           User     @relation(fields: [notedById], references: [id], onDelete: Cascade)
+  confirmedByMentor Boolean  @default(false)
+  confirmedByMentee Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  @@index([pairId, startsAt])
+}
+
+enum CapsuleTheme {
+  BACKEND
+  MOBILE
+  CAREER
+}
+
+/// What a senior learned, readable in under 5 minutes.
+model Capsule {
+  id        String       @id @default(cuid())
+  authorId  String
+  author    User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title     String       @db.VarChar(120)
+  theme     CapsuleTheme
+  tags      String[]     @default([])
+  minutes   Int
+  body      String       @db.VarChar(6000)
+  code      String?      @db.VarChar(2000)
+  reads     Int          @default(0)
+  createdAt DateTime     @default(now())
+
+  @@index([theme, createdAt])
+}
+
+/**
+ * Challenges and prize pots
+ */
+
+enum ChallengeKind {
+  CAGNOTTE
+  SPONSORISE
+  LOT
+}
+
+enum ChallengeStatus {
+  OPEN
+  JURY
+  DONE
+}
+
+model Challenge {
+  id                String          @id
+  title             String          @db.VarChar(120)
+  kind              ChallengeKind
+  status            ChallengeStatus @default(OPEN)
+  level             String          @db.VarChar(20)
+  stack             String          @db.VarChar(60)
+  description       String          @db.VarChar(2000)
+  closesAt          DateTime
+  resultsAt         DateTime?
+  requiresMentoring Boolean         @default(false)
+  /// Physical prize, for LOT challenges.
+  prizeLabel        String?         @db.VarChar(120)
+  sponsorName       String?         @db.VarChar(120)
+  /// Amount committed by the sponsor, in F CFA. Paid contributions add to it.
+  sponsorAmount     Int             @default(0)
+  publishedAt       DateTime?
+  createdAt         DateTime        @default(now())
+
+  jurors        ChallengeJuror[]
+  submissions   Submission[]
+  contributions Contribution[]
+  payouts       Payout[]
+}
+
+model ChallengeJuror {
+  challengeId String
+  userId      String
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([challengeId, userId])
+}
+
+model Submission {
+  id             String      @id @default(cuid())
+  challengeId    String
+  userId         String
+  challenge      Challenge   @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repoUrl        String      @db.VarChar(200)
+  demoUrl        String?     @db.VarChar(200)
+  explanation    String      @db.VarChar(800)
+  payoutOperator String?     @db.VarChar(30)
+  payoutPhone    String?     @db.VarChar(30)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  scores         JuryScore[]
+
+  @@unique([challengeId, userId])
+}
+
+/// Each juror scores each solution on 4 criteria from 1 to 5.
+model JuryScore {
+  submissionId String
+  jurorId      String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  juror        User       @relation(fields: [jurorId], references: [id], onDelete: Cascade)
+  works        Int
+  code         Int
+  tests        Int
+  explain      Int
+  comment      String?    @db.VarChar(1000)
+  createdAt    DateTime   @default(now())
+
+  @@id([submissionId, jurorId])
+}
+
+enum ContributionStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+/// A sponsor's payment. Counted in the pot only once PAID.
+model Contribution {
+  id          String             @id @default(cuid())
+  challengeId String
+  challenge   Challenge          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  amount      Int
+  displayName String             @db.VarChar(80)
+  email       String             @db.VarChar(200)
+  anonymous   Boolean            @default(false)
+  company     Boolean            @default(false)
+  status      ContributionStatus @default(PENDING)
+  createdAt   DateTime           @default(now())
+  paidAt      DateTime?
+
+  @@index([challengeId, status])
+}
+
+enum PayoutRole {
+  WINNER
+  MENTOR
+  PLATFORM
+}
+
+enum PayoutStatus {
+  PENDING
+  SENT
+}
+
+/// The 60/30/10 split of a pot, sent by Mobile Money after the 48 h contest period.
+model Payout {
+  id            String       @id @default(cuid())
+  challengeId   String
+  challenge     Challenge    @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  role          PayoutRole
+  beneficiaryId String?
+  beneficiary   User?        @relation(fields: [beneficiaryId], references: [id], onDelete: SetNull)
+  amount        Int
+  operator      String?      @db.VarChar(30)
+  phone         String?      @db.VarChar(30)
+  reference     String?      @db.VarChar(60)
+  status        PayoutStatus @default(PENDING)
+  createdAt     DateTime     @default(now())
+  sentAt        DateTime?
+
+  @@unique([challengeId, role])
+}
+
+/**
+ * Community tests
+ */
+
+enum Platform {
+  WEB
+  ANDROID
+}
+
+model TestApp {
+  id        String       @id @default(cuid())
+  ownerId   String
+  owner     User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String       @db.VarChar(40)
+  platform  Platform
+  url       String       @db.VarChar(300)
+  minutes   Int
+  slots     Int
+  pitch     String       @db.VarChar(500)
+  task      String       @db.VarChar(200)
+  steps     String[]
+  /// [{ q, options?, answer }]: control questions that prove the tester went through the app.
+  questions Json
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  reports   TestReport[]
+
+  @@index([active, createdAt])
+}
+
+enum TestReportStatus {
+  SUBMITTED
+  VALIDATED
+  REFUSED
+}
+
+model TestReport {
+  id            String           @id @default(cuid())
+  testAppId     String
+  testerId      String
+  testApp       TestApp          @relation(fields: [testAppId], references: [id], onDelete: Cascade)
+  tester        User             @relation(fields: [testerId], references: [id], onDelete: Cascade)
+  device        String           @db.VarChar(40)
+  /// [{ question, answer, correct }]
+  answers       Json
+  remarks       String           @db.VarChar(2000)
+  status        TestReportStatus @default(SUBMITTED)
+  refusalReason String?          @db.VarChar(500)
+  createdAt     DateTime         @default(now())
+  reviewedAt    DateTime?
+  screenshots   Screenshot[]
+
+  @@unique([testAppId, testerId])
+}
+
+/// Kept in PostgreSQL: a few small images per report, readable only by the tester and the app owner.
+model Screenshot {
+  id       String     @id @default(cuid())
+  reportId String
+  report   TestReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  position Int
+  mime     String
+  data     Bytes
+
+  @@unique([reportId, position])
+}
+
+/**
+ * Notifications
+ */
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Short name shown in bold: a member, a group or a challenge.
+  actor     String    @db.VarChar(120)
+  text      String    @db.VarChar(300)
+  href      String    @db.VarChar(200)
+  icon      String    @db.VarChar(20)
+  tone      String    @db.VarChar(20)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// Fixed-window counters shared by every web instance.
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+}
+
+/**
+ * Account e-mails
+ */
+
+enum EmailTokenPurpose {
+  VERIFY
+  RESET_PASSWORD
+}
+
+/// One-time link sent by e-mail. Only the SHA-256 of the token is stored.
+model EmailToken {
+  id        String            @id
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   EmailTokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  @@index([userId, purpose])
+}
+
+/// What the team did, kept for accountability.
+model AdminAction {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     User     @relation("AdminActor", fields: [adminId], references: [id], onDelete: Cascade)
+  action    String   @db.VarChar(40)
+  targetId  String?
+  details   String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/**
+ * Voice rooms: live audio events, like a stage with an audience
+ */
+
+enum RoomStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+}
+
+model VoiceRoom {
+  id           String            @id @default(cuid())
+  title        String            @db.VarChar(100)
+  description  String            @db.VarChar(600)
+  hostId       String
+  host         User              @relation("RoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  status       RoomStatus        @default(SCHEDULED)
+  startsAt     DateTime
+  startedAt    DateTime?
+  endedAt      DateTime?
+  /// Hidden by the moderation team.
+  hiddenAt     DateTime?
+  createdAt    DateTime          @default(now())
+  participants RoomParticipant[]
+  interests    RoomInterest[]
+
+  @@index([status, startsAt])
+}
+
+enum RoomRole {
+  HOST
+  SPEAKER
+  LISTENER
+}
+
+/// Who is (or was) in a room, and with which role. Only HOST and SPEAKER may publish audio.
+model RoomParticipant {
+  roomId       String
+  userId       String
+  room         VoiceRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         RoomRole  @default(LISTENER)
+  handRaisedAt DateTime?
+  /// Removed by the host: cannot come back into this room.
+  removedAt    DateTime?
+  joinedAt     DateTime  @default(now())
+  leftAt       DateTime?
+
+  @@id([roomId, userId])
+  @@index([userId])
+}
+
+/// "Remind me": notified when the room goes live.
+model RoomInterest {
+  roomId    String
+  userId    String
+  room      VoiceRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@id([roomId, userId])
 }

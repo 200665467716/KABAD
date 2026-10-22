@@ -25,6 +25,7 @@ async function signIn(browser: Browser, who: keyof typeof EMAIL): Promise<Page> 
 
 test("la connexion refuse un mauvais mot de passe", async ({ page }) => {
   await page.goto("/connexion");
+  await page.getByLabel("Adresse e-mail").fill(EMAIL.kossi);
   await page.getByLabel("Mot de passe").fill("mauvais-mot-de-passe");
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page.getByText("E-mail ou mot de passe incorrect.")).toBeVisible();
@@ -40,7 +41,7 @@ test("un message arrive chez l’autre membre sans recharger la page", async ({ 
 
   const text = `Merci Moussa, je corrige ce soir (${Date.now()})`;
   await kossi.getByLabel("Votre message").fill(text);
-  await kossi.keyboard.press("Enter");
+  await kossi.getByRole("button", { name: "Envoyer" }).click();
   await expect(thread(kossi).getByText(text)).toBeVisible();
   await expect(thread(moussa).getByText(text)).toBeVisible({ timeout: 10_000 });
 
@@ -87,7 +88,7 @@ test("un groupe privé : le créateur choisit parmi ses contacts, tout le monde 
   await yao.getByRole("link", { name: /Groupe Revue de code/ }).click();
   const text = `Je relis ta PR ce soir (${Date.now()})`;
   await kossi.getByLabel("Message au groupe").fill(text);
-  await kossi.keyboard.press("Enter");
+  await kossi.getByRole("button", { name: "Envoyer" }).click();
   await expect(thread(kossi).getByText(text)).toBeVisible();
   await expect(thread(yao).getByText(text)).toBeVisible({ timeout: 10_000 });
 

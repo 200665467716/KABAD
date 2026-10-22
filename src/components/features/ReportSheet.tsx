@@ -8,13 +8,13 @@ import { Checkbox, RadioCard, TextArea } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
 import { REPORT_REASONS } from "@/lib/schemas";
 
-export type ReportTarget = { type: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION"; id: string };
+export type ReportTarget = { type: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION" | "ROOM"; id: string };
 
 /** Report a member, a message, a conversation or an invitation. A moderator reviews it within 24 h; the reporter stays anonymous. */
 export function ReportSheet({ open, onClose, subject, target, onBlocked }: { open: boolean; onClose: () => void; subject: string; target: ReportTarget; onBlocked?: () => void }) {
   const [reason, setReason] = useState<(typeof REPORT_REASONS)[number] | null>(null);
   const [details, setDetails] = useState("");
-  const [block, setBlock] = useState(true);
+  const [block, setBlock] = useState(false);
   const [state, setState] = useState<"form" | "sending" | "sent">("form");
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +61,7 @@ export function ReportSheet({ open, onClose, subject, target, onBlocked }: { ope
     >
       {state === "sent" ? (
         <Alert tone="success" role="status">
-          Un modérateur l’examine sous 24 h.{block ? " Cette personne ne peut plus vous écrire ni vous inviter." : ""}
+          L’équipe KABAD l’examine.{block ? " Cette personne ne peut plus vous écrire ni vous inviter." : ""}
         </Alert>
       ) : (
         <>

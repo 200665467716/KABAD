@@ -58,7 +58,8 @@ describe("invitations", () => {
 
   it("notifies the recipient through PostgreSQL only after the commit", async () => {
     const { events } = await captureEvents(() => sendInvitation("kossi", { toId: "moussa", message: "x" }, prisma));
-    expect(events).toEqual([expect.objectContaining({ t: "invitation", recipients: ["moussa"] })]);
+    expect(events).toEqual([expect.objectContaining({ t: "invitation", recipients: ["moussa"] }), expect.objectContaining({ t: "notification", recipients: ["moussa"] })]);
+    expect(await prisma.notification.count({ where: { userId: "moussa" } })).toBe(1);
   });
 });
 
