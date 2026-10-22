@@ -27,7 +27,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className={`${inter.variable} ${mono.variable}`}>
-      <body className="min-h-dvh">{children}</body>
+      {/* Some browser extensions add attributes to <body> before React loads; this ignores those attributes only, not the content. */}
+      <body className="min-h-dvh" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }
