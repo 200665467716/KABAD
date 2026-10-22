@@ -4,6 +4,8 @@ export class DomainError extends Error {
     public readonly code: string,
     message: string,
     public readonly status = 400,
+    /** The form field the refusal is about, so the screen can show it next to that field. */
+    public readonly field?: string,
   ) {
     super(message);
     this.name = "DomainError";

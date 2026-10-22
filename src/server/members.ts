@@ -2,7 +2,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { notFound } from "./errors";
-import type { MemberCard, Mentor, MentorStats, Profile } from "@/lib/domain-types";
+import type { MemberCard, Mentor, MentorStats, Profile, Recommendation } from "@/lib/domain-types";
 
 const cardSelect = { id: true, name: true, role: true, city: true, country: true, diaspora: true, years: true, headline: true, bio: true, stack: true, seniorVerifiedAt: true } as const;
 
@@ -52,16 +52,16 @@ export async function getProfile(viewerId: string | null, id: string, prisma: Db
     stats = { pairs: s.pairs, hours: s.hours, judged: s.judged };
     openSlots = Math.max(0, mentorCapacity - s.activePairs);
   }
-  const [isContact, invited] = viewerId
-    ? await Promise.all([
-        prisma.contact.count({ where: { userId: viewerId, contactId: id } }).then(Boolean),
-        prisma.invitation.count({ where: { fromId: viewerId, toId: id, status: "PENDING" } }).then(Boolean),
-      ])
-    : [false, false];
-  return { ...toCard(card), stats, openSlots, replyTime, isContact, invited };
+  const [isContact, invited, conversation, blocked, testsValidated] = await Promise.all([
+    viewerId ? prisma.contact.count({ where: { userId: viewerId, contactId: id } }).then(Boolean) : false,
+    viewerId ? prisma.invitation.count({ where: { fromId: viewerId, toId: id, status: "PENDING" } }).then(Boolean) : false,
+    viewerId ? prisma.conversation.findUnique({ where: { directKey: [viewerId, id].sort().join(":") }, select: { id: true } }) : null,
+    viewerId ? prisma.block.count({ where: { blockerId: viewerId, blockedId: id } }).then(Boolean) : false,
+    prisma.testReport.count({ where: { testerId: id, status: "VALIDATED" } }),
+  ]);
+  return { ...toCard(card), stats, openSlots, replyTime, isContact, invited, conversationId: conversation?.id ?? null, blockedByMe: blocked, testsValidated };
 }
 
-export type Recommendation = MemberCard & { why: string };
 
 /**
  * Members to meet at the end of sign-up: same stack, same city or country, available mentors.
@@ -104,13 +104,16 @@ export async function updateProfile(
   input: { role: "JUNIOR" | "SENIOR"; country: string; city: string; diaspora: boolean; stack: string[]; profileLink: string; headline?: string; bio?: string; years?: number },
   prisma: Db = db,
 ) {
-  const current = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { mentorCapacity: true } });
+  const current = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { mentorCapacity: true, profileLink: true, role: true } });
+  // The senior status was checked against one profile: a new profile, or becoming senior, needs a new check.
+  const recheck = input.role === "SENIOR" && (current.role !== "SENIOR" || current.profileLink !== input.profileLink);
   await prisma.user.update({
     where: { id: userId },
     data: {
       ...input,
       // A new senior starts with one open place.
       mentorCapacity: input.role === "SENIOR" ? Math.max(1, current.mentorCapacity) : 0,
+      ...(recheck || input.role === "JUNIOR" ? { seniorVerifiedAt: null } : {}),
     },
   });
 }

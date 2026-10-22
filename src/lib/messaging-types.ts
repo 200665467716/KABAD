@@ -41,3 +41,5 @@ export type ReceivedInvitation = { id: string; message: string; createdAt: strin
 export type InvitationDetail = ReceivedInvitation & { status: "PENDING" | "ACCEPTED" | "DECLINED"; conversationId: string | null };
 
 export type Contact = { id: string; name: string; city: string; role: "JUNIOR" | "SENIOR"; stack: string[] };
+
+export type SentInvitation = { id: string; toId: string; message: string; createdAt: string; to: { name: string; city: string } };

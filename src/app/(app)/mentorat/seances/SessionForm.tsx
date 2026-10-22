@@ -48,7 +48,8 @@ export function SessionForm({ pairId, project, session, onCancel }: { pairId: st
     }
   }
 
-  const start = session ? new Date(session.startsAt) : new Date(Math.floor(Date.now() / 900_000) * 900_000 - 3600_000);
+  // By default, an hour ago, rounded to the quarter.
+  const [start] = useState(() => (session ? new Date(session.startsAt) : new Date(Math.floor(Date.now() / 900_000) * 900_000 - 3600_000)));
   const fieldError = (f: string) => (error?.field === f ? error.text : undefined);
 
   return (

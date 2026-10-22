@@ -7,8 +7,16 @@ import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type Role } from "../src/generated/prisma/client";
 
-if (process.env.NODE_ENV === "production" && process.env.SEED_FORCE !== "1") {
-  console.error("Seed refusé en production.");
+// Demo data, with public passwords and a team account: only on a database of this machine.
+const seedHost = (() => {
+  try {
+    return new URL(process.env.DATABASE_URL ?? "").hostname;
+  } catch {
+    return "";
+  }
+})();
+if ((process.env.NODE_ENV === "production" || !["127.0.0.1", "localhost", "::1"].includes(seedHost)) && process.env.SEED_FORCE !== "1") {
+  console.error("Seed refusé : il ne tourne que sur une base locale (127.0.0.1 ou localhost), jamais en production.");
   process.exit(1);
 }
 
@@ -48,9 +56,9 @@ async function main() {
   const now = new Date();
   await db.user.createMany({
     data: [
-      ...users.map((u) => ({ ...u, diaspora: u.diaspora ?? false, passwordHash, seniorVerifiedAt: u.role === "SENIOR" ? minutesAgo(60 * 24 * 90) : null })),
+      ...users.map((u) => ({ ...u, diaspora: u.diaspora ?? false, passwordHash, emailVerifiedAt: minutesAgo(60 * 24 * 100), seniorVerifiedAt: u.role === "SENIOR" ? minutesAgo(60 * 24 * 90) : null })),
       // The team account: verifies seniors, closes challenges, publishes results and records transfers.
-      { id: "equipe", email: "equipe@kabad.app", name: "Équipe KABAD", role: "JUNIOR" as Role, city: "Lomé", country: "Togo", passwordHash, isAdmin: true },
+      { id: "equipe", email: "equipe@kabad.app", name: "Équipe KABAD", role: "JUNIOR" as Role, city: "Lomé", country: "Togo", passwordHash, isAdmin: true, emailVerifiedAt: now },
     ],
   });
 

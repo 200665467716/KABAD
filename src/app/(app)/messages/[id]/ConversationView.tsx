@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { MessageBubble, SystemLine } from "@/components/features/Thread";
 import { ReportSheet } from "@/components/features/ReportSheet";
@@ -38,6 +39,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   const [blocked, setBlocked] = useState(false);
   const [report, setReport] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [people, setPeople] = useState(false);
+  const router = useRouter();
   const list = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
   const keepOffset = useRef<number | null>(null);
@@ -77,10 +80,12 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
       const fresh = await api<ConversationDetail>(`/api/conversations/${detail.id}`);
       setDetail(fresh);
       setMessages((cur) => merge(cur, fresh.messages));
-    } catch {
-      // A later event or reconnection retries.
+    } catch (e) {
+      // Removed from the group, or the group was deleted: back to the inbox.
+      if (e instanceof ApiError && e.status === 404) router.replace("/messages");
+      // Otherwise a later event or reconnection retries.
     }
-  }, [detail.id]);
+  }, [detail.id, router]);
 
   useRealtime("conversation:changed", ({ conversationId }) => {
     if (conversationId === detail.id) reload();
@@ -165,6 +170,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
         actions={
           <>
             {group && detail.isOwner && <IconButton icon="userPlus" label="Ajouter des participants" onClick={() => setAdding(true)} />}
+            {group && <IconButton icon="users" label="Participants" onClick={() => setPeople(true)} />}
             <IconButton icon="more" label="Signaler la conversation" onClick={() => setReport(true)} />
           </>
         }
@@ -239,6 +245,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
       </form>
 
       <ReportSheet open={report} onClose={() => setReport(false)} subject="cette conversation" target={{ type: "CONVERSATION", id: detail.id }} onBlocked={() => setBlocked(true)} />
+      {group && <MembersSheet open={people} onClose={() => setPeople(false)} detail={detail} meId={me.id} onChanged={reload} onLeft={() => router.replace("/messages")} />}
       {group && detail.isOwner && <AddMembersSheet open={adding} onClose={() => setAdding(false)} conversationId={detail.id} memberIds={detail.members.map((m) => m.id)} onAdded={reload} />}
     </div>
   );
@@ -311,6 +318,86 @@ function AddMembersSheet({ open, onClose, conversationId, memberIds, onAdded }: 
           })}
         </ul>
       )}
+      {error && (
+        <Alert tone="danger" role="alert">
+          {error}
+        </Alert>
+      )}
+    </Sheet>
+  );
+}
+
+function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open: boolean; onClose: () => void; detail: ConversationDetail; meId: string; onChanged: () => void; onLeft: () => void }) {
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run(key: string, call: () => Promise<unknown>, after: () => void) {
+    setBusy(key);
+    setError(null);
+    try {
+      await call();
+      after();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "L’action n’a pas abouti. Réessayez.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={`Participants (${detail.members.length})`}
+      footer={
+        confirmLeave ? (
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
+            <Button variant="secondary" onClick={() => setConfirmLeave(false)}>
+              Annuler
+            </Button>
+            <Button variant="danger" disabled={busy !== null} onClick={() => run("leave", () => api(`/api/groups/${detail.id}/leave`, { method: "POST" }), onLeft)}>
+              {busy === "leave" ? "Départ…" : "Oui, quitter le groupe"}
+            </Button>
+          </div>
+        ) : (
+          <Button variant="secondary" size="lg" block onClick={() => setConfirmLeave(true)}>
+            Quitter le groupe
+          </Button>
+        )
+      }
+    >
+      {confirmLeave && (
+        <Alert tone="info">
+          Vous ne verrez plus les messages du groupe.{detail.isOwner ? " Le membre le plus ancien deviendra responsable du groupe." : ""}
+        </Alert>
+      )}
+      <ul className="m-0 list-none divide-y divide-line rounded-lg border border-line p-0">
+        {detail.members.map((m) => (
+          <li key={m.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5">
+            <Avatar initials={initials(m.name)} size="sm" />
+            <span className="grid">
+              <Link href={`/profil/${m.id}`} className="text-sm font-bold text-ink no-underline">
+                {m.id === meId ? "Vous" : m.name}
+              </Link>
+              {m.owner && <span className="text-xs text-muted">Responsable du groupe</span>}
+            </span>
+            {detail.isOwner && m.id !== meId ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy !== null}
+                aria-label={`Retirer ${m.name} du groupe`}
+                onClick={() => run(m.id, () => api(`/api/groups/${detail.id}/members/${m.id}`, { method: "DELETE" }), onChanged)}
+              >
+                {busy === m.id ? "…" : "Retirer"}
+              </Button>
+            ) : (
+              <span />
+            )}
+          </li>
+        ))}
+      </ul>
       {error && (
         <Alert tone="danger" role="alert">
           {error}

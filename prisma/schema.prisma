@@ -26,6 +26,11 @@ model User {
   isAdmin          Boolean   @default(false)
   /// Set by a KABAD admin after checking the GitHub or LinkedIn profile. Only verified seniors mentor and judge.
   seniorVerifiedAt DateTime?
+  /// Set when the member opens the link sent by e-mail. Until then they read but cannot contact anyone.
+  emailVerifiedAt  DateTime?
+  /// Set by a KABAD admin. A suspended member cannot sign in; their sessions are closed.
+  suspendedAt      DateTime?
+  suspensionReason String?   @db.VarChar(300)
   /// How many pairs a senior accepts at the same time.
   mentorCapacity   Int       @default(0)
   replyTime        String    @default("")
@@ -64,6 +69,12 @@ model User {
   testApps             TestApp[]
   testReports          TestReport[]
   notifications        Notification[]
+  emailTokens          EmailToken[]
+  adminActions         AdminAction[]        @relation("AdminActor")
+  reportsResolved      Report[]             @relation("ReportResolver")
+  roomsHosted          VoiceRoom[]          @relation("RoomHost")
+  roomSeats            RoomParticipant[]
+  roomInterests        RoomInterest[]
 }
 
 /// The cookie holds a random token; only its SHA-256 is stored.
@@ -164,6 +175,8 @@ model Message {
   /// Sent by the client so that a retried send never creates a duplicate.
   clientId       String?
   createdAt      DateTime     @default(now())
+  /// Hidden by the moderation team: the members see that a message was removed, not its content.
+  hiddenAt       DateTime?
 
   @@unique([authorId, clientId])
   @@index([conversationId, createdAt])
@@ -180,6 +193,7 @@ model Block {
 }
 
 enum ReportTarget {
+  ROOM
   USER
   MESSAGE
   CONVERSATION
@@ -192,17 +206,25 @@ enum ReportStatus {
 }
 
 model Report {
-  id         String       @id @default(cuid())
-  reporterId String
-  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
-  targetType ReportTarget
-  targetId   String
-  reason     String       @db.VarChar(80)
-  details    String?      @db.VarChar(1000)
-  status     ReportStatus @default(OPEN)
-  createdAt  DateTime     @default(now())
+  id           String       @id @default(cuid())
+  reporterId   String
+  reporter     User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  /// The member the report is about, when there is one: lets the team see repeat offenders.
+  targetUserId String?
+  targetType   ReportTarget
+  targetId     String
+  reason       String       @db.VarChar(80)
+  details      String?      @db.VarChar(1000)
+  status       ReportStatus @default(OPEN)
+  createdAt    DateTime     @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+  resolvedBy   User?        @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  /// What the team decided, shown in the moderation history.
+  resolution   String?      @db.VarChar(300)
 
   @@index([status, createdAt])
+  @@index([targetUserId])
 }
 
 /**
@@ -522,4 +544,102 @@ model RateLimit {
   key     String   @id
   count   Int
   resetAt DateTime
+}
+
+/**
+ * Account e-mails
+ */
+
+enum EmailTokenPurpose {
+  VERIFY
+  RESET_PASSWORD
+}
+
+/// One-time link sent by e-mail. Only the SHA-256 of the token is stored.
+model EmailToken {
+  id        String            @id
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   EmailTokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  @@index([userId, purpose])
+}
+
+/// What the team did, kept for accountability.
+model AdminAction {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     User     @relation("AdminActor", fields: [adminId], references: [id], onDelete: Cascade)
+  action    String   @db.VarChar(40)
+  targetId  String?
+  details   String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/**
+ * Voice rooms: live audio events, like a stage with an audience
+ */
+
+enum RoomStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+}
+
+model VoiceRoom {
+  id           String            @id @default(cuid())
+  title        String            @db.VarChar(100)
+  description  String            @db.VarChar(600)
+  hostId       String
+  host         User              @relation("RoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  status       RoomStatus        @default(SCHEDULED)
+  startsAt     DateTime
+  startedAt    DateTime?
+  endedAt      DateTime?
+  /// Hidden by the moderation team.
+  hiddenAt     DateTime?
+  createdAt    DateTime          @default(now())
+  participants RoomParticipant[]
+  interests    RoomInterest[]
+
+  @@index([status, startsAt])
+}
+
+enum RoomRole {
+  HOST
+  SPEAKER
+  LISTENER
+}
+
+/// Who is (or was) in a room, and with which role. Only HOST and SPEAKER may publish audio.
+model RoomParticipant {
+  roomId       String
+  userId       String
+  room         VoiceRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         RoomRole  @default(LISTENER)
+  handRaisedAt DateTime?
+  /// Removed by the host: cannot come back into this room.
+  removedAt    DateTime?
+  joinedAt     DateTime  @default(now())
+  leftAt       DateTime?
+
+  @@id([roomId, userId])
+  @@index([userId])
+}
+
+/// "Remind me": notified when the room goes live.
+model RoomInterest {
+  roomId    String
+  userId    String
+  room      VoiceRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@id([roomId, userId])
 }

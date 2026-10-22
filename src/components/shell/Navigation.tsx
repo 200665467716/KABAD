@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
+import { disconnectRealtime } from "@/lib/realtime-client";
 import { cn } from "@/lib/cn";
 import { initials } from "@/lib/format";
 import { useMe } from "@/lib/use-me";
 import { Avatar } from "../ui/Display";
 import { Icon, type IconName } from "../ui/Icon";
 import { Wordmark } from "../ui/Logo";
+import { hardNavigate } from "@/lib/hard-navigate";
 
 type Item = { href: string; label: string; icon: IconName; match: string[] };
 
@@ -67,7 +69,6 @@ export function BottomNav() {
 
 export function SideNav() {
   const path = usePathname();
-  const router = useRouter();
   const { me } = useMe();
   const unread = me?.unreadMessages ?? 0;
   return (
@@ -102,6 +103,12 @@ export function SideNav() {
             </span>
           ) : null}
         </Link>
+        {me && (
+          <Link href="/compte" className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline", path === "/compte" ? "bg-brand-soft text-brand-text" : "text-muted hover:bg-sunken hover:text-ink")}>
+            <Icon name="user" />
+            Mon compte
+          </Link>
+        )}
         {me?.isAdmin && (
           <Link href="/admin" className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline", path === "/admin" ? "bg-brand-soft text-brand-text" : "text-muted hover:bg-sunken hover:text-ink")}>
             <Icon name="lock" />
@@ -126,8 +133,9 @@ export function SideNav() {
               title="Se déconnecter"
               onClick={async () => {
                 await api("/api/auth/logout", { method: "POST" }).catch(() => {});
-                router.replace("/connexion");
-                router.refresh();
+                disconnectRealtime();
+                // A full page load clears everything the previous member had in memory.
+                hardNavigate("/connexion");
               }}
               className="inline-grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-sunken hover:text-ink"
             >

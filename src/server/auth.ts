@@ -36,22 +36,33 @@ export async function setSessionCookie(token: string, expiresAt: Date) {
   });
 }
 
-export async function userFromToken(token: string | undefined, prisma: Db = db) {
+/** The session behind a cookie token. Expired sessions and suspended members count as signed out. */
+export async function sessionFromToken(token: string | undefined, prisma: Db = db) {
   if (!token) return null;
   const session = await prisma.session.findUnique({ where: { id: hashToken(token) }, include: { user: true } });
-  if (!session || session.expiresAt <= new Date()) return null;
-  return session.user;
+  if (!session || session.expiresAt <= new Date() || session.user.suspendedAt) return null;
+  return session;
 }
 
-/** The signed-in member for this request, or null. Deduplicated within one render. */
-export const getCurrentUser = cache(async () => {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  return userFromToken(token);
-});
+export async function userFromToken(token: string | undefined, prisma: Db = db) {
+  return (await sessionFromToken(token, prisma))?.user ?? null;
+}
+
+/** The signed-in member and their session for this request, or null. Deduplicated within one render. */
+export const getCurrentSession = cache(async () => sessionFromToken((await cookies()).get(SESSION_COOKIE)?.value));
+
+export const getCurrentUser = cache(async () => (await getCurrentSession())?.user ?? null);
 
 export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) throw unauthorized();
+  return user;
+}
+
+/** For actions that reach other members: the e-mail address must be confirmed first. */
+export async function requireVerifiedUser() {
+  const user = await requireUser();
+  if (!user.emailVerifiedAt) throw new DomainError("email_unverified", "Confirmez d’abord votre adresse e-mail : ouvrez le lien que nous vous avons envoyé.", 403);
   return user;
 }
 
@@ -70,5 +81,6 @@ export async function login(email: string, password: string) {
   dummyHash ??= hashPassword("kabad-timing-guard");
   const ok = await verifyPassword(password, user?.passwordHash ?? (await dummyHash));
   if (!user || !ok) throw new DomainError("bad_credentials", "E-mail ou mot de passe incorrect.", 401);
+  if (user.suspendedAt) throw new DomainError("suspended", "Ce compte est suspendu. Écrivez à l’équipe KABAD si vous pensez qu’il s’agit d’une erreur.", 403);
   return user;
 }

@@ -12,7 +12,7 @@ async function InboxData() {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion?suite=/messages");
   const [conversations, invitations] = await Promise.all([listConversations(user.id), listInvitations(user.id)]);
-  return <Inbox me={user.id} initialConversations={conversations} initialInvitations={invitations.received} />;
+  return <Inbox me={user.id} initialConversations={conversations} initialInvitations={invitations.received} initialSent={invitations.sent} />;
 }
 
 function InboxSkeleton() {

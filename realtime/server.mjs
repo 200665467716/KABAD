@@ -34,7 +34,7 @@ const pool = new pg.Pool({ connectionString: DATABASE_URL, max: 4 });
 const http = createServer((req, res) => {
   if (req.url === "/health") {
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ ok: true, sockets: io.engine.clientsCount }));
+    res.end(JSON.stringify({ ok: true }));
     return;
   }
   res.writeHead(404).end();
@@ -49,6 +49,7 @@ io.use(async (socket, next) => {
     const { payload } = await jwtVerify(token, key, { audience: "kabad-realtime", algorithms: ["HS256"] });
     if (!payload.sub) throw new Error("missing subject");
     socket.data.userId = payload.sub;
+    socket.data.expiresAt = (payload.exp ?? 0) * 1000;
     next();
   } catch {
     next(new Error("unauthorized"));
@@ -57,6 +58,10 @@ io.use(async (socket, next) => {
 
 io.on("connection", (socket) => {
   socket.join(`user:${socket.data.userId}`);
+  // When the token expires the socket is closed; the browser reconnects with a new token,
+  // which the web app only issues while the session is still valid.
+  const timer = setTimeout(() => socket.disconnect(true), Math.max(1000, socket.data.expiresAt - Date.now()));
+  socket.on("disconnect", () => clearTimeout(timer));
 });
 
 const rooms = (ids) => ids.map((id) => `user:${id}`);
@@ -93,6 +98,12 @@ async function handle(event) {
       break;
     case "notification":
       io.to(to).emit("notification:new", {});
+      break;
+    case "room":
+      io.to(to).emit("room:changed", { roomId: event.roomId });
+      break;
+    case "revoke":
+      io.in(to).disconnectSockets(true);
       break;
   }
 }

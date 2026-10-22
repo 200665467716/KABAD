@@ -58,13 +58,26 @@ export async function fetchGithubIdentity(config: GithubConfig, code: string, fe
 /** Returns the member to sign in, and whether the account was just created (to finish the profile). */
 export async function signInWithGithub(identity: Awaited<ReturnType<typeof fetchGithubIdentity>>, prisma: Db = db) {
   const byGithub = await prisma.user.findUnique({ where: { githubId: identity.githubId } });
-  if (byGithub) return { user: byGithub, created: false };
-  // A verified GitHub e-mail proves the address: the existing account is linked.
+  if (byGithub) {
+    if (byGithub.suspendedAt) throw new DomainError("suspended", "Ce compte est suspendu.", 403);
+    return { user: byGithub, created: false };
+  }
   const byEmail = await prisma.user.findUnique({ where: { email: identity.email } });
   if (byEmail) {
-    const user = await prisma.user.update({ where: { id: byEmail.id }, data: { githubId: identity.githubId, githubLogin: identity.login, profileLink: byEmail.profileLink || identity.profile } });
+    if (byEmail.suspendedAt) throw new DomainError("suspended", "Ce compte est suspendu.", 403);
+    // GitHub has verified this address: it belongs to the person signing in now.
+    // If our account was never confirmed by e-mail, someone else may have created it with this address:
+    // their password and sessions are removed before linking.
+    const takeover = !byEmail.emailVerifiedAt;
+    const [user] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: byEmail.id },
+        data: { githubId: identity.githubId, githubLogin: identity.login, profileLink: byEmail.profileLink || identity.profile, emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date(), ...(takeover ? { passwordHash: null } : {}) },
+      }),
+      ...(takeover ? [prisma.session.deleteMany({ where: { userId: byEmail.id } })] : []),
+    ]);
     return { user, created: false };
   }
-  const user = await prisma.user.create({ data: { email: identity.email, name: identity.name.slice(0, 80), githubId: identity.githubId, githubLogin: identity.login, profileLink: identity.profile } });
+  const user = await prisma.user.create({ data: { email: identity.email, name: identity.name.slice(0, 80), githubId: identity.githubId, githubLogin: identity.login, profileLink: identity.profile, emailVerifiedAt: new Date() } });
   return { user, created: true };
 }

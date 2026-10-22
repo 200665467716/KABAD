@@ -16,7 +16,7 @@ export class ApiError extends Error {
  * Calls the KABAD API and returns the JSON answer, or throws an ApiError carrying the message to show.
  * A FormData body is sent as multipart (file uploads).
  */
-export async function api<T = unknown>(path: string, init: { method?: "GET" | "POST" | "PUT" | "DELETE"; body?: unknown } = {}): Promise<T> {
+export async function api<T = unknown>(path: string, init: { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; body?: unknown } = {}): Promise<T> {
   const form = init.body instanceof FormData;
   let res: Response;
   try {

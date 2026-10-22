@@ -2,8 +2,8 @@ import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { createSession, setSessionCookie } from "@/server/auth";
 import { fetchGithubIdentity, githubConfig, OAUTH_COOKIE, signInWithGithub } from "@/server/github";
+import { safeNext } from "@/lib/safe-next";
 
-const safeNext = (raw: unknown) => (typeof raw === "string" && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/accueil");
 
 export async function GET(request: Request) {
   await connection();

@@ -7,12 +7,14 @@ import { Sheet } from "@/components/ui/Controls";
 import { Alert, Avatar, Badge, PersonRow } from "@/components/ui/Display";
 import { TextArea } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
-import type { Member } from "@/lib/data";
+import type { MemberCard } from "@/lib/domain-types";
 import { initials } from "@/lib/format";
 import { charactersLeft, checkInvitationMessage, INVITATION_MAX_LENGTH } from "@/lib/invitation";
 
 /** Invite a member with one first message (300 characters at most). The conversation opens once they accept. */
-export function InviteSheet({ target, open, onClose, onSent }: { target: Member | null; open: boolean; onClose: () => void; onSent: (id: string) => void }) {
+export type InviteTarget = Pick<MemberCard, "id" | "name" | "role" | "city"> & Partial<Pick<MemberCard, "diaspora" | "headline" | "years">>;
+
+export function InviteSheet({ target, open, onClose, onSent }: { target: InviteTarget | null; open: boolean; onClose: () => void; onSent: (id: string) => void }) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -52,8 +54,8 @@ export function InviteSheet({ target, open, onClose, onSent }: { target: Member 
       <PersonRow
         avatar={<Avatar initials={initials(target.name)} size="lg" />}
         name={target.name}
-        badge={target.role === "senior" ? <Badge tone="brand">Senior</Badge> : undefined}
-        meta={`${target.city}${target.diaspora ? " · Diaspora" : ""} · ${target.headline}, ${target.years} ans`}
+        badge={target.role === "SENIOR" ? <Badge tone="brand">Senior</Badge> : undefined}
+        meta={[target.city, target.diaspora ? "Diaspora" : "", target.headline, target.years ? `${target.years} an${target.years > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ")}
       />
       <TextArea
         id="invite-message"

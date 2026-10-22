@@ -13,6 +13,8 @@ import { pageUser } from "@/server/page";
 
 export const metadata: Metadata = { title: "Résultats" };
 
+const hasPassed = (iso: string) => new Date(iso).getTime() <= Date.now();
+
 async function ResultsData({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await pageUser(`/defis/${id}/resultats`);
@@ -26,7 +28,7 @@ async function ResultsData({ params }: { params: Promise<{ id: string }> }) {
   const contestEnds = new Date(new Date(published).getTime() + CONTEST_HOURS * 3600_000).toISOString();
   const steps = [
     { label: "Résultats publiés", when: longDate(published), done: true },
-    { label: `Délai de contestation de ${CONTEST_HOURS} h écoulé`, when: longDate(contestEnds), done: Date.now() >= new Date(contestEnds).getTime() },
+    { label: `Délai de contestation de ${CONTEST_HOURS} h écoulé`, when: longDate(contestEnds), done: hasPassed(contestEnds) },
     winnerPayout?.status === "SENT"
       ? { label: `Envoyé sur ${winnerPayout.operator ?? "Mobile Money"} ${winnerPayout.phone ?? ""}`.trim(), when: `${longDate(winnerPayout.sentAt!)} · réf. ${winnerPayout.reference}`, mono: true, done: true }
       : { label: "Envoi sur Mobile Money", when: "En attente", done: false },

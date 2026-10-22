@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { api, ApiError } from "./api";
 import { useRealtime, useRealtimeReconnect } from "./realtime-client";
 
-export type Me = { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string; isAdmin: boolean; unreadMessages: number; unreadNotifications: number };
+export type Me = { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string; isAdmin: boolean; emailVerified: boolean; unreadMessages: number; unreadNotifications: number };
 
 const MeContext = createContext<{ me: Me | null; ready: boolean; refresh: () => void }>({ me: null, ready: false, refresh: () => {} });
 

@@ -195,3 +195,12 @@ export const reviewReportSchema = z.discriminatedUnion("validate", [
   z.object({ validate: z.literal(true) }),
   z.object({ validate: z.literal(false), reason: trimmed(5, 500, "Expliquez pourquoi en quelques mots.", "500 caractères au plus.") }),
 ]);
+
+/* Account */
+
+const newPassword = z.string().min(12, "Le mot de passe doit faire au moins 12 caractères.").max(200);
+export const forgotPasswordSchema = z.object({ email: z.email("Cette adresse e-mail n’est pas valide.").max(200) });
+export const resetPasswordSchema = z.object({ token: z.string().min(20).max(100), password: newPassword });
+export const verifyEmailSchema = z.object({ token: z.string().min(20).max(100) });
+export const changePasswordSchema = z.object({ current: z.string().max(200).default(""), next: newPassword });
+export const deleteAccountSchema = z.object({ password: z.string().max(200).optional(), confirm: z.literal("SUPPRIMER", "Écrivez SUPPRIMER pour confirmer.") });

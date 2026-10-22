@@ -34,7 +34,15 @@ services:
     environment:
       DATABASE_URL: postgresql://kabad:${POSTGRES_PASSWORD}@db:5432/kabad
       REALTIME_SECRET: ${REALTIME_SECRET:?REALTIME_SECRET manquant}
-    ports: ["3000:3000"]
+      APP_URL: ${APP_URL:?APP_URL manquant}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      # Number of reverse proxies in front of the app; the visitor's IP is read from their headers.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+    # Reachable only from this server: the HTTPS reverse proxy (Caddy, Nginx) sits in front.
+    ports: ["127.0.0.1:3000:3000"]
     depends_on:
       migrate: { condition: service_completed_successfully }
 
@@ -46,7 +54,7 @@ services:
       REALTIME_SECRET: ${REALTIME_SECRET}
       REALTIME_ALLOWED_ORIGINS: ${REALTIME_ALLOWED_ORIGINS:?REALTIME_ALLOWED_ORIGINS manquant}
       REALTIME_PORT: 4001
-    ports: ["4001:4001"]
+    ports: ["127.0.0.1:4001:4001"]
     depends_on:
       migrate: { condition: service_completed_successfully }
 

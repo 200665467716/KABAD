@@ -132,6 +132,13 @@ export async function submitSolution(
 
 /* Jury */
 
+/** A juror never scores someone they mentor or mentored: the mentor of the winner receives 30 % of the pot. */
+async function conflicts(prisma: Db | Prisma.TransactionClient, jurorId: string, userIds: string[]) {
+  if (userIds.length === 0) return new Set<string>();
+  const pairs = await prisma.pair.findMany({ where: { OR: [{ mentorId: jurorId, menteeId: { in: userIds } }, { menteeId: jurorId, mentorId: { in: userIds } }] }, select: { mentorId: true, menteeId: true } });
+  return new Set(pairs.map((p) => (p.mentorId === jurorId ? p.menteeId : p.mentorId)));
+}
+
 async function assertJuror(prisma: Db, jurorId: string, challengeId: string) {
   await syncStatuses(prisma);
   const c = await prisma.challenge.findUnique({ where: { id: challengeId }, include: { jurors: { select: { userId: true } } } });
@@ -143,7 +150,10 @@ async function assertJuror(prisma: Db, jurorId: string, challengeId: string) {
 /** The next solution this juror has not scored yet. Solutions are anonymous: no name, no country. */
 export async function nextForJury(jurorId: string, challengeId: string, prisma: Db = db): Promise<JuryItem> {
   const c = await assertJuror(prisma, jurorId, challengeId);
-  const subs = await prisma.submission.findMany({ where: { challengeId }, orderBy: { createdAt: "asc" }, select: { id: true, repoUrl: true, demoUrl: true, explanation: true, scores: { where: { jurorId }, select: { jurorId: true } } } });
+  const all = await prisma.submission.findMany({ where: { challengeId }, orderBy: { createdAt: "asc" }, select: { id: true, userId: true, repoUrl: true, demoUrl: true, explanation: true, scores: { where: { jurorId }, select: { jurorId: true } } } });
+  // Solutions of someone the juror mentors are scored by the other jurors only.
+  const recused = await conflicts(prisma, jurorId, all.map((x) => x.userId));
+  const subs = all.filter((x) => !recused.has(x.userId));
   const scored = subs.filter((s) => s.scores.length > 0).length;
   const index = subs.findIndex((s) => s.scores.length === 0);
   const next = c.status === "JURY" && index >= 0 ? subs[index] : null;
@@ -158,8 +168,9 @@ export async function nextForJury(jurorId: string, challengeId: string, prisma: 
 export async function scoreSubmission(jurorId: string, challengeId: string, input: { submissionId: string; works: number; code: number; tests: number; explain: number; comment?: string }, prisma: Db = db) {
   const c = await assertJuror(prisma, jurorId, challengeId);
   if (c.status !== "JURY") throw new DomainError("not_jury", c.status === "OPEN" ? "Le défi n’est pas encore clôturé." : "Les résultats sont déjà publiés.", 409);
-  const sub = await prisma.submission.findUnique({ where: { id: input.submissionId }, select: { challengeId: true } });
+  const sub = await prisma.submission.findUnique({ where: { id: input.submissionId }, select: { challengeId: true, userId: true } });
   if (!sub || sub.challengeId !== challengeId) throw notFound("Solution introuvable.");
+  if ((await conflicts(prisma, jurorId, [sub.userId])).size) throw forbidden("Vous accompagnez ou avez accompagné l’auteur de cette solution : les autres jurés la notent.");
   const score = { works: input.works, code: input.code, tests: input.tests, explain: input.explain };
   const total = totalScore(score);
   await prisma.juryScore.upsert({
@@ -214,7 +225,12 @@ export async function publishResults(adminId: string, challengeId: string, prism
   if (!c) throw notFound("Défi introuvable.");
   if (c.status !== "JURY") throw new DomainError("not_jury", "Seul un défi en jury peut publier ses résultats.", 409);
   if (c.submissions.length === 0) throw new DomainError("empty", "Aucune solution n’a été soumise.", 409);
-  const missing = c.submissions.filter((s) => s._count.scores < c.jurors.length).length;
+  let missing = 0;
+  for (const sub of c.submissions) {
+    let required = 0;
+    for (const j of c.jurors) if (!(await conflicts(prisma, j.userId, [sub.userId])).size) required += 1;
+    if (sub._count.scores < required) missing += 1;
+  }
   if (missing) throw new DomainError("unscored", `${missing} solution${missing > 1 ? "s n’ont" : " n’a"} pas encore été notée${missing > 1 ? "s" : ""} par tout le jury.`, 409);
 
   const rank = await ranking(challengeId, prisma);
@@ -223,7 +239,9 @@ export async function publishResults(adminId: string, challengeId: string, prism
 
   return prisma.$transaction(async (tx) => {
     const now = new Date();
-    await tx.challenge.update({ where: { id: challengeId }, data: { status: "DONE", publishedAt: now, resultsAt: now } });
+    // Two clicks, or two admins at once: only one publication creates the transfers.
+    const { count } = await tx.challenge.updateMany({ where: { id: challengeId, status: "JURY" }, data: { status: "DONE", publishedAt: now, resultsAt: now } });
+    if (!count) throw new DomainError("already_published", "Les résultats sont déjà publiés.", 409);
     const notes: NotificationInput[] = c.submissions
       .filter((s) => s.userId !== winner.userId)
       .map((s) => ({ userId: s.userId, actor: `Défi « ${c.title} »`, text: " : les résultats sont publiés.", href: `/defis/${challengeId}/resultats`, icon: "trophy", tone: "accent" }));
@@ -257,7 +275,8 @@ export async function markPayoutSent(adminId: string, payoutId: string, referenc
   const contestEnds = (p.challenge.publishedAt?.getTime() ?? Infinity) + CONTEST_HOURS * 3600_000;
   if (Date.now() < contestEnds) throw new DomainError("contest", `Attendez la fin des ${CONTEST_HOURS} h de contestation avant de verser.`, 409);
   return prisma.$transaction(async (tx) => {
-    await tx.payout.update({ where: { id: payoutId }, data: { status: "SENT", reference, sentAt: new Date() } });
+    const { count } = await tx.payout.updateMany({ where: { id: payoutId, status: "PENDING" }, data: { status: "SENT", reference, sentAt: new Date() } });
+    if (!count) throw new DomainError("already_sent", "Ce versement est déjà marqué comme envoyé.", 409);
     if (p.beneficiaryId) {
       await pushNotifications(tx, [{ userId: p.beneficiaryId, actor: "KABAD", text: `a versé ${formatFCFA(p.amount)} sur votre Mobile Money pour le défi « ${p.challenge.title} ».`, href: `/defis/${p.challenge.id}/resultats`, icon: "wallet", tone: "accent" }]);
     }

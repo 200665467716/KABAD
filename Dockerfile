@@ -22,6 +22,7 @@ RUN npx prisma generate && npm run build
 
 # Applies database migrations, then exits. Run before each new version of the web app.
 FROM deps AS migrate
+ENV NODE_ENV=production
 CMD ["npx", "prisma", "migrate", "deploy"]
 
 FROM node:22-alpine AS realtime

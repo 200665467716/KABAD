@@ -15,11 +15,23 @@ export type MemberCard = {
   verified: boolean;
 };
 
+export type Recommendation = MemberCard & { why: string };
+
 export type MentorStats = { pairs: number; hours: number; judged: number };
 
 export type Mentor = MemberCard & { stats: MentorStats; openSlots: number; replyTime: string };
 
-export type Profile = MemberCard & { stats: MentorStats | null; openSlots: number | null; replyTime: string; isContact: boolean; invited: boolean };
+export type Profile = MemberCard & {
+  stats: MentorStats | null;
+  openSlots: number | null;
+  replyTime: string;
+  isContact: boolean;
+  invited: boolean;
+  /** The direct conversation with the viewer, once they are contacts. */
+  conversationId: string | null;
+  blockedByMe: boolean;
+  testsValidated: number;
+};
 
 export type SessionView = {
   id: string;

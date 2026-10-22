@@ -36,7 +36,7 @@ export function route<A extends unknown[]>(handler: (request: Request, ...rest: 
       return await handler(request, ...rest);
     } catch (e) {
       unstable_rethrow(e);
-      if (e instanceof DomainError) return Response.json({ error: e.message, code: e.code }, { status: e.status });
+      if (e instanceof DomainError) return Response.json({ error: e.message, code: e.code, field: e.field }, { status: e.status });
       if (e instanceof ZodError) {
         const first = e.issues[0];
         return Response.json({ error: first?.message ?? "Données invalides.", code: "invalid", field: first?.path.join(".") }, { status: 400 });
@@ -47,4 +47,43 @@ export function route<A extends unknown[]>(handler: (request: Request, ...rest: 
   };
 }
 
-export const clientIp = (request: Request) => request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined;
+/**
+ * The visitor's IP as seen by our own reverse proxy. Each trusted proxy appends the address it received
+ * the request from, so the real client is TRUSTED_PROXY_HOPS entries from the end of X-Forwarded-For;
+ * the entries before it are written by the client and cannot be trusted.
+ */
+export function clientIp(request: Request): string {
+  const hops = Number(process.env.TRUSTED_PROXY_HOPS ?? 1);
+  const list = (request.headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return (hops > 0 ? list[list.length - hops] : undefined) ?? request.headers.get("x-real-ip") ?? "inconnue";
+}
+
+/** Reads at most `max` bytes of the body, whatever Content-Length says: a chunked upload cannot exhaust memory. */
+export async function readLimitedBody(request: Request, max: number): Promise<Uint8Array> {
+  const declared = Number(request.headers.get("content-length") ?? 0);
+  if (declared > max) throw new DomainError("too_big", "L’envoi est trop lourd.", 413);
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel();
+      throw new DomainError("too_big", "L’envoi est trop lourd.", 413);
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(size);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.byteLength;
+  }
+  return out;
+}

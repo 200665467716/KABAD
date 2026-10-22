@@ -6,6 +6,8 @@ import { DomainError } from "./errors";
  * One atomic statement: a new window starts at 1, an open window counts up.
  */
 export async function rateLimit(key: string, max: number, windowMs: number, message: string, prisma: Db = db) {
+  // Now and then, clear expired counters and sessions so the tables stay small.
+  if (Math.random() < 0.01) void purgeRateLimits(prisma).catch(() => {});
   const resetAt = new Date(Date.now() + windowMs);
   const [row] = await prisma.$queryRaw<Array<{ count: number; resetAt: Date }>>`
     INSERT INTO "RateLimit" (key, count, "resetAt") VALUES (${key}, 1, ${resetAt})
@@ -25,5 +27,8 @@ export async function resetRateLimit(key: string, prisma: Db = db) {
 
 /** Expired windows are useless; removed now and then so the table stays small. */
 export async function purgeRateLimits(prisma: Db = db) {
-  await prisma.rateLimit.deleteMany({ where: { resetAt: { lt: new Date() } } });
+  const now = new Date();
+  await prisma.rateLimit.deleteMany({ where: { resetAt: { lt: now } } });
+  await prisma.session.deleteMany({ where: { expiresAt: { lt: now } } });
+  await prisma.emailToken.deleteMany({ where: { expiresAt: { lt: now } } });
 }

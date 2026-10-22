@@ -16,6 +16,12 @@ import { cashChallengeEligibility } from "@/lib/mentoring";
 import type { Eligibility, MentorRequestView, PairView, SessionView } from "@/lib/domain-types";
 
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
+/** A session is noted within two weeks; older ones are no longer believable. */
+export const SESSION_MAX_AGE_DAYS = 14;
+/** At most this much confirmed mentoring per pair and per day. */
+export const DAILY_MINUTES_MAX = 4 * 60;
+/** After a refusal, the same mentor can be asked again only after this delay. */
+export const REQUEST_AGAIN_AFTER_DAYS = 30;
 const directKey = (a: string, b: string) => [a, b].sort().join(":");
 
 const sessionInclude = { notedBy: { select: { id: true, name: true } } } as const;
@@ -74,6 +80,8 @@ export async function requestMentoring(menteeId: string, input: { mentorId: stri
   if (blocked) throw forbidden("Vous ne pouvez pas contacter ce membre.");
   if (pair?.active) throw new DomainError("already_pair", `Vous êtes déjà en binôme avec ${first}.`, 409);
   if (pending) throw new DomainError("already_sent", `Vous avez déjà envoyé une demande à ${first}. Attendez sa réponse.`, 409);
+  const declined = await prisma.mentorRequest.count({ where: { mentorId: mentor.id, menteeId, status: "DECLINED", answeredAt: { gte: new Date(Date.now() - REQUEST_AGAIN_AFTER_DAYS * 86_400_000) } } });
+  if (declined) throw new DomainError("declined", `${first} n’est pas disponible pour vous accompagner en ce moment. Choisissez un autre mentor.`, 409);
   const stats = (await mentorStats([mentor.id], prisma)).get(mentor.id)!;
   if (mentor.mentorCapacity - stats.activePairs <= 0) throw new DomainError("full", `${first} n’a plus de place libre pour le moment.`, 409);
 
@@ -101,6 +109,8 @@ export async function answerRequest(mentorId: string, requestId: string, accept:
   const r = await prisma.mentorRequest.findUnique({ where: { id: requestId }, include: requestInclude });
   if (!r || r.mentorId !== mentorId) throw notFound("Demande introuvable.");
   if (r.status !== "PENDING") throw new DomainError("already_answered", "Vous avez déjà répondu à cette demande.", 409);
+  const blocked = await prisma.block.count({ where: { OR: [{ blockerId: mentorId, blockedId: r.menteeId }, { blockerId: r.menteeId, blockedId: mentorId }] } });
+  if (accept && blocked) throw forbidden("Vous ne pouvez pas accepter cette demande : l’un de vous a bloqué l’autre.");
 
   if (!accept) {
     return prisma.$transaction(async (tx) => {
@@ -118,7 +128,8 @@ export async function answerRequest(mentorId: string, requestId: string, accept:
 
   return prisma.$transaction(async (tx) => {
     const now = new Date();
-    await tx.mentorRequest.update({ where: { id: r.id }, data: { status: "ACCEPTED", answeredAt: now } });
+    const { count } = await tx.mentorRequest.updateMany({ where: { id: r.id, status: "PENDING" }, data: { status: "ACCEPTED", answeredAt: now } });
+    if (!count) throw new DomainError("already_answered", "Vous avez déjà répondu à cette demande.", 409);
     const pair = await tx.pair.upsert({
       where: { mentorId_menteeId: { mentorId, menteeId: r.menteeId } },
       create: { mentorId, menteeId: r.menteeId, project: r.project, repo: r.repo },
@@ -171,11 +182,30 @@ export async function getSession(userId: string, sessionId: string, prisma: Db =
 
 type SessionInput = { startsAt: string; minutes: number; topic: string; done: string; next: string };
 
+/**
+ * A session must fall between the start of the pair and now, within the last two weeks,
+ * and a pair cannot declare more than 4 h on the same day: confirmed time unlocks prize money.
+ */
+async function assertBelievable(prisma: Db, pair: { id: string; createdAt: Date }, startsAt: Date, minutes: number, excludeId?: string) {
+  const now = Date.now();
+  if (Number.isNaN(startsAt.getTime())) throw new DomainError("date", "Indiquez la date et l’heure de la séance.", 400, "startsAt");
+  if (startsAt.getTime() > now + 10 * 60_000) throw new DomainError("future", "Notez une séance une fois qu’elle a eu lieu.", 400, "startsAt");
+  if (startsAt < pair.createdAt) throw new DomainError("before_pair", "Cette date est antérieure au début de votre binôme.", 400, "startsAt");
+  if (startsAt.getTime() < now - SESSION_MAX_AGE_DAYS * 86_400_000) throw new DomainError("too_old", `Une séance se note dans les ${SESSION_MAX_AGE_DAYS} jours qui suivent.`, 400, "startsAt");
+  const dayStart = new Date(startsAt);
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const sameDay = await prisma.mentoringSession.aggregate({
+    where: { pairId: pair.id, startsAt: { gte: dayStart, lt: new Date(dayStart.getTime() + 86_400_000) }, ...(excludeId ? { NOT: { id: excludeId } } : {}) },
+    _sum: { minutes: true },
+  });
+  if ((sameDay._sum.minutes ?? 0) + minutes > DAILY_MINUTES_MAX) throw new DomainError("too_much", "Votre binôme a déjà noté 4 heures ce jour-là.", 400, "minutes");
+}
+
 export async function noteSession(userId: string, input: SessionInput & { pairId: string }, prisma: Db = db) {
   const p = await pairOf(prisma, userId, input.pairId);
   if (!p.active) throw new DomainError("inactive", "Ce binôme est terminé.");
   const startsAt = new Date(input.startsAt);
-  if (startsAt.getTime() > Date.now() + 10 * 60_000) throw new DomainError("future", "Notez une séance une fois qu’elle a eu lieu.");
+  await assertBelievable(prisma, p, startsAt, input.minutes);
   const iAmMentor = p.mentorId === userId;
   const me = iAmMentor ? p.mentor : p.mentee;
   const other = iAmMentor ? p.mentee : p.mentor;
@@ -206,6 +236,7 @@ export async function confirmSession(userId: string, sessionId: string, prisma: 
 export async function correctSession(userId: string, sessionId: string, input: SessionInput, prisma: Db = db) {
   const { session, pair } = await getSession(userId, sessionId, prisma);
   if (session.confirmedByMentor && session.confirmedByMentee) throw new DomainError("locked", "Cette séance est confirmée par vous deux : elle ne peut plus être modifiée.", 409);
+  await assertBelievable(prisma, { id: pair.id, createdAt: new Date(pair.since) }, new Date(input.startsAt), input.minutes, sessionId);
   const iAmMentor = pair.iAm === "MENTOR";
   const other = iAmMentor ? pair.mentee : pair.mentor;
   const me = iAmMentor ? pair.mentor : pair.mentee;
