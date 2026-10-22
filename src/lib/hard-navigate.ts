@@ -5,6 +5,5 @@
  * (sign-in, sign-out, account deleted), so nothing from the previous member stays in memory.
  */
 export function hardNavigate(path: string) {
-  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full reload is the point here
   window.location.assign(path);
 }

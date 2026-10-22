@@ -5,7 +5,7 @@ import { MentoringProgress } from "@/components/features/MentoringProgress";
 import { SessionJournal } from "@/components/features/SessionJournal";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink, IconButton } from "@/components/ui/Button";
-import { Alert, Avatar, AvatarGroup, Card, Overline, SectionHead } from "@/components/ui/Display";
+import { Avatar, AvatarGroup, Card, Overline, SectionHead } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { formatDuration, initials } from "@/lib/format";
 import { longDate } from "@/lib/time";
