@@ -33,6 +33,7 @@ Une tâche cochée a passé lint, typecheck et tests, et est commitée.
 
   À faire en premier : cela simplifie R1, R2 et la CI.
 - [ ] **R1. Image construite par la CI.** Un workflow GitHub Actions construit les images `web`, `realtime` et `migrate`, et les pousse sur GHCR. `compose.yaml` utilise `image:` et n'utilise plus `build:` en production.
+  - *Fait sur `dev/r1-images` : job `images` de `ci.yml` (après `verify`, seulement sur `dev/Emmerson`), étiquettes `main` et SHA, `compose.local.yaml` pour construire en local. À cocher après le premier passage réussi sur `dev/Emmerson`. Ensuite, rendre les paquets GHCR publics ou créer un jeton `read:packages` pour le serveur.*
 - [ ] **R2. Caddy et déploiement.** Ajouter un service Caddy et un `Caddyfile` pour kabad.app, le temps réel en wss et LiveKit. Un workflow de déploiement par SSH lance `docker compose pull && up -d`. Ajouter un healthcheck sur `web`. Le pare-feu n'ouvre que les ports 22, 80 et 443.
 - [ ] **R3. Sauvegardes.** `pg_dump` chaque nuit, copie hors du serveur, conservation 7 jours. Un script de restauration doit être testé.
 - [ ] **R4. Observabilité minimale.**

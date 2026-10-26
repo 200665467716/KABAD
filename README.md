@@ -118,9 +118,13 @@ La CI GitHub Actions (`.github/workflows/ci.yml`) lance tout cela avec PostgreSQ
 
 `compose.yaml` décrit la pile : PostgreSQL, les migrations, l’application et le service temps réel.
 
+- **Images** : la CI construit `kabad-web`, `kabad-realtime` et `kabad-migrate` et les publie sur GitHub Packages (`ghcr.io/200665467716/kabad-*`), seulement après le succès de toutes les vérifications et seulement pour `dev/Emmerson`. Chaque image porte deux étiquettes : `main` et le SHA du commit. Le serveur ne compile jamais (1 vCPU) : `docker compose pull && docker compose up -d`. Pour revenir à une version précédente : `KABAD_TAG=<sha>` dans le `.env` du serveur.
+- **Adresse du temps réel** : elle est fixée à la construction de l’image, et se règle dans la variable de dépôt `NEXT_PUBLIC_REALTIME_URL` (Settings > Secrets and variables > Actions > Variables). Par défaut : `https://rt.kabad.app`.
+- **Accès aux images** : GitHub Packages les crée privées. Soit on les rend publiques (Package settings > Change visibility : le code est déjà sur GitHub), soit le serveur se connecte une fois avec `docker login ghcr.io`, à l’aide d’un jeton GitHub limité à `read:packages`.
+- **Construire en local** : `docker compose -f compose.yaml -f compose.local.yaml up -d --build`.
+
 - Les secrets (`POSTGRES_PASSWORD`, `REALTIME_SECRET`, `SMTP_URL`) vont dans un `.env` **sur le serveur**, jamais dans le dépôt.
 - Les ports 3000 et 4001 n’écoutent que sur la machine : un reverse proxy HTTPS (Caddy ou Nginx) est placé devant.
-- `NEXT_PUBLIC_REALTIME_URL` (adresse publique en `https://`) est fixée à la construction de l’image web.
 
 ### Salons vocaux
 

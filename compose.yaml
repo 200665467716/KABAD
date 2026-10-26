@@ -1,6 +1,9 @@
 # Full KABAD stack on one server: PostgreSQL, migrations, web app, realtime service.
 # Secrets come from a .env file next to this one (never committed): see .env.example.
-#   docker compose up -d --build
+# The images are built by GitHub Actions and pulled here: the server never compiles (1 vCPU).
+#   docker compose pull && docker compose up -d
+# KABAD_TAG picks the version: "main" (last commit on dev/Emmerson) or a commit SHA, to roll back.
+# To build on your own computer instead: docker compose -f compose.yaml -f compose.local.yaml up -d --build
 services:
   db:
     image: postgres:16-alpine
@@ -17,7 +20,7 @@ services:
       retries: 10
 
   migrate:
-    build: { context: ., target: migrate }
+    image: ${KABAD_REGISTRY:-ghcr.io/200665467716}/kabad-migrate:${KABAD_TAG:-main}
     environment:
       DATABASE_URL: postgresql://kabad:${POSTGRES_PASSWORD}@db:5432/kabad
     depends_on:
@@ -25,14 +28,8 @@ services:
     restart: "no"
 
   web:
-    build:
-      context: .
-      target: web
-      args:
-        NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:?NEXT_PUBLIC_REALTIME_URL manquant}
-        # Voice rooms: off unless NEXT_PUBLIC_SALONS=on (then start with --profile salons).
-        NEXT_PUBLIC_SALONS: ${NEXT_PUBLIC_SALONS:-off}
-        NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-}
+    # NEXT_PUBLIC_* values (realtime URL, voice rooms switch) are fixed when the image is built.
+    image: ${KABAD_REGISTRY:-ghcr.io/200665467716}/kabad-web:${KABAD_TAG:-main}
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://kabad:${POSTGRES_PASSWORD}@db:5432/kabad
@@ -53,7 +50,7 @@ services:
       migrate: { condition: service_completed_successfully }
 
   realtime:
-    build: { context: ., target: realtime }
+    image: ${KABAD_REGISTRY:-ghcr.io/200665467716}/kabad-realtime:${KABAD_TAG:-main}
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://kabad:${POSTGRES_PASSWORD}@db:5432/kabad
@@ -73,7 +70,7 @@ services:
     restart: unless-stopped
     command: ["--bind", "0.0.0.0"]
     environment:
-      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-}: ${LIVEKIT_API_SECRET:-}"
       LIVEKIT_CONFIG: |
         port: 7880
         rtc:

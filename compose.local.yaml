@@ -1,0 +1,16 @@
+# Builds the images on this computer instead of pulling them (never on the 1 vCPU server):
+#   docker compose -f compose.yaml -f compose.local.yaml up -d --build
+services:
+  migrate:
+    build: { context: ., target: migrate }
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:?NEXT_PUBLIC_REALTIME_URL manquant}
+        # Voice rooms: off unless NEXT_PUBLIC_SALONS=on (then start with --profile salons).
+        NEXT_PUBLIC_SALONS: ${NEXT_PUBLIC_SALONS:-off}
+        NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-}
+  realtime:
+    build: { context: ., target: realtime }
