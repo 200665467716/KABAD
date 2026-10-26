@@ -2,7 +2,7 @@
 
 # KABAD — consignes pour Claude Code
 
-KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora : mentorat, défis de code, tests communautaires, messagerie (et salons vocaux). C'est le projet de l'équipe pour la **CADEV 2026** (Coupe d'Afrique des Développeurs, Systalink).
+KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora : mentorat, défis de code, tests communautaires, messagerie. Les salons vocaux (LiveKit) sont retirés pour la CADEV (décision D3). C'est le projet de l'équipe pour la **CADEV 2026** (Coupe d'Afrique des Développeurs, Systalink).
 
 - **Thème officiel** : « Construire la plateforme d'échange africaine, pour les devs, par les devs. »
 - **Date limite de soumission : 15 novembre 2026, 17h00 GMT.** Rien n'est accepté après.
@@ -21,7 +21,9 @@ KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora
 
 - **Next.js 16** (App Router, Cache Components), React 19, TypeScript strict, Tailwind CSS 4. Cette version de Next.js diffère de ce que tu connais : lire `node_modules/next/dist/docs/` avant d'utiliser une API Next.js (voir `AGENTS.md`).
 - **Données** : PostgreSQL 16 + Prisma 7 (`prisma/schema.prisma`). Toute modification du schéma passe par une migration (`npm run db:migrate -- --name <nom>`), jamais par `db push`.
-- **Temps réel** : `realtime/server.mjs` (Socket.IO alimenté par `pg_notify`). Salons vocaux : LiveKit.
+- **Temps réel** : `realtime/server.mjs` (Socket.IO alimenté par `pg_notify`).
+- **Paiement** : XedoPay en sandbox (décision D2) ; utiliser le skill `xedopay-integration`.
+- **Langues** : FR par défaut, EN partiel via next-intl (décision D1). Tout nouveau texte d'interface passe par les dictionnaires dès que R30 est livré.
 - **Organisation** :
   - `src/server/*.ts` porte les règles métier, vérifiées côté serveur ;
   - `src/app/api/**` contient des routes fines qui valident l'entrée (Zod, `src/lib/schemas.ts`) puis appellent `src/server` ;
@@ -39,7 +41,7 @@ KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora
 | `npm run db:migrate` / `npm run db:seed` | Migrations / données de démonstration (mot de passe `kabad-demo-2026`) |
 | `npm run lint` · `npm run typecheck` · `npm test` | Vérifications rapides : à lancer avant chaque commit |
 | `npm run test:integration` | Règles sur une vraie base (`DATABASE_URL_TEST`, vidée par les tests) |
-| `npm run test:e2e` | Parcours Playwright (nécessite LiveKit pour les salons) |
+| `npm run test:e2e` | Parcours Playwright |
 | `npm run licenses` | Échoue si une licence GPL/AGPL/LGPL est présente |
 
 Poste local : Node 22 est attendu (la CI l'utilise). PostgreSQL n'est pas installé sur la machine : le lancer avec Docker, par exemple `docker run -d --name kabad-pg -e POSTGRES_USER=kabad -e POSTGRES_PASSWORD=kabad -e POSTGRES_DB=kabad -p 5432:5432 postgres:16-alpine`, puis créer `kabad_test`.

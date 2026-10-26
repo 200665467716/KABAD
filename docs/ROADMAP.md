@@ -10,18 +10,30 @@ Ordre de priorité, guidé par la grille du jury :
 
 Une tâche cochée a passé lint, typecheck et tests, et est commitée.
 
-## Décisions à prendre par l'équipe (avant le 28 octobre)
+## Décisions de l'équipe (tranchées le 26 octobre 2026)
 
-- [ ] **D1. Interface anglaise.** Le cahier promet FR + EN, or toutes les chaînes sont en dur en français. Le retrofit coûte environ 2 à 3 jours. Proposition : le faire en P1 (R30) avec next-intl, sur les pages publiques et le parcours de démo d'abord.
-- [ ] **D2. Agrégateur de paiement en sandbox** : FeexPay ou XedoPay (des skills d'intégration existent pour les deux). Sans choix, R40 reste bloquée et la cagnotte reste en « bientôt ».
-- [ ] **D3. Salons vocaux LiveKit.** Ils sont hors cahier, gourmands sur 1 vCPU, et ouvrent 10 001 ports UDP. Proposition : les garder (c'est un plus pour l'innovation), mais avec une plage UDP réduite et un drapeau pour les couper.
-- [ ] **D4. Écarts volontaires du code.** Le code impose 7 j d'expiration au lieu de 72 h, 90 j de délai après un refus au lieu de 30, une capacité de 0 à 5 au lieu de 1 à 3, des défis créés par un admin, et laisse les 30 % au gagnant s'il n'a pas de mentor. Proposition : s'aligner sur le cahier, sauf sur le dernier point, à trancher.
-- [ ] **D5. Serveur.** Prendre 4 Go de RAM (2 Go sont trop justes avec LiveKit) et acheter le produit Datacloud avec le code de -40 %.
+- [x] **D1. Interface anglaise : partielle.** next-intl avec des dictionnaires `fr` et `en`. On traduit d'abord les pages publiques, l'inscription et le parcours de démo, puis le reste si le temps le permet (R30).
+- [x] **D2. Paiement : XedoPay en sandbox** (skill `xedopay-integration`) : mobile money et carte, checkout hébergé, webhooks signés (R40).
+- [x] **D3. Salons vocaux : retirés pour la CADEV.** On masque la fonction et on retire LiveKit de `compose.yaml`, de la CI et des e2e (R9). Le code reste dans l'historique git pour une V2.
+- [x] **D4. Écarts : alignement sur le cahier.**
+  - Demande de mentorat : relance à 48 h, réaffectation à 72 h (R5).
+  - Délai après un refus d'invitation : 30 j (R23).
+  - Capacité du mentor : 1 à 3 (R12).
+  - Défis créés par un senior et validés par un modérateur (R15).
+  - Exception conservée : **sans mentor, le gagnant garde les 30 %** (règle à écrire dans les conditions et le README).
+- [x] **D5. Serveur : 4 Go de RAM**, Systalink Dakar 1, acheté avec le code promo de -40 %. C'est le produit Datacloud de la condition de recevabilité.
 
 ## P0 — Recevable, en ligne, stable (objectif : 2 novembre)
 
+- [ ] **R9. Retrait des salons vocaux (D3).**
+  - Masquer `/salons` (navigation, routes, API `rooms`).
+  - Retirer le service `livekit` de `compose.yaml`, ainsi que LiveKit de la CI, de `playwright.config.ts`, des e2e et du README.
+  - Retirer `livekit-client` des dépendances.
+  - Laisser les tables en base, sans migration destructive.
+
+  À faire en premier : cela simplifie R1, R2 et la CI.
 - [ ] **R1. Image construite par la CI.** Un workflow GitHub Actions construit les images `web`, `realtime` et `migrate`, et les pousse sur GHCR. `compose.yaml` utilise `image:` et n'utilise plus `build:` en production.
-- [ ] **R2. Caddy et déploiement.** Ajouter un service Caddy et un `Caddyfile` pour kabad.app, le temps réel en wss et LiveKit. Un workflow de déploiement par SSH lance `docker compose pull && up -d`. Ajouter un healthcheck sur `web` et réduire la plage UDP de LiveKit (D3).
+- [ ] **R2. Caddy et déploiement.** Ajouter un service Caddy et un `Caddyfile` pour kabad.app, le temps réel en wss et LiveKit. Un workflow de déploiement par SSH lance `docker compose pull && up -d`. Ajouter un healthcheck sur `web`. Le pare-feu n'ouvre que les ports 22, 80 et 443.
 - [ ] **R3. Sauvegardes.** `pg_dump` chaque nuit, copie hors du serveur, conservation 7 jours. Un script de restauration doit être testé.
 - [ ] **R4. Observabilité minimale.**
   - Journaux structurés et `instrumentation.ts` (`onRequestError`).
@@ -78,12 +90,12 @@ Une tâche cochée a passé lint, typecheck et tests, et est commitée.
 - [ ] **R23. Règles d'invitation.** Délai de 30 j après un refus, expiration à 30 j (via R5). 5 à 10 recommandations, aussi dans l'espace Conversations (F4.1).
 
 ### Langue
-- [ ] **R30. Interface EN (si D1 = oui).** next-intl, avec dictionnaires `fr` et `en`, et un sélecteur de langue. Traduire d'abord les pages publiques, l'inscription et le parcours de démo.
+- [ ] **R30. Interface EN partielle (D1).** next-intl, avec dictionnaires `fr` et `en`, sélecteur de langue et langue mémorisée sur le profil. Périmètre minimal : pages publiques, inscription et connexion, accueil, parcours de démo. Messages d'erreur serveur à traduire par clé.
 
 ## P2 — Les « Should » (si le temps le permet)
 
 - [ ] **R40. Cagnotte en sandbox (F2.6, F2.7, F2.9).**
-  - Agrégateur choisi en D2, avec webhook signé et idempotent.
+  - XedoPay en sandbox (D2, skill `xedopay-integration`), avec webhook signé `X-Xedopay-Signature` et idempotent (une référence de paiement n'est créditée qu'une fois).
   - Registre comptable et séquestre.
   - Remboursement si le défi est annulé.
   - Contribution sans compte depuis `/soutenir/[id]`.
