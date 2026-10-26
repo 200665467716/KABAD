@@ -30,7 +30,9 @@ services:
       target: web
       args:
         NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:?NEXT_PUBLIC_REALTIME_URL manquant}
-        NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:?NEXT_PUBLIC_LIVEKIT_URL manquant}
+        # Voice rooms: off unless NEXT_PUBLIC_SALONS=on (then start with --profile salons).
+        NEXT_PUBLIC_SALONS: ${NEXT_PUBLIC_SALONS:-off}
+        NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-}
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://kabad:${POSTGRES_PASSWORD}@db:5432/kabad
@@ -43,8 +45,8 @@ services:
       # Number of reverse proxies in front of the app; the visitor's IP is read from their headers.
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
       LIVEKIT_URL: http://livekit:7880
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?LIVEKIT_API_KEY manquant}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?LIVEKIT_API_SECRET manquant}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
     # Reachable only from this server: the HTTPS reverse proxy (Caddy, Nginx) sits in front.
     ports: ["127.0.0.1:3000:3000"]
     depends_on:
@@ -62,9 +64,11 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
 
-  # Audio of the voice rooms. UDP 50000-60000 carries the sound (WebRTC); 7881 is the TCP fallback.
+  # Audio of the voice rooms, switched off for the CADEV: started only with `docker compose --profile salons up`.
+  # UDP 50000-60000 carries the sound (WebRTC); 7881 is the TCP fallback.
   # Put wss:// in front of 7880 with the reverse proxy (NEXT_PUBLIC_LIVEKIT_URL).
   livekit:
+    profiles: ["salons"]
     image: livekit/livekit-server:v1.13.10
     restart: unless-stopped
     command: ["--bind", "0.0.0.0"]

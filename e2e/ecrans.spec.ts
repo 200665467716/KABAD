@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { salonsEnabled } from "../src/lib/features";
 
 /* Every screen loads without error and without horizontal scrolling, on phone and on computer. */
 const PUBLIC = ["/", "/inscription", "/connexion", "/mot-de-passe-oublie", "/soutenir/api-mobile-money"];
@@ -26,9 +27,7 @@ const SIGNED_IN = [
   "/tests/marche-vert",
   "/tests/sante-direct/rapport",
   "/tests/nouveau",
-  "/salons",
-  "/salons/salon-entretiens",
-  "/salons/nouveau",
+  ...(salonsEnabled ? ["/salons", "/salons/salon-entretiens", "/salons/nouveau"] : []),
   "/messages",
   "/messages?onglet=invitations",
   "/messages/groupes/nouveau",
@@ -62,5 +61,14 @@ test.describe("écrans du membre connecté", () => {
   test("les pages de l’équipe n’existent pas pour un membre", async ({ page }) => {
     await page.goto("/admin");
     await expect(page.getByRole("heading", { name: "Page introuvable" })).toBeVisible();
+  });
+
+  test("les salons vocaux désactivés n’apparaissent nulle part", async ({ page, request }) => {
+    test.skip(salonsEnabled, "Salons vocaux activés (NEXT_PUBLIC_SALONS=on).");
+    await page.goto("/salons");
+    await expect(page.getByRole("heading", { name: "Page introuvable" })).toBeVisible();
+    await page.goto("/accueil");
+    await expect(page.getByRole("link", { name: /Salons vocaux/ })).toHaveCount(0);
+    expect((await request.get("/api/rooms")).status()).toBe(404);
   });
 });

@@ -17,6 +17,7 @@ import { listConversations, listInvitations } from "@/server/messaging";
 import { unreadNotifications } from "@/server/notifications";
 import { pageUser } from "@/server/page";
 import { listRooms } from "@/server/rooms";
+import { salonsEnabled } from "@/lib/features";
 
 export const metadata: Metadata = { title: "Accueil" };
 
@@ -47,7 +48,7 @@ async function HomeData() {
     listConversations(user.id),
     unreadNotifications(user.id),
     db.submission.findMany({ where: { userId: user.id }, select: { challengeId: true } }),
-    listRooms(user.id),
+    salonsEnabled ? listRooms(user.id) : null,
   ]);
   const first = user.name.split(" ")[0];
   const pair = pairs.find((p) => p.iAm === "MENTEE") ?? pairs[0] ?? null;
@@ -191,10 +192,10 @@ async function HomeData() {
                 }
               />
             ))}
-            {rooms.live.slice(0, 2).map((r) => (
+            {rooms?.live.slice(0, 2).map((r) => (
               <TodoRow key={r.id} href={`/salons/${r.id}`} avatar={<Avatar initials={<Icon name="radio" size={16} />} size="sm" tone="accent" />} title={`En direct : ${r.title}`} text={`Salon vocal de ${r.host.name} · ${r.listeners} présent${r.listeners > 1 ? "s" : ""}`} />
             ))}
-            {rooms.live.length === 0 && rooms.upcoming[0] && (
+            {rooms && rooms.live.length === 0 && rooms.upcoming[0] && (
               <TodoRow href={`/salons/${rooms.upcoming[0].id}`} avatar={<Avatar initials={<Icon name="radio" size={16} />} size="sm" tone="neutral" />} title={`Salon vocal : ${rooms.upcoming[0].title}`} text={`${sessionWhen(rooms.upcoming[0].startsAt)} · avec ${rooms.upcoming[0].host.name}`} />
             )}
             <TodoRow href="/membres" avatar={<Avatar initials={<Icon name="userPlus" size={16} />} size="sm" tone="neutral" />} title="Rencontrer des développeurs" text="Cherchez par technologie, ville ou pays, et invitez" />

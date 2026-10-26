@@ -35,12 +35,9 @@ jobs:
       NEXT_PUBLIC_REALTIME_URL: http://127.0.0.1:4001
       APP_URL: http://127.0.0.1:3100
       TRUSTED_PROXY_HOPS: 0
-      # LiveKit started in development mode for the voice room tests (keys devkey / secret).
-      LIVEKIT_URL: http://127.0.0.1:7880
-      NEXT_PUBLIC_LIVEKIT_URL: ws://127.0.0.1:7880
-      LIVEKIT_API_KEY: devkey
-      LIVEKIT_API_SECRET: secret
-      LIVEKIT_BIN: ${{ github.workspace }}/.livekit/livekit-server
+      # Voice rooms are switched off for the CADEV: no LiveKit server here. To test them again,
+      # set NEXT_PUBLIC_SALONS=on, the LIVEKIT_* values and download livekit-server (see git history).
+      NEXT_PUBLIC_SALONS: "off"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -60,13 +57,7 @@ jobs:
       - run: npm run build
       - name: Navigateur pour les tests de parcours
         run: npx playwright install --with-deps chromium
-      - name: Serveur audio LiveKit pour les salons vocaux (Apache-2.0)
-        run: |
-          mkdir -p .livekit
-          curl -sSL -o .livekit/lk.tgz https://github.com/livekit/livekit/releases/download/v1.13.10/livekit_1.13.10_linux_amd64.tar.gz
-          echo "c25a3e45fb922e9a93c6443d10c0ed041ba64342097e38632331736630283165  .livekit/lk.tgz" | sha256sum -c -
-          tar -xzf .livekit/lk.tgz -C .livekit
-      - name: Tests de parcours (écrans, parcours, messagerie en temps réel, salons vocaux)
+      - name: Tests de parcours (écrans, parcours, messagerie en temps réel)
         run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()

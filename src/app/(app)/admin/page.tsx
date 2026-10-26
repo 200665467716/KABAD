@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { Card } from "@/components/ui/Display";
 import { formatFCFA, formatNumber } from "@/lib/format";
+import { salonsEnabled } from "@/lib/features";
 import { dashboard } from "@/server/admin";
 import { adminUser } from "@/server/admin-page";
 import { AdminNav } from "./AdminNav";
@@ -56,7 +57,7 @@ async function DashboardData() {
           <Tile label="binômes actifs" value={d.activePairs} />
           <Tile label="heures de mentorat confirmées" value={d.confirmedHours} />
           <Tile label="défis ouverts" value={d.openChallenges} />
-          <Tile label="salons en direct" value={d.liveRooms} />
+          {salonsEnabled && <Tile label="salons en direct" value={d.liveRooms} />}
           <Tile label="comptes suspendus" value={d.suspended} href="/admin/membres?filtre=suspendus" />
         </div>
       </section>

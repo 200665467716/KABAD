@@ -1,9 +1,9 @@
 # KABAD
 
-La communauté des développeurs d’Afrique et de la diaspora : mentorat sur projet concret, défis de code, tests communautaires, messagerie et salons vocaux.
+La communauté des développeurs d’Afrique et de la diaspora : mentorat sur projet concret, défis de code, tests communautaires, messagerie. Les salons vocaux existent mais sont **désactivés pour la CADEV** (voir « Salons vocaux » plus bas).
 Projet de l’équipe KABAD pour la Coupe d’Afrique des Développeurs (CADEV) de Systalink.
 
-Tout fonctionne sur de vraies données : comptes, mentorat, défis et jury, cagnottes et versements, tests communautaires, messagerie en temps réel, salons vocaux, modération et tableau de bord de l’équipe. Seul le **paiement en ligne des contributions** n’est pas branché : le prestataire reste à choisir.
+Tout fonctionne sur de vraies données : comptes, mentorat, défis et jury, cagnottes et versements, tests communautaires, messagerie en temps réel, modération et tableau de bord de l’équipe. Seul le **paiement en ligne des contributions** n’est pas encore branché : ce sera XedoPay, en mode test.
 
 ## Lancer KABAD sur son ordinateur
 
@@ -47,17 +47,12 @@ npm run db:seed
 
 ### 5. Démarrer les services
 
-Ouvrez trois terminaux :
+Ouvrez deux terminaux :
 
 | Terminal | Commande | Rôle |
 | --- | --- | --- |
 | 1 | `npm run realtime` | Messages et notifications en direct (port 4001) |
-| 2 | `livekit-server --dev` | Audio des salons vocaux (port 7880) |
-| 3 | `npm run dev` | L’application : http://localhost:3000 |
-
-**LiveKit** : téléchargez `livekit-server` (version 1.13.10) depuis https://github.com/livekit/livekit/releases, ou lancez-le avec Docker :
-`docker run --rm -p 7880:7880 -p 7881:7881 -p 7882:7882/udp livekit/livekit-server:v1.13.10 --dev --bind 0.0.0.0`.
-Sans LiveKit, tout fonctionne sauf l’audio des salons.
+| 2 | `npm run dev` | L’application : http://localhost:3000 |
 
 ### 6. Se connecter
 
@@ -75,7 +70,7 @@ Mot de passe **`kabad-demo-2026`** pour tous les comptes :
 | Ibrahim Kaboré, senior | `ibrahim.kabore@exemple.bf` | Mentor complet |
 | **Équipe KABAD** | `equipe@kabad.app` | **Tableau de bord** `/admin` : signalements, membres, défis, versements, journal |
 
-Ouvrez deux navigateurs (ou une fenêtre privée) avec deux comptes pour voir les messages et les salons vocaux en direct.
+Ouvrez deux navigateurs (ou une fenêtre privée) avec deux comptes pour voir les messages en direct.
 
 **E-mails** : en local, les e-mails (confirmation d’adresse, mot de passe oublié) s’affichent dans le terminal de `npm run dev`. En production, renseignez `SMTP_URL`.
 
@@ -93,7 +88,7 @@ Ouvrez deux navigateurs (ou une fenêtre privée) avec deux comptes pour voir le
 - **Mentorat** : demande à un senior vérifié, binôme, séances notées et confirmées à deux, prochaine séance, fin de binôme. Les défis à cagnotte demandent 6 h confirmées.
 - **Défis** : soumission, jury anonyme de trois seniors (un juré ne note jamais son propre mentoré), résultats, partage 60/30/10 et versements après 48 h de contestation.
 - **Tests communautaires** : publier son app avec un scénario et des questions de contrôle ; rapports avec captures, validés ou refusés par le porteur.
-- **Salons vocaux** : salons en direct ou programmés, avec scène et auditoire ; lever la main ; l’hôte fait monter sur scène, renvoie dans l’auditoire ou retire. Seuls l’hôte et les intervenants peuvent parler, et c’est le serveur audio qui l’impose.
+- **Salons vocaux** (désactivés, voir plus bas) : salons en direct ou programmés, avec scène et auditoire ; lever la main ; l’hôte fait monter sur scène, renvoie dans l’auditoire ou retire. Seuls l’hôte et les intervenants peuvent parler, et c’est le serveur audio qui l’impose.
 - **Modération** : signalements traités par l’équipe (classer, retirer un message, fermer un salon, avertir, suspendre), vérification des seniors, journal de toutes les actions.
 
 ## Sécurité
@@ -114,26 +109,35 @@ Ouvrez deux navigateurs (ou une fenêtre privée) avec deux comptes pour voir le
 | `npm run typecheck` | Types des routes et TypeScript strict |
 | `npm test` | Tests unitaires des règles métier |
 | `npm run test:integration` | Règles et failles corrigées, sur une vraie base PostgreSQL (`DATABASE_URL_TEST`, vidée par les tests) |
-| `npm run test:e2e` | Playwright : chaque écran sur téléphone et ordinateur, les parcours, la messagerie en temps réel, les salons vocaux avec un vrai serveur audio. Il faut `LIVEKIT_BIN` (chemin de `livekit-server`), ou `livekit-server` dans le `PATH`. |
+| `npm run test:e2e` | Playwright : chaque écran sur téléphone et ordinateur, les parcours, la messagerie en temps réel (et les salons vocaux s’ils sont activés : il faut alors `LIVEKIT_BIN`, chemin de `livekit-server`). |
 | `npm run licenses` | Échoue si une dépendance est sous GPL, AGPL ou LGPL |
 
-La CI GitHub Actions (`.github/workflows/ci.yml`) lance tout cela avec PostgreSQL et LiveKit, à chaque push sur `main` et `dev/**`, et à chaque pull request.
+La CI GitHub Actions (`.github/workflows/ci.yml`) lance tout cela avec PostgreSQL, à chaque push sur `main` et `dev/**`, et à chaque pull request.
 
 ## Mise en production
 
-`compose.yaml` décrit la pile : PostgreSQL, les migrations, l’application, le service temps réel et LiveKit.
+`compose.yaml` décrit la pile : PostgreSQL, les migrations, l’application et le service temps réel.
 
-- Les secrets (`POSTGRES_PASSWORD`, `REALTIME_SECRET`, `LIVEKIT_API_SECRET`, `SMTP_URL`) vont dans un `.env` **sur le serveur**, jamais dans le dépôt.
-- Les ports 3000, 4001 et 7880 n’écoutent que sur la machine : un reverse proxy HTTPS (Caddy ou Nginx) est placé devant.
-- LiveKit a aussi besoin du port TCP 7881 et des ports UDP 50000 à 60000 ouverts.
-- `NEXT_PUBLIC_REALTIME_URL` et `NEXT_PUBLIC_LIVEKIT_URL` (adresses publiques en `https://` et `wss://`) sont fixées à la construction de l’image web.
+- Les secrets (`POSTGRES_PASSWORD`, `REALTIME_SECRET`, `SMTP_URL`) vont dans un `.env` **sur le serveur**, jamais dans le dépôt.
+- Les ports 3000 et 4001 n’écoutent que sur la machine : un reverse proxy HTTPS (Caddy ou Nginx) est placé devant.
+- `NEXT_PUBLIC_REALTIME_URL` (adresse publique en `https://`) est fixée à la construction de l’image web.
+
+### Salons vocaux
+
+Ils sont désactivés pour la CADEV : le serveur Systalink n’a qu’un processeur, et le pare-feu n’ouvre que les ports 22, 80 et 443. Le code reste en place derrière un interrupteur (`src/lib/features.ts`). Pour les réactiver :
+
+1. Construire l’image web avec `NEXT_PUBLIC_SALONS=on` et `NEXT_PUBLIC_LIVEKIT_URL` (adresse `wss://` publique).
+2. Renseigner `LIVEKIT_API_KEY` et `LIVEKIT_API_SECRET` dans le `.env` du serveur.
+3. Démarrer avec `docker compose --profile salons up -d` : LiveKit a besoin du port TCP 7881 et des ports UDP 50000 à 60000.
+
+En local : `NEXT_PUBLIC_SALONS="on"` dans `.env`, puis `livekit-server --dev` (version 1.13.10, https://github.com/livekit/livekit/releases).
 
 ## Pile technique
 
 - **Next.js 16** (App Router, Cache Components), **React 19**, **TypeScript**, **Tailwind CSS 4**.
 - **Données** : PostgreSQL et Prisma 7.
 - **Temps réel** : Socket.IO, alimenté par `pg_notify`.
-- **Audio des salons** : LiveKit, serveur auto-hébergé et client `livekit-client`.
+- **Audio des salons** (désactivé) : LiveKit, serveur auto-hébergé et client `livekit-client`.
 - **Polices** : Inter (texte et titres) et JetBrains Mono (code), servies par `next/font`. Elles couvrent les lettres des langues d’Afrique de l’Ouest et centrale (ɛ ɔ ŋ ɓ ɗ ƙ ẹ ọ ṣ ɖ ƒ ɣ ʋ).
 - **PWA** : `src/app/manifest.ts` et `public/icons/`.
 

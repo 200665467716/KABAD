@@ -11,6 +11,7 @@ import { Avatar } from "../ui/Display";
 import { Icon, type IconName } from "../ui/Icon";
 import { Wordmark } from "../ui/Logo";
 import { hardNavigate } from "@/lib/hard-navigate";
+import { salonsEnabled } from "@/lib/features";
 
 type Item = { href: string; label: string; icon: IconName; match: string[] };
 
@@ -20,6 +21,14 @@ const items: Item[] = [
   { href: "/defis", label: "Défis", icon: "trophy", match: ["/defis"] },
   { href: "/tests", label: "Tests", icon: "clipboard", match: ["/tests"] },
   { href: "/messages", label: "Messages", icon: "message", match: ["/messages"] },
+];
+
+/** The side bar on computers also lists the secondary spaces. */
+const sideItems: Item[] = [
+  ...items,
+  { href: "/membres", label: "Membres", icon: "users", match: ["/membres"] },
+  ...(salonsEnabled ? [{ href: "/salons", label: "Salons vocaux", icon: "radio", match: ["/salons"] } satisfies Item] : []),
+  { href: "/capsules", label: "Capsules", icon: "capsule", match: ["/capsules"] },
 ];
 
 /** Screens that focus on one task show their own action bar instead of the tab bar. */
@@ -77,7 +86,7 @@ export function SideNav() {
         <Wordmark />
       </Link>
       <nav aria-label="Navigation principale" className="grid gap-0.5">
-        {[...items, { href: "/membres", label: "Membres", icon: "users" as IconName, match: ["/membres"] }, { href: "/salons", label: "Salons vocaux", icon: "radio" as IconName, match: ["/salons"] }, { href: "/capsules", label: "Capsules", icon: "capsule" as IconName, match: ["/capsules"] }].map((it) => {
+        {sideItems.map((it) => {
           const active = it.href === "/mentorat" ? path === "/mentorat" || (path.startsWith("/mentorat/") && !path.startsWith("/capsules")) : isActive(path, it);
           return (
             <Link

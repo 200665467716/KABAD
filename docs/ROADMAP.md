@@ -25,11 +25,11 @@ Une tâche cochée a passé lint, typecheck et tests, et est commitée.
 
 ## P0 — Recevable, en ligne, stable (objectif : 2 novembre)
 
-- [ ] **R9. Retrait des salons vocaux (D3).**
-  - Masquer `/salons` (navigation, routes, API `rooms`).
-  - Retirer le service `livekit` de `compose.yaml`, ainsi que LiveKit de la CI, de `playwright.config.ts`, des e2e et du README.
-  - Retirer `livekit-client` des dépendances.
-  - Laisser les tables en base, sans migration destructive.
+- [ ] **R9. Désactivation des salons vocaux (D3), par interrupteur et sans suppression de code.**
+  - `NEXT_PUBLIC_SALONS` (éteint par défaut) est lu dans `src/lib/features.ts`.
+  - Quand il est éteint : `/salons` répond 404, l'API `/api/rooms` répond 404 (`src/proxy.ts`), et les salons disparaissent de la navigation, de l'accueil et du tableau de bord.
+  - LiveKit est sorti de la CSP, de la CI et des e2e. Le service `livekit` de compose passe sous le profil `salons`.
+  - Les tables restent en base. Un test e2e vérifie que les salons n'apparaissent nulle part.
 
   À faire en premier : cela simplifie R1, R2 et la CI.
 - [ ] **R1. Image construite par la CI.** Un workflow GitHub Actions construit les images `web`, `realtime` et `migrate`, et les pousse sur GHCR. `compose.yaml` utilise `image:` et n'utilise plus `build:` en production.

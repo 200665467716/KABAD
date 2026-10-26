@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const isProd = process.env.NODE_ENV === "production";
 // Served over HTTPS (production behind the reverse proxy): browsers must stick to HTTPS.
 const https = (process.env.NEXT_PUBLIC_REALTIME_URL ?? "").startsWith("https:");
+// Voice rooms (LiveKit) are switched off unless NEXT_PUBLIC_SALONS=on (see src/lib/features.ts).
+const salons = process.env.NEXT_PUBLIC_SALONS === "on";
 
 /** "https://rt.kabad.app" or "wss://rt.kabad.app" → both forms: sockets start over HTTP(S), then switch to WS(S). */
 function withSocket(url: string | undefined) {
@@ -18,7 +20,7 @@ function withSocket(url: string | undefined) {
 
 // Partial prerendering rules out nonces, so inline scripts stay allowed; everything else is locked down:
 // where the page may connect, frame embedding, plugins, base and form targets.
-const connect = [...new Set(["'self'", ...withSocket(process.env.NEXT_PUBLIC_REALTIME_URL ?? "http://localhost:4001"), ...withSocket(process.env.NEXT_PUBLIC_LIVEKIT_URL ?? "ws://localhost:7880")])];
+const connect = [...new Set(["'self'", ...withSocket(process.env.NEXT_PUBLIC_REALTIME_URL ?? "http://localhost:4001"), ...(salons ? withSocket(process.env.NEXT_PUBLIC_LIVEKIT_URL ?? "ws://localhost:7880") : [])])];
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}`,
@@ -41,8 +43,8 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
-  // The microphone is needed by the voice rooms, on this site only.
-  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
+  // The microphone is needed by the voice rooms only, on this site only.
+  { key: "Permissions-Policy", value: `camera=(), microphone=${salons ? "(self)" : "()"}, geolocation=()` },
 ];
 
 const nextConfig: NextConfig = {
