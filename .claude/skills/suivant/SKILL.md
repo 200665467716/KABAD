@@ -12,7 +12,7 @@ Argument facultatif : l'identifiant d'une tâche de `docs/ROADMAP.md` (par exemp
    - relire l'exigence dans `../KABAD — Cahier des charges.md` (les ID F1.x, F2.x, F4.x et les critères d'acceptation) ;
    - lire le code existant du module (`src/server/<module>.ts`, routes `src/app/api/...`, écrans `src/app/(app)/...`, `prisma/schema.prisma`) ;
    - avant toute API Next.js, lire le guide correspondant dans `node_modules/next/dist/docs/`.
-3. **Créer une branche** : `git switch -c dev/<sujet-court>` depuis `dev/Emmerson`, si l'on n'est pas déjà sur une branche dédiée.
+3. **Créer une branche** : `git switch -c dev/<sujet-court>` depuis `main`, si l'on n'est pas déjà sur une branche dédiée.
 4. **Implémenter** en suivant `CLAUDE.md` :
    - les règles vont dans `src/server` et sont validées par Zod ;
    - toute nouvelle dépendance a une licence permissive ;

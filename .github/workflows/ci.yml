@@ -70,7 +70,7 @@ jobs:
   # for the main branch: a failing test blocks the release. The Systalink server pulls them (R2).
   images:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev/Emmerson'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:

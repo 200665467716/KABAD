@@ -7,7 +7,7 @@ description: Point d'avancement de KABAD vers la soumission CADEV du 15 novembre
 
 1. Calculer le nombre de jours restants avant le **15 novembre 2026 à 17h00 GMT**.
 2. Lire `docs/ROADMAP.md` : compter les tâches cochées et restantes par lot (P0, P1, P2).
-3. `git log --oneline dev/Emmerson..HEAD` et `git status --short` : ce qui est en cours et non fusionné.
+3. `git log --oneline main..HEAD` et `git status --short` : ce qui est en cours et non fusionné.
 4. Signaler les risques :
    - une tâche P0 non faite à moins de 7 jours de l'échéance ;
    - une démo pas encore en ligne sur le serveur Systalink ;

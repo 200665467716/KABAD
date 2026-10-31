@@ -2,7 +2,7 @@
 # Secrets come from a .env file next to this one (never committed): see .env.example.
 # The images are built by GitHub Actions and pulled here: the server never compiles (1 vCPU).
 #   docker compose pull && docker compose up -d
-# KABAD_TAG picks the version: "main" (last commit on dev/Emmerson) or a commit SHA, to roll back.
+# KABAD_TAG picks the version: "main" (last commit on the main branch) or a commit SHA, to roll back.
 # To build on your own computer instead: docker compose -f compose.yaml -f compose.local.yaml up -d --build
 services:
   db:

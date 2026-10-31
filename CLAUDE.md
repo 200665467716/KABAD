@@ -52,5 +52,5 @@ Poste local : Node 22 est attendu (la CI l'utilise). PostgreSQL n'est pas instal
 - Une tâche = une entrée de `docs/ROADMAP.md`. Commencer par relire l'exigence correspondante dans le cahier des charges, puis le code existant du module.
 - Toute règle métier nouvelle ou corrigée reçoit un test (unitaire dans `src/lib/__tests__` si elle est pure, sinon d'intégration dans `tests/integration`).
 - Avant de déclarer une tâche finie : `npm run lint && npm run typecheck && npm test` doivent passer. Lancer aussi les tests d'intégration si le serveur ou le schéma a changé.
-- Branches : travailler sur une branche `dev/<sujet>` partant de `dev/Emmerson`. Ne jamais pousser, fusionner ni forcer sans demande explicite.
+- Branches : travailler sur une branche `dev/<sujet>` partant de `main`, la branche qui reçoit toutes les fusions (par PR). Ne jamais pousser, fusionner ni forcer sans demande explicite.
 - Ne jamais committer de secret : `.env*` est ignoré, et les secrets de production restent sur le serveur.
