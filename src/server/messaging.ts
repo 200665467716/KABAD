@@ -8,6 +8,7 @@
  */
 import { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
+import { attachmentProblem, safeFileName, sniffMime, type AttachmentKind } from "@/lib/attachments";
 import { DomainError, forbidden, notFound } from "./errors";
 import { pushNotifications } from "./notifications";
 import { notify } from "./realtime-events";
@@ -84,7 +85,9 @@ export async function listConversations(userId: string, prisma: Db = db): Promis
       isOwner: c.createdById === userId,
       unread: unread.get(c.id) ?? 0,
       lastMessageAt: c.lastMessageAt.toISOString(),
-      last: last ? { body: last.body, authorId: last.authorId, authorName: last.author?.name ?? null, system: last.kind === "SYSTEM" } : null,
+      last: last
+        ? { body: last.hiddenAt ? HIDDEN_MESSAGE : last.body, authorId: last.authorId, authorName: last.author?.name ?? null, system: last.kind === "SYSTEM", attachment: last.hiddenAt ? null : last.kind === "FILE" || last.kind === "VOICE" ? last.kind : null }
+        : null,
     };
   });
 }
@@ -93,7 +96,22 @@ export async function listConversations(userId: string, prisma: Db = db): Promis
 
 export const HIDDEN_MESSAGE = "Message retiré par la modération.";
 
-const toChat = (m: { id: string; authorId: string | null; author: { name: string } | null; body: string; kind: string; createdAt: Date; clientId: string | null; hiddenAt?: Date | null }): ChatMessage => ({
+const attachmentSelect = { select: { id: true, name: true, mime: true, size: true, seconds: true } } as const;
+const withAuthor = { author: { select: { name: true } }, attachment: attachmentSelect } as const;
+
+type ChatRow = {
+  id: string;
+  authorId: string | null;
+  author: { name: string } | null;
+  body: string;
+  kind: string;
+  createdAt: Date;
+  clientId: string | null;
+  hiddenAt?: Date | null;
+  attachment?: { id: string; name: string; mime: string; size: number; seconds: number | null } | null;
+};
+
+const toChat = (m: ChatRow): ChatMessage => ({
   id: m.id,
   authorId: m.authorId,
   authorName: m.author?.name ?? null,
@@ -103,6 +121,8 @@ const toChat = (m: { id: string; authorId: string | null; author: { name: string
   system: m.kind === "SYSTEM",
   createdAt: m.createdAt.toISOString(),
   clientId: m.clientId,
+  // A removed message keeps nothing: neither its text nor its file.
+  attachment: m.attachment && !m.hiddenAt ? { ...m.attachment, kind: m.kind === "VOICE" ? "VOICE" : "FILE" } : null,
 });
 
 export async function getConversation(userId: string, conversationId: string, opts: { before?: string; limit?: number } = {}, prisma: Db = db): Promise<ConversationDetail> {
@@ -116,7 +136,7 @@ export async function getConversation(userId: string, conversationId: string, op
     where: { conversationId, ...(opts.before ? { createdAt: { lt: new Date(opts.before) } } : {}) },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limit + 1,
-    include: { author: { select: { name: true } } },
+    include: withAuthor,
   });
   const other = c.kind === "DIRECT" ? c.members.find((x) => x.userId !== userId)?.user : undefined;
   const blocks = other ? await prisma.block.findMany({ where: { OR: [{ blockerId: userId, blockedId: other.id }, { blockerId: other.id, blockedId: userId }] }, select: { blockerId: true } }) : [];
@@ -138,7 +158,7 @@ export async function getConversation(userId: string, conversationId: string, op
 export async function sendMessage(userId: string, conversationId: string, input: { body: string; clientId?: string }, prisma: Db = db): Promise<ChatMessage> {
   const m = await membership(prisma, userId, conversationId);
   if (input.clientId) {
-    const existing = await prisma.message.findUnique({ where: { authorId_clientId: { authorId: userId, clientId: input.clientId } }, include: { author: { select: { name: true } } } });
+    const existing = await prisma.message.findUnique({ where: { authorId_clientId: { authorId: userId, clientId: input.clientId } }, include: withAuthor });
     if (existing) return toChat(existing);
   }
   if (m.conversation.kind === "DIRECT") {
@@ -149,13 +169,60 @@ export async function sendMessage(userId: string, conversationId: string, input:
   return prisma.$transaction(async (tx) => {
     const msg = await tx.message.create({
       data: { conversationId, authorId: userId, body: input.body, clientId: input.clientId },
-      include: { author: { select: { name: true } } },
+      include: withAuthor,
     });
     await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: msg.createdAt } });
     await tx.conversationMember.update({ where: { conversationId_userId: { conversationId, userId } }, data: { lastReadAt: msg.createdAt } });
     await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients });
     return toChat(msg);
   });
+}
+
+/** Sends a file or a voice note. The file was checked by its content (src/lib/attachments.ts). */
+export async function sendAttachment(
+  userId: string,
+  conversationId: string,
+  input: { kind: AttachmentKind; name: string; data: Uint8Array; seconds?: number; caption?: string; clientId?: string },
+  prisma: Db = db,
+): Promise<ChatMessage> {
+  const m = await membership(prisma, userId, conversationId);
+  const mime = sniffMime(input.data);
+  const problem = attachmentProblem(input.kind, mime, input.data.byteLength, input.seconds);
+  if (problem) throw new DomainError("bad_file", problem, 400, "file");
+  if (input.clientId) {
+    const existing = await prisma.message.findUnique({ where: { authorId_clientId: { authorId: userId, clientId: input.clientId } }, include: withAuthor });
+    if (existing) return toChat(existing);
+  }
+  if (m.conversation.kind === "DIRECT") {
+    const other = m.conversation.members.find((x) => x.userId !== userId)?.userId;
+    if (other && (await isBlocked(prisma, userId, other))) throw forbidden("Vous ne pouvez plus écrire à ce membre.");
+  }
+  const recipients = m.conversation.members.map((x) => x.userId);
+  return prisma.$transaction(async (tx) => {
+    const msg = await tx.message.create({
+      data: {
+        conversationId,
+        authorId: userId,
+        kind: input.kind,
+        body: (input.caption ?? "").slice(0, 1000),
+        clientId: input.clientId,
+        attachment: { create: { name: safeFileName(input.name, mime!), mime: mime!, size: input.data.byteLength, seconds: input.kind === "VOICE" ? Math.round(input.seconds!) : null, data: Buffer.from(input.data) } },
+      },
+      include: withAuthor,
+    });
+    await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: msg.createdAt } });
+    await tx.conversationMember.update({ where: { conversationId_userId: { conversationId, userId } }, data: { lastReadAt: msg.createdAt } });
+    await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients });
+    return toChat(msg);
+  });
+}
+
+/** A file is readable by the members of its conversation only, and never once the message is removed. */
+export async function getAttachment(userId: string, attachmentId: string, prisma: Db = db) {
+  const a = await prisma.attachment.findUnique({ where: { id: attachmentId }, include: { message: { select: { conversationId: true, hiddenAt: true } } } });
+  if (!a || a.message.hiddenAt) throw notFound("Fichier introuvable.");
+  await membership(prisma, userId, a.message.conversationId);
+  return { name: a.name, mime: a.mime, data: a.data };
 }
 
 export async function markRead(userId: string, conversationId: string, prisma: Db = db) {

@@ -47,8 +47,8 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
-  // The microphone is needed by the voice rooms only, on this site only.
-  { key: "Permissions-Policy", value: `camera=(), microphone=${salons ? "(self)" : "()"}, geolocation=()` },
+  // The microphone records voice notes in the messaging (and the voice rooms when on), on this site only.
+  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
 ];
 
 const nextConfig: NextConfig = {

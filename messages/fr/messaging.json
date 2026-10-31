@@ -18,7 +18,9 @@
       "you": "Toi",
       "noMessage": "Aucun message",
       "unread": "{count, plural, one {# non lu} other {# non lus}}",
-      "yesterday": "Hier"
+      "yesterday": "Hier",
+      "voiceNote": "Note vocale",
+      "file": "Fichier"
     },
     "invitations": {
       "metaTitle": "Invitations",
@@ -80,7 +82,9 @@
       "placeholderGroup": "Message au groupe",
       "placeholder": "Ton message",
       "send": "Envoyer",
-      "tooLong": "Un message fait {max} caractères au plus."
+      "tooLong": "Un message fait {max} caractères au plus.",
+      "voiceSending": "Note vocale…",
+      "uploadFailed": "Le fichier n’a pas été envoyé. Réessaie."
     },
     "add": {
       "title": "Ajouter des participants",
@@ -179,6 +183,16 @@
     },
     "share": {
       "copied": "Lien copié"
+    },
+    "attachments": {
+      "attach": "Joindre un fichier",
+      "download": "Télécharger",
+      "play": "Écouter la note vocale",
+      "pause": "Mettre en pause",
+      "record": "Enregistrer une note vocale",
+      "stop": "Arrêter et envoyer",
+      "unsupported": "Ton navigateur ne permet pas d’enregistrer une note vocale.",
+      "micDenied": "Autorise le micro pour enregistrer une note vocale."
     }
   }
 }

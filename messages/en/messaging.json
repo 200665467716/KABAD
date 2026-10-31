@@ -18,7 +18,9 @@
       "you": "You",
       "noMessage": "No message",
       "unread": "{count} unread",
-      "yesterday": "Yesterday"
+      "yesterday": "Yesterday",
+      "voiceNote": "Voice note",
+      "file": "File"
     },
     "invitations": {
       "metaTitle": "Invitations",
@@ -80,7 +82,9 @@
       "placeholderGroup": "Message the group",
       "placeholder": "Your message",
       "send": "Send",
-      "tooLong": "A message is {max} characters at most."
+      "tooLong": "A message is {max} characters at most.",
+      "voiceSending": "Voice note…",
+      "uploadFailed": "The file wasn’t sent. Try again."
     },
     "add": {
       "title": "Add participants",
@@ -179,6 +183,16 @@
     },
     "share": {
       "copied": "Link copied"
+    },
+    "attachments": {
+      "attach": "Attach a file",
+      "download": "Download",
+      "play": "Play the voice note",
+      "pause": "Pause",
+      "record": "Record a voice note",
+      "stop": "Stop and send",
+      "unsupported": "Your browser can’t record voice notes.",
+      "micDenied": "Allow the microphone to record a voice note."
     }
   }
 }

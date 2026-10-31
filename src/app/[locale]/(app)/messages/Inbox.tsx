@@ -45,7 +45,7 @@ export function Inbox({ me, initialConversations, initialInvitations }: { me: st
         ...target,
         lastMessageAt: message.createdAt,
         unread: message.authorId !== me && !message.system ? target.unread + 1 : target.unread,
-        last: { body: message.body, authorId: message.authorId, authorName: message.authorName, system: message.system },
+        last: { body: message.body, authorId: message.authorId, authorName: message.authorName, system: message.system, attachment: message.attachment?.kind ?? null },
       };
       return [updated, ...list.filter((c) => c.id !== conversationId)];
     });
@@ -109,7 +109,7 @@ export function Inbox({ me, initialConversations, initialInvitations }: { me: st
                     <Avatar initials={initials(c.title)} square={group} tone={group ? "neutral" : "brand"} />
                     <span className="grid min-w-0">
                       <b className="truncate text-[15px] leading-5">{c.title}</b>
-                      <small className={c.unread > 0 ? "truncate text-[13px] leading-[18px] font-bold text-ink" : "truncate text-[13px] leading-[18px] text-muted"}>{c.last ? `${author}${c.last.body.split("\n")[0]}` : t("noMessage")}</small>
+                      <small className={c.unread > 0 ? "truncate text-[13px] leading-[18px] font-bold text-ink" : "truncate text-[13px] leading-[18px] text-muted"}>{c.last ? `${author}${c.last.body.split("\n")[0] || (c.last.attachment === "VOICE" ? t("voiceNote") : c.last.attachment === "FILE" ? t("file") : "")}` : t("noMessage")}</small>
                     </span>
                     <span className="grid justify-items-end gap-1">
                       <span className="text-xs text-muted tabular">{time.short(c.lastMessageAt)}</span>

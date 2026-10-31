@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /** Splits a message on ``` fences: odd parts are code. */
@@ -36,8 +37,11 @@ export function MessageBubble({
   onRetry,
   hidden,
   onReport,
+  attachment,
 }: {
   text: string;
+  /** A file or a voice note, shown above the caption. */
+  attachment?: ReactNode;
   hidden?: boolean;
   onReport?: () => void;
   time?: string;
@@ -58,7 +62,8 @@ export function MessageBubble({
       )}
     >
       {author && <span className={cn("text-xs font-extrabold", authorTone === "accent" ? "text-accent-text" : "text-brand-text")}>{author}</span>}
-      {hidden ? <p className="text-sm italic opacity-80">{text}</p> : <MessageBody text={text} />}
+      {!hidden && attachment}
+      {hidden ? <p className="text-sm italic opacity-80">{text}</p> : text ? <MessageBody text={text} /> : null}
       <span className="justify-self-end text-[11px] font-bold opacity-75 tabular">
         {status === "sending" ? t("sending") : status === "failed" ? t("failed") : time}
       </span>

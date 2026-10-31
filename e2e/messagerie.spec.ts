@@ -84,3 +84,24 @@ test("accepter une invitation ouvre la conversation avec le premier message", as
   await expect(thread(kossi).getByText(/a accepté l’invitation/)).toBeVisible();
   await kossi.context().close();
 });
+
+test("un PDF joint arrive chez l’autre membre et se télécharge", async ({ browser }) => {
+  const kossi = await signIn(browser, "kossi");
+  const yao = await signIn(browser, "yao");
+  await kossi.getByRole("link", { name: /Yao Agbeko/ }).click();
+  await yao.getByRole("link", { name: /Kossi Mensah/ }).click();
+
+  const name = `specs-${Date.now()}.pdf`;
+  await kossi.locator('input[type="file"]').setInputFiles({ name, mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7\n1 0 obj\n<<>>\nendobj\n") });
+  await expect(thread(kossi).getByRole("link", { name: new RegExp(name) })).toBeVisible();
+  const card = thread(yao).getByRole("link", { name: new RegExp(name) });
+  await expect(card).toBeVisible({ timeout: 10_000 });
+  // Fetched by Yao's browser, with his session: the file is served as a PDF.
+  const href = (await card.getAttribute("href"))!;
+  const [status, type] = await yao.evaluate((u) => fetch(u).then((r) => [r.status, r.headers.get("content-type")]), href);
+  expect(status).toBe(200);
+  expect(type).toBe("application/pdf");
+
+  await kossi.context().close();
+  await yao.context().close();
+});

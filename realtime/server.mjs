@@ -72,15 +72,27 @@ async function handle(event) {
   switch (event.t) {
     case "message": {
       const { rows } = await pool.query(
-        `SELECT m.id, m."authorId", u.name AS "authorName", m.body, m.kind, m."createdAt", m."clientId"
-         FROM "Message" m LEFT JOIN "User" u ON u.id = m."authorId" WHERE m.id = $1`,
+        `SELECT m.id, m."authorId", u.name AS "authorName", m.body, m.kind, m."createdAt", m."clientId",
+                a.id AS "attachmentId", a.name AS "attachmentName", a.mime, a.size, a.seconds
+         FROM "Message" m LEFT JOIN "User" u ON u.id = m."authorId" LEFT JOIN "Attachment" a ON a."messageId" = m.id
+         WHERE m.id = $1`,
         [event.messageId],
       );
       const m = rows[0];
       if (!m) return;
       io.to(to).emit("message:new", {
         conversationId: event.conversationId,
-        message: { id: m.id, authorId: m.authorId, authorName: m.authorName, body: m.body, system: m.kind === "SYSTEM", createdAt: new Date(m.createdAt).toISOString(), clientId: m.clientId },
+        message: {
+          id: m.id,
+          authorId: m.authorId,
+          authorName: m.authorName,
+          body: m.body,
+          system: m.kind === "SYSTEM",
+          createdAt: new Date(m.createdAt).toISOString(),
+          clientId: m.clientId,
+          // Files and voice notes: only their description travels, the bytes are read from /api/attachments.
+          attachment: m.attachmentId ? { id: m.attachmentId, kind: m.kind === "VOICE" ? "VOICE" : "FILE", name: m.attachmentName, mime: m.mime, size: m.size, seconds: m.seconds } : null,
+        },
       });
       break;
     }

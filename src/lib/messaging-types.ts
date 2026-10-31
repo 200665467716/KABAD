@@ -10,7 +10,11 @@ export type ChatMessage = {
   clientId: string | null;
   /** Removed by the moderation team: the body is a notice, not the original text. */
   hidden?: boolean;
+  /** A file or a voice note; the body is then an optional caption. */
+  attachment?: ChatAttachment | null;
 };
+
+export type ChatAttachment = { id: string; kind: "FILE" | "VOICE"; name: string; mime: string; size: number; seconds: number | null };
 
 export type ConversationSummary = {
   id: string;
@@ -23,7 +27,7 @@ export type ConversationSummary = {
   isOwner: boolean;
   unread: number;
   lastMessageAt: string;
-  last: { body: string; authorId: string | null; authorName: string | null; system: boolean } | null;
+  last: { body: string; authorId: string | null; authorName: string | null; system: boolean; attachment: "FILE" | "VOICE" | null } | null;
 };
 
 export type ConversationDetail = {

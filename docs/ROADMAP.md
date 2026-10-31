@@ -134,7 +134,7 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
 - [x] Design system de la charte « Motif » (tokens, polices, composants) et coque (en-tête indigo, bandeau, barre du bas Accueil · Mentorat · Hackathons · Rise-Up · Messages).
 - [x] Écrans du canvas « KABAD — Refonte » : inscription en 5 étapes, accueil, mentorat par créneaux, badge mentor, hackathons, Africa Rise-Up, tests d'apps, messagerie, profil et notifications, administration.
 - [x] Tests : unitaires, intégration (10 nouveaux), e2e réécrits (99 passent, téléphone et ordinateur).
-- [ ] À brancher plus tard : rappel 1 h avant un événement Rise-Up et expiration des demandes de séance (worker R5), pièces jointes et notes vocales (R43).
+- [x] Rappels et expirations par le worker (R5) ; pièces jointes et notes vocales (R43).
 
 ## P1 — Les « Must » manquants et Africa'Raise-up (objectif : 11 novembre)
 
@@ -253,7 +253,8 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
   - Classement par thème et niveau via l'API Claude.
 
 - [ ] R43. Messagerie enrichie (F4.6, F4.7).
-  - Images de 5 Mo au plus.
+  - Fait le 1er novembre : PDF, images et notes vocales (2 Mo, 2 minutes), reconnus à leur contenu, lisibles par les seuls membres de la conversation, retirés avec le message par la modération.
+  - Images de 5 Mo au plus (aujourd'hui 2 Mo, la limite commune des fichiers gardés dans PostgreSQL).
   - Coloration syntaxique avec une bibliothèque légère sous licence MIT, chargée à la demande.
 
 - [ ] R44. PWA hors ligne.

@@ -5,6 +5,7 @@ import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { MessageBubble, SystemLine } from "@/components/features/Thread";
+import { AttachButton, AttachmentView, VoiceRecorder } from "@/components/features/messaging/Attachments";
 import { ReportSheet } from "@/components/features/ReportSheet";
 import { TopBar } from "@/components/shell/TopBar";
 import { Button, IconButton } from "@/components/ui/Button";
@@ -129,6 +130,26 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
     deliver(body, clientId);
   }
 
+  /** Sends a file or a voice note, shown at once as "sending", like a text message. */
+  async function upload(file: File, kind: "FILE" | "VOICE", seconds?: number) {
+    setError(null);
+    const clientId = crypto.randomUUID();
+    stickToBottom.current = true;
+    const form = new FormData();
+    form.set("file", file);
+    form.set("kind", kind);
+    form.set("clientId", clientId);
+    if (seconds) form.set("seconds", String(seconds));
+    setMessages((cur) => [...cur, { id: `tmp-${clientId}`, clientId, authorId: me.id, authorName: me.name, body: kind === "VOICE" ? t("voiceSending") : file.name, system: false, createdAt: new Date().toISOString(), status: "sending" }]);
+    try {
+      const saved = await api<ChatMessage>(`/api/conversations/${detail.id}/attachments`, { body: form });
+      setMessages((cur) => merge(cur, [saved]));
+    } catch (e) {
+      setMessages((cur) => cur.filter((m) => m.clientId !== clientId));
+      setError(e instanceof ApiError ? e.message : t("uploadFailed"));
+    }
+  }
+
   function retry(m: Shown) {
     setMessages((cur) => cur.map((x) => (x.clientId === m.clientId ? { ...x, status: "sending" } : x)));
     deliver(m.body, m.clientId!);
@@ -212,10 +233,10 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
                 ) : group && !mine ? (
                   <div className="grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2">
                     <Avatar initials={initials(m.authorName ?? "?")} size="sm" />
-                    <MessageBubble text={m.body} hidden={m.hidden} time={time.clock(m.createdAt)} author={m.authorName ?? t("member")} authorTone={tone(m.authorId)} onReport={() => setReportMessage(m.id)} />
+                    <MessageBubble text={m.body} hidden={m.hidden} attachment={m.attachment && <AttachmentView attachment={m.attachment} />} time={time.clock(m.createdAt)} author={m.authorName ?? t("member")} authorTone={tone(m.authorId)} onReport={() => setReportMessage(m.id)} />
                   </div>
                 ) : (
-                  <MessageBubble text={m.body} hidden={m.hidden} time={time.clock(m.createdAt)} mine={mine} status={m.status} onRetry={() => retry(m)} onReport={mine ? undefined : () => setReportMessage(m.id)} />
+                  <MessageBubble text={m.body} hidden={m.hidden} attachment={m.attachment && <AttachmentView attachment={m.attachment} mine={mine} />} time={time.clock(m.createdAt)} mine={mine} status={m.status} onRetry={() => retry(m)} onReport={mine ? undefined : () => setReportMessage(m.id)} />
                 )}
               </Fragment>
             );
@@ -230,7 +251,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
               {blocked ? (detail.blocked === "by_them" ? t("blockedByThem") : t("blockedByMe")) : error}
             </Alert>
           )}
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-1">
+            <AttachButton disabled={blocked && !group} onPick={(f) => upload(f, "FILE")} />
             <textarea
               rows={Math.min(5, Math.max(1, draft.split("\n").length))}
               value={draft}
@@ -242,7 +264,11 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
               placeholder={group ? t("placeholderGroup") : t("placeholder")}
               className="min-h-11 min-w-0 flex-1 resize-none rounded-[22px] border-2 border-line-strong bg-bg px-4 py-2 text-base leading-[22px]"
             />
-            <Button type="submit" iconOnly icon="send" aria-label={t("send")} className="rounded-full" disabled={!draft.trim() || (blocked && !group)} />
+            {draft.trim() ? (
+              <Button type="submit" iconOnly icon="send" aria-label={t("send")} className="rounded-full" disabled={blocked && !group} />
+            ) : (
+              <VoiceRecorder disabled={blocked && !group} onRecorded={(f, s) => upload(f, "VOICE", s)} onError={setError} />
+            )}
           </div>
           {length > MESSAGE_MAX_LENGTH - 500 && (
             <span className="justify-self-end text-xs text-subtle tabular">
