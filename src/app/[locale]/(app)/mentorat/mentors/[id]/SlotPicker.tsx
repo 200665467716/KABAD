@@ -15,7 +15,8 @@ function dayOf(iso: string | Date, timeZone: string) {
  * Month calendar and free slots of a mentor (screen M2), shown at the member's own time.
  * Days with at least one slot are in bold; picking a slot leads to the booking form.
  */
-export function SlotPicker({ mentorId, slots, timeZone }: { mentorId: string; slots: string[]; timeZone: string }) {
+/** `zone` is computed on the server ("UTC+0"): Node and the browser do not always name an offset the same way. */
+export function SlotPicker({ mentorId, slots, timeZone, zone }: { mentorId: string; slots: string[]; timeZone: string; zone: string }) {
   const t = useTranslations("mentoring.profile");
   const format = useFormatter();
   const byDay = useMemo(() => {
@@ -38,7 +39,6 @@ export function SlotPicker({ mentorId, slots, timeZone }: { mentorId: string; sl
   const offset = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
   const monthLabel = format.dateTime(new Date(Date.UTC(y, m - 1, 15)), { month: "long", year: "numeric", timeZone: "UTC" });
   const weekdays = Array.from({ length: 7 }, (_, i) => format.dateTime(new Date(Date.UTC(2026, 10, 2 + i)), { weekday: "short", timeZone: "UTC" }));
-  const zone = new Intl.DateTimeFormat("fr", { timeZone, timeZoneName: "shortOffset" }).formatToParts(new Date()).find((p) => p.type === "timeZoneName")?.value ?? timeZone;
   const daySlots = day ? (byDay.get(day) ?? []) : [];
   const time = (iso: string) => format.dateTime(new Date(iso), { hour: "2-digit", minute: "2-digit", timeZone });
 

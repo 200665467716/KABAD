@@ -10,6 +10,9 @@ import { getMentor } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
 import { SlotPicker } from "./SlotPicker";
 
+/** "UTC+0", "UTC+1": the member's offset, shown next to the slots. */
+const zoneLabel = (timeZone: string) => new Intl.DateTimeFormat("fr", { timeZone, timeZoneName: "shortOffset" }).formatToParts(new Date()).find((p) => p.type === "timeZoneName")?.value ?? timeZone;
+
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("mentoring.profile");
   return { title: t("title") };
@@ -49,7 +52,7 @@ async function MentorData({ params }: { params: Promise<{ id: string }> }) {
           </section>
         )}
         {self && <p className="rounded-action bg-brand-wash px-4 py-3 text-sm">{t("self")}</p>}
-        {!self && <SlotPicker mentorId={mentor.id} slots={mentor.slots} timeZone={user.timeZone} />}
+        {!self && <SlotPicker mentorId={mentor.id} slots={mentor.slots} timeZone={user.timeZone} zone={zoneLabel(user.timeZone)} />}
       </Page>
     </>
   );
