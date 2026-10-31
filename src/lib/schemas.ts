@@ -45,8 +45,11 @@ export const sendMessageSchema = z.object({
   clientId: z.string().min(8).max(64).optional(),
 });
 
+export const GROUP_THEMES = ["Fintech", "Hackathon", "Entraide", "Mobile", "Data et IA"] as const;
+
 export const createGroupSchema = z.object({
   name: trimmed(1, GROUP_NAME_MAX, "Donnez un nom au groupe.", `Le nom du groupe fait ${GROUP_NAME_MAX} caractères au plus.`),
+  theme: z.enum(GROUP_THEMES).optional(),
   memberIds: z.array(id).min(1, "Choisissez au moins un participant.").max(GROUP_MAX_MEMBERS - 1, `Un groupe compte ${GROUP_MAX_MEMBERS} membres au plus.`),
 });
 
@@ -76,50 +79,68 @@ const profileUrl = z
   .transform((s) => s.trim().replace(/^https?:\/\//, ""))
   .pipe(z.string().max(200).regex(/^$|^(www\.)?(github\.com|linkedin\.com)\/\S+$/, "Indiquez un profil GitHub ou LinkedIn (github.com/… ou linkedin.com/…)."));
 
-export const profileSchema = z
-  .object({
-    role: z.enum(["JUNIOR", "SENIOR"]),
-    country: trimmed(2, 60, "Choisissez votre pays.", "Ce pays est trop long."),
-    city: trimmed(2, 60, "Indiquez votre ville.", "Ce nom de ville est trop long."),
-    diaspora: z.boolean().default(false),
-    stack: z.array(z.string().min(1).max(30)).max(12, "12 technologies au plus."),
-    profileLink: profileUrl,
-    headline: z.string().trim().max(80).optional(),
-    bio: z.string().trim().max(600).optional(),
-    years: z.number().int().min(0).max(50).optional(),
-    mentorCapacity: z.number().int().min(0, "0 au moins.").max(5, "5 binômes au plus en même temps.").optional(),
-  })
-  .refine((p) => p.role !== "SENIOR" || p.profileLink.length > 0, { message: "Un profil GitHub ou LinkedIn est obligatoire pour vérifier votre statut Senior.", path: ["profileLink"] });
+export const LEVELS = ["ASPIRANT", "DEBUTANT", "INTERMEDIAIRE", "SENIOR"] as const;
+/** Technologies offered at sign-up (profile step 2). Members can add others later. */
+export const TECH_CHOICES = ["JavaScript", "TypeScript", "Python", "PHP", "Java", "Kotlin", "Flutter", "React", "Node.js", "Django", "Laravel", "Data et IA"] as const;
+/** What a member comes for (profile step 2). */
+export const GOALS = ["mentor", "hackathons", "get_tested", "test_apps", "rise_up", "meet_devs"] as const;
 
-/* Mentoring */
+/** Every field is optional: sign-up sends steps 1 and 2 separately, the profile page sends what changed. */
+export const profileSchema = z.object({
+  country: trimmed(2, 60, "Choisissez votre pays.", "Ce pays est trop long.").optional(),
+  city: trimmed(2, 60, "Indiquez votre ville.", "Ce nom de ville est trop long.").optional(),
+  diaspora: z.boolean().optional(),
+  level: z.enum(LEVELS, "Choisissez votre niveau.").optional(),
+  stack: z.array(z.string().trim().min(1).max(30)).max(12, "12 technologies au plus.").optional(),
+  goals: z.array(z.enum(GOALS)).max(GOALS.length).optional(),
+  profileLink: profileUrl.optional(),
+  headline: z.string().trim().max(80).optional(),
+  bio: z.string().trim().max(600).optional(),
+  years: z.number().int().min(0).max(50).optional(),
+  timeZone: z.string().max(40).optional(),
+});
 
-export const MENTOR_TOPICS = ["Tests", "Webhooks", "Architecture", "Déploiement", "Revue de code"] as const;
+export const localeSchema = z.object({ locale: z.enum(["fr", "en"]) });
 
-const repoField = z
-  .string()
-  .transform((s) => s.trim().replace(/^https?:\/\//, ""))
-  .pipe(z.string().max(200).regex(/^$|^(github\.com|gitlab\.com|codeberg\.org)\/[\w.-]+\/[\w.-]+\/?$/, "Indiquez un dépôt GitHub, GitLab ou Codeberg."));
+/* Mentoring by time slots */
 
-export const mentorRequestSchema = z.object({
+export const bookingSchema = z.object({
   mentorId: id,
-  project: trimmed(3, 120, "Indiquez le projet sur lequel vous voulez travailler.", "Le nom du projet fait 120 caractères au plus."),
-  situation: trimmed(10, 1000, "Dites en quelques mots où vous en êtes.", "1 000 caractères au plus."),
-  repo: repoField.optional(),
-  topics: z.array(z.enum(MENTOR_TOPICS)).max(MENTOR_TOPICS.length),
-});
-
-export const answerRequestSchema = z.object({ accept: z.boolean() });
-
-export const sessionSchema = z.object({
-  pairId: id,
-  startsAt: z.iso.datetime({ offset: true, message: "Indiquez la date et l’heure de la séance." }),
-  minutes: z.number({ message: "Indiquez la durée." }).int().min(15, "Une séance dure 15 minutes au moins.").max(240, "Une séance dure 4 heures au plus."),
+  startsAt: z.iso.datetime({ offset: true, message: "Choisissez un créneau." }),
   topic: trimmed(3, 120, "Indiquez le sujet de la séance.", "Le sujet fait 120 caractères au plus."),
-  done: trimmed(10, 1000, "Décrivez ce que vous avez fait.", "1 000 caractères au plus."),
-  next: trimmed(3, 500, "Indiquez la prochaine étape.", "500 caractères au plus."),
+  problem: trimmed(20, 1000, "Décrivez ton problème précis (20 caractères au moins).", "1 000 caractères au plus."),
+  link: z.union([z.literal(""), z.url({ protocol: /^https$/, message: "Le lien doit commencer par https://." }).max(200)]).optional(),
 });
 
-export const nextSessionSchema = z.object({ at: z.iso.datetime({ offset: true, message: "Indiquez la date et l’heure." }).nullable() });
+export const answerBookingSchema = z.object({ accept: z.boolean(), reason: z.string().trim().max(300).optional() });
+
+const minuteOfDay = z.number().int().min(0).max(24 * 60);
+export const availabilitySchema = z.object({
+  timeZone: z.string().min(3).max(40),
+  meetingUrl: z.union([z.literal(""), z.url({ protocol: /^https$/, message: "Le lien de visio doit commencer par https://." }).max(200)]).optional(),
+  ranges: z.array(z.object({ weekday: z.number().int().min(1).max(7), startMin: minuteOfDay, endMin: minuteOfDay })).max(40, "40 plages au plus."),
+  blocked: z.array(z.object({ day: z.iso.date("Date invalide."), reason: z.string().trim().max(80).optional() })).max(60, "60 dates bloquées au plus."),
+});
+
+/* Mentor badge */
+
+const optionalUrl = (host: RegExp | null, message: string) =>
+  z.union([z.literal(""), z.url({ protocol: /^https$/, message: "Le lien doit commencer par https://." }).max(200).refine((u) => !host || host.test(new URL(u).hostname), message)]).optional();
+
+export const badgeRequestSchema = z.object({
+  domains: z.array(z.string().min(1).max(40)).min(1, "Choisissez au moins un domaine.").max(3, "3 domaines au plus."),
+  technologies: z.array(trimmed(1, 30, "Technologie vide.", "30 caractères au plus.")).min(1, "Indiquez au moins une technologie.").max(12, "12 technologies au plus."),
+  experience: z.enum(["3-5", "5-10", "10+"], "Indiquez ton expérience."),
+  jobTitle: trimmed(2, 80, "Indiquez ton poste actuel.", "80 caractères au plus."),
+  company: z.string().trim().max(80).optional(),
+  githubUrl: optionalUrl(/(^|\.)github\.com$/, "Indique un lien github.com."),
+  linkedinUrl: optionalUrl(/(^|\.)linkedin\.com$/, "Indique un lien linkedin.com."),
+  portfolioUrl: optionalUrl(null, ""),
+  bio: trimmed(30, 280, "Présente-toi en quelques phrases (30 caractères au moins).", "280 caractères au plus."),
+  topics: trimmed(10, 300, "Dis sur quoi tu peux aider.", "300 caractères au plus."),
+});
+
+export const reviewBadgeSchema = z.object({ approve: z.boolean(), reason: z.string().trim().max(500).optional() });
 
 export const capsuleSchema = z.object({
   title: trimmed(8, 120, "Donnez un titre clair (8 caractères au moins).", "Le titre fait 120 caractères au plus."),
@@ -129,20 +150,62 @@ export const capsuleSchema = z.object({
   tags: z.array(trimmed(2, 20, "Mot-clé trop court.", "Mot-clé trop long.")).max(3, "3 mots-clés au plus.").default([]),
 });
 
-/* Challenges */
+/* Hackathons */
 
 export const OPERATORS = ["Moov Money", "MTN MoMo", "Orange Money", "Wave", "Airtel Money", "Flooz", "T-Money"] as const;
 export const SUBMISSION_MAX = 800;
 
 export const submissionSchema = z.object({
+  projectName: trimmed(2, 60, "Donnez le nom du projet.", "60 caractères au plus."),
   repoUrl: z.string().trim().regex(/^https:\/\/(github\.com|gitlab\.com|codeberg\.org)\/[\w.-]+\/[\w.-]+\/?$/, "Indiquez l’adresse d’un dépôt public GitHub, GitLab ou Codeberg."),
   demoUrl: z.union([z.literal(""), z.url({ protocol: /^https$/, message: "La démo doit être une adresse https." }).max(200)]).optional(),
-  explanation: trimmed(40, SUBMISSION_MAX, "Expliquez vos choix en quelques phrases (40 caractères au moins).", `${SUBMISSION_MAX} caractères au plus.`),
+  explanation: trimmed(40, SUBMISSION_MAX, "Décrivez ce que fait votre solution (40 caractères au moins).", `${SUBMISSION_MAX} caractères au plus.`),
   payoutOperator: z.enum(OPERATORS).optional(),
-  payoutPhone: z.string().trim().regex(/^\+?[\d\s]{8,20}$/, "Indiquez le numéro Mobile Money qui recevra votre gain.").optional(),
-  solo: z.literal(true, "Cochez les deux engagements pour soumettre."),
-  explainable: z.literal(true, "Cochez les deux engagements pour soumettre."),
+  payoutPhone: z.string().trim().regex(/^\+?[\d\s]{8,20}$/, "Indiquez le numéro Mobile Money qui recevra le gain.").optional(),
+  teamAgrees: z.literal(true, "Confirmez que toute l’équipe a relu la soumission."),
 });
+
+export const registerSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("solo"), skill: z.string().trim().max(30).optional(), rules: z.literal(true, "Acceptez le règlement du hackathon.") }),
+  z.object({
+    mode: z.literal("create"),
+    teamName: trimmed(2, 40, "Donnez un nom à votre équipe.", "40 caractères au plus."),
+    lookingFor: z.string().trim().max(80).optional(),
+    skill: z.string().trim().max(30).optional(),
+    rules: z.literal(true, "Acceptez le règlement du hackathon."),
+  }),
+  z.object({ mode: z.literal("join"), teamId: id, skill: z.string().trim().max(30).optional(), rules: z.literal(true, "Acceptez le règlement du hackathon.") }),
+]);
+
+export const answerJoinSchema = z.object({ accept: z.boolean() });
+export const teamUpdateSchema = z.object({ lookingFor: z.string().trim().max(80).nullable().optional() });
+
+export const hackathonSchema = z.object({
+  title: trimmed(5, 120, "Donnez un nom au hackathon.", "120 caractères au plus."),
+  organizerName: trimmed(2, 80, "Indiquez l’organisateur.", "80 caractères au plus."),
+  format: z.enum(["ONLINE", "ONSITE", "HYBRID"]),
+  city: z.string().trim().max(60).optional(),
+  startsAt: z.iso.datetime({ offset: true, message: "Indiquez le début." }),
+  endsAt: z.iso.datetime({ offset: true, message: "Indiquez la fin." }),
+  closesAt: z.iso.datetime({ offset: true, message: "Indiquez la clôture des inscriptions." }),
+  teamMin: z.number().int().min(1).max(10),
+  teamMax: z.number().int().min(1).max(10),
+  level: z.enum(["Débutant", "Intermédiaire", "Avancé", "Tous niveaux"]),
+  stack: trimmed(2, 60, "Indiquez les technologies attendues.", "60 caractères au plus."),
+  description: trimmed(30, 2000, "Décrivez le défi (30 caractères au moins).", "2 000 caractères au plus."),
+  rulesUrl: z.union([z.literal(""), z.url({ protocol: /^https$/, message: "Le règlement doit être un lien https." }).max(200)]).optional(),
+  prizeKind: z.enum(["CAGNOTTE", "SPONSORISE", "LOT"]).optional(),
+  prizes: z.array(trimmed(2, 120, "Prix vide.", "120 caractères au plus.")).max(5, "5 prix au plus.").default([]),
+  sponsorName: z.string().trim().max(120).optional(),
+  sponsorAmount: z.number().int().min(0).max(100_000_000).optional(),
+  mentoringMinutes: z.number().int().min(0).max(20 * 60).optional(),
+  missionText: z.string().trim().max(600).optional(),
+  instructorFee: z.number().int().min(0).max(10_000_000).optional(),
+  instructorCount: z.number().int().min(0).max(20).optional(),
+});
+
+export const missionsSchema = z.object({ mentorIds: z.array(id).min(1, "Choisissez au moins un mentor.").max(20) });
+export const answerMissionSchema = z.object({ accept: z.boolean() });
 
 const mark = z.number().int().min(1).max(5);
 export const juryScoreSchema = z.object({
@@ -155,7 +218,7 @@ export const juryScoreSchema = z.object({
 });
 
 export const contributionSchema = z.object({
-  challengeId: id,
+  hackathonId: id,
   amount: z.number().int().positive(),
   displayName: trimmed(2, 80, "Indiquez le nom à afficher.", "80 caractères au plus."),
   email: z.email("Indiquez une adresse e-mail valide pour recevoir le reçu.").max(200),
@@ -176,15 +239,17 @@ export const testQuestionSchema = z.object({
 
 export const testAppSchema = z.object({
   name: trimmed(2, 40, "Donnez le nom de l’application.", "40 caractères au plus."),
-  platform: z.enum(["WEB", "ANDROID"]),
+  platforms: z.array(z.enum(["WEB", "ANDROID", "IOS"])).min(1, "Choisissez au moins une plateforme.").max(3),
   url: z.url({ protocol: /^https$/, message: "Indiquez le lien https de l’application." }).max(300),
   minutes: z.number().int().min(5, "5 minutes au moins.").max(30, "Un test dure 30 minutes au plus."),
   slots: z.number().int().min(1).max(50, "50 testeurs au plus."),
   pitch: trimmed(20, 500, "Présentez l’application en une ou deux phrases.", "500 caractères au plus."),
   task: trimmed(10, 200, "Décrivez la tâche à accomplir.", "200 caractères au plus."),
   steps: z.array(trimmed(5, 200, "Chaque étape fait 5 caractères au moins.", "200 caractères au plus.")).min(1, "Ajoutez au moins une étape.").max(5, "5 étapes au plus."),
-  questions: z.array(testQuestionSchema).min(1, "Ajoutez au moins une question de contrôle.").max(3, "3 questions au plus."),
+  questions: z.array(testQuestionSchema).max(3, "3 questions au plus.").default([]),
 });
+
+export const testStepSchema = z.object({ index: z.number().int().min(0).max(10), done: z.boolean() });
 
 export const testReportSchema = z.object({
   device: trimmed(2, 40, "Indiquez l’appareil utilisé.", "40 caractères au plus."),
@@ -203,6 +268,8 @@ const newPassword = z.string().min(12, "Le mot de passe doit faire au moins 12 c
 export const forgotPasswordSchema = z.object({ email: z.email("Cette adresse e-mail n’est pas valide.").max(200) });
 export const resetPasswordSchema = z.object({ token: z.string().min(20).max(100), password: newPassword });
 export const verifyEmailSchema = z.object({ token: z.string().min(20).max(100) });
+export const verifyCodeSchema = z.object({ code: z.string().trim().regex(/^\d{6}$/, "Le code compte 6 chiffres.") });
+export const changeEmailSchema = z.object({ email: z.email("Cette adresse e-mail n’est pas valide.").max(200) });
 export const changePasswordSchema = z.object({ current: z.string().max(200).default(""), next: newPassword });
 export const deleteAccountSchema = z.object({ password: z.string().max(200).optional(), confirm: z.literal("SUPPRIMER", "Écrivez SUPPRIMER pour confirmer.") });
 
@@ -214,25 +281,38 @@ export const adminReportSchema = z.object({
 });
 
 export const adminMemberSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("verify") }),
   z.object({ action: z.literal("reinstate") }),
-  z.object({ action: z.literal("reject"), reason: trimmed(5, 250, "Expliquez en quelques mots.", "250 caractères au plus.") }),
+  z.object({ action: z.literal("revoke"), reason: trimmed(5, 250, "Expliquez en quelques mots.", "250 caractères au plus.") }),
   z.object({ action: z.literal("suspend"), reason: trimmed(5, 250, "Indiquez le motif de la suspension.", "250 caractères au plus.") }),
 ]);
 
-export const challengeCreateSchema = z.object({
-  title: trimmed(5, 120, "Donnez un titre au défi.", "120 caractères au plus."),
-  kind: z.enum(["CAGNOTTE", "SPONSORISE", "LOT"]),
-  level: z.enum(["Débutant", "Intermédiaire", "Avancé"]),
-  stack: trimmed(2, 60, "Indiquez la technologie attendue.", "60 caractères au plus."),
-  description: trimmed(30, 2000, "Décrivez le défi (30 caractères au moins).", "2 000 caractères au plus."),
-  closesAt: z.iso.datetime({ offset: true, message: "Indiquez la date de clôture." }),
-  requiresMentoring: z.boolean(),
-  prizeLabel: z.string().trim().max(120).optional(),
-  sponsorName: z.string().trim().max(120).optional(),
-  sponsorAmount: z.number().int().min(0).max(100_000_000).optional(),
-  jurorIds: z.array(id).length(3, "Choisissez exactement trois jurés."),
+export const jurySchema = z.object({ jurorIds: z.array(id).length(3, "Choisissez exactement trois jurés.") });
+
+/* Africa Rise-Up */
+
+export const RISE_DOMAINS = ["WATER", "HEALTH", "AGRICULTURE", "EDUCATION", "ENERGY", "FINANCE", "OTHER"] as const;
+
+export const riseProjectSchema = z.object({
+  name: trimmed(5, 80, "Donnez un nom au projet.", "80 caractères au plus."),
+  domain: z.enum(RISE_DOMAINS, "Choisissez le défi visé."),
+  summary: trimmed(10, 200, "Résumez le projet en une phrase.", "200 caractères au plus."),
+  problem: trimmed(30, 1500, "Décrivez le problème à résoudre (30 caractères au moins).", "1 500 caractères au plus."),
+  skills: z.array(trimmed(2, 30, "Compétence vide.", "30 caractères au plus.")).max(8, "8 compétences au plus.").default([]),
+  skill: z.string().trim().max(30).optional(),
 });
+
+export const risePostSchema = z.object({ body: trimmed(2, 2000, "Écrivez votre message.", "2 000 caractères au plus."), parentId: id.optional() });
+
+export const riseEventSchema = z.object({
+  title: trimmed(3, 100, "Donnez un titre à l’événement.", "100 caractères au plus."),
+  agenda: trimmed(5, 600, "Indiquez l’ordre du jour.", "600 caractères au plus."),
+  startsAt: z.iso.datetime({ offset: true, message: "Indiquez la date et l’heure." }),
+  minutes: z.number().int().min(15, "15 minutes au moins.").max(240, "4 heures au plus."),
+  meetingUrl: z.union([z.literal(""), z.url({ protocol: /^https$/, message: "Le lien de visio doit commencer par https://." }).max(200)]).optional(),
+  notify: z.boolean().default(true),
+});
+
+export const joinSchema = z.object({ skill: z.string().trim().max(30).optional() });
 
 /* Voice rooms */
 

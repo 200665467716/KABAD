@@ -92,3 +92,10 @@ export function localInputValue(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+/** "jeu. 5 nov. à 15 h 00" in the reader's time zone: used in notifications about a session or an event. */
+export function formatSlot(at: Date, timeZone: string = TZ, locale = "fr-FR"): string {
+  const day = at.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short", timeZone });
+  const hour = at.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", timeZone }).replace(":", " h ");
+  return locale.startsWith("fr") ? `${day} à ${hour}` : `${day}, ${at.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", timeZone })}`;
+}

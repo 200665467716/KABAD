@@ -1,5 +1,5 @@
 import { requireUser } from "@/server/auth";
-import { markPayoutSent } from "@/server/challenges";
+import { markPayoutSent } from "@/server/hackathons";
 import { readJson, route } from "@/server/http";
 import { payoutSentSchema } from "@/lib/schemas";
 

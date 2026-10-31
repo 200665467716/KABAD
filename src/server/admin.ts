@@ -1,9 +1,10 @@
 /*
- * The KABAD team's tools: dashboard figures, moderation of reports, members (verify seniors, suspend),
- * challenges (create, close, publish) and transfers. Every action is checked against isAdmin and logged.
+ * The KABAD team's tools: dashboard figures, moderation of reports, members (suspend, withdraw a badge),
+ * hackathon juries and transfers. Every action is checked against isAdmin and logged.
+ * Mentor badges: src/server/badges.ts. Hackathon review and results: src/server/hackathons.ts.
  */
 import type { Prisma } from "@/generated/prisma/client";
-import { requireAdmin } from "./challenges";
+import { requireAdmin } from "./hackathons";
 import { db, type Db } from "./db";
 import { DomainError, notFound } from "./errors";
 import { HIDDEN_MESSAGE } from "./messaging";
@@ -19,36 +20,38 @@ const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000);
 
 export async function dashboard(adminId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
-  const [members, newMembers, seniors, pendingSeniors, unverified, suspended, messages7d, openReports, activePairs, confirmed, openChallenges, juryChallenges, liveRooms, pendingPayouts] = await Promise.all([
+  const [members, newMembers, mentors, pendingBadges, unverified, suspended, messages7d, openReports, upcomingSessions, held, openHackathons, juryHackathons, toPublish, riseProjects, pendingPayouts] = await Promise.all([
     prisma.user.count({ where: { isAdmin: false } }),
     prisma.user.count({ where: { isAdmin: false, createdAt: { gte: daysAgo(7) } } }),
-    prisma.user.count({ where: { role: "SENIOR", seniorVerifiedAt: { not: null } } }),
-    prisma.user.count({ where: { role: "SENIOR", seniorVerifiedAt: null, suspendedAt: null } }),
+    prisma.user.count({ where: { seniorVerifiedAt: { not: null } } }),
+    prisma.mentorBadgeRequest.count({ where: { status: "PENDING" } }),
     prisma.user.count({ where: { emailVerifiedAt: null } }),
     prisma.user.count({ where: { suspendedAt: { not: null } } }),
     prisma.message.count({ where: { kind: "TEXT", createdAt: { gte: daysAgo(7) } } }),
     prisma.report.count({ where: { status: "OPEN" } }),
-    prisma.pair.count({ where: { active: true } }),
-    prisma.mentoringSession.aggregate({ where: { confirmedByMentor: true, confirmedByMentee: true }, _sum: { minutes: true } }),
-    prisma.challenge.count({ where: { status: "OPEN" } }),
-    prisma.challenge.count({ where: { status: "JURY" } }),
-    prisma.voiceRoom.count({ where: { status: "LIVE" } }),
+    prisma.mentoringBooking.count({ where: { status: "ACCEPTED", startsAt: { gte: new Date() } } }),
+    prisma.mentoringBooking.aggregate({ where: { status: "ACCEPTED", startsAt: { lt: new Date() } }, _sum: { minutes: true } }),
+    prisma.hackathon.count({ where: { status: "OPEN", publishedAt: { not: null } } }),
+    prisma.hackathon.count({ where: { status: "JURY" } }),
+    prisma.hackathon.count({ where: { publishedAt: null } }),
+    prisma.riseProject.count(),
     prisma.payout.aggregate({ where: { status: "PENDING" }, _sum: { amount: true }, _count: { _all: true } }),
   ]);
   return {
     members,
     newMembers,
-    seniors,
-    pendingSeniors,
+    mentors,
+    pendingBadges,
     unverified,
     suspended,
     messages7d,
     openReports,
-    activePairs,
-    confirmedHours: Math.floor((confirmed._sum.minutes ?? 0) / 60),
-    openChallenges,
-    juryChallenges,
-    liveRooms,
+    upcomingSessions,
+    heldHours: Math.floor((held._sum.minutes ?? 0) / 60),
+    openHackathons,
+    juryHackathons,
+    toPublish,
+    riseProjects,
     pendingPayouts: { count: pendingPayouts._count._all, amount: pendingPayouts._sum.amount ?? 0 },
   };
 }
@@ -231,92 +234,46 @@ export async function reinstateMember(adminId: string, userId: string, prisma: D
   return { ok: true };
 }
 
-export async function rejectSenior(adminId: string, userId: string, reason: string, prisma: Db = db) {
+/** Withdraws the mentor badge (misconduct, false information). Sessions to come are cancelled. */
+export async function revokeBadge(adminId: string, userId: string, reason: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
   await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: userId }, data: { seniorVerifiedAt: null, mentorCapacity: 0, role: "JUNIOR" } });
-    await pushNotifications(tx, [{ userId, actor: "Équipe KABAD", text: `n’a pas pu vérifier votre statut Senior : ${reason}. Complétez votre profil GitHub ou LinkedIn puis redemandez.`, href: "/inscription/profil", icon: "info", tone: "neutral" }]);
-    await logAction(tx, adminId, "senior:reject", userId, reason);
+    await tx.user.update({ where: { id: userId }, data: { seniorVerifiedAt: null, role: "JUNIOR" } });
+    await tx.mentoringBooking.updateMany({ where: { mentorId: userId, status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gt: new Date() } }, data: { status: "CANCELLED", answeredAt: new Date() } });
+    await pushNotifications(tx, [{ userId, actor: "Équipe KABAD", text: ` t’a retiré le badge mentor : ${reason}.`, href: "/mentorat/badge", icon: "info", tone: "neutral" }]);
+    await logAction(tx, adminId, "badge:revoke", userId, reason);
   });
   return { ok: true };
 }
 
-/* Challenges */
+/* Hackathon juries */
 
-export type NewChallenge = {
-  title: string;
-  kind: "CAGNOTTE" | "SPONSORISE" | "LOT";
-  level: string;
-  stack: string;
-  description: string;
-  closesAt: string;
-  requiresMentoring: boolean;
-  prizeLabel?: string;
-  sponsorName?: string;
-  sponsorAmount?: number;
-  jurorIds: string[];
-};
-
-const slug = (title: string) =>
-  title
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 60) || "defi";
-
-/** Three verified seniors form the jury. */
-export async function createChallenge(adminId: string, input: NewChallenge, prisma: Db = db) {
+/** Three badged mentors form the jury. Organizers and members of a team cannot judge it. */
+export async function setJury(adminId: string, hackathonId: string, jurorIds: string[], prisma: Db = db) {
   await requireAdmin(adminId, prisma);
-  const jurors = [...new Set(input.jurorIds)];
+  const jurors = [...new Set(jurorIds)];
   if (jurors.length !== 3) throw new DomainError("jury", "Choisissez exactement trois jurés.", 400, "jurorIds");
-  const ok = await prisma.user.count({ where: { id: { in: jurors }, role: "SENIOR", seniorVerifiedAt: { not: null }, suspendedAt: null } });
-  if (ok !== 3) throw new DomainError("jury", "Les jurés doivent être des seniors vérifiés.", 400, "jurorIds");
-  const closesAt = new Date(input.closesAt);
-  if (closesAt.getTime() < Date.now() + 86_400_000) throw new DomainError("date", "La clôture doit être dans 24 heures au moins.", 400, "closesAt");
-  if (input.kind === "LOT" && !input.prizeLabel) throw new DomainError("prize", "Décrivez le lot.", 400, "prizeLabel");
-  if (input.kind === "SPONSORISE" && (!input.sponsorName || !input.sponsorAmount)) throw new DomainError("sponsor", "Indiquez le sponsor et sa dotation.", 400, "sponsorName");
-  let id = slug(input.title);
-  if (await prisma.challenge.count({ where: { id } })) id = `${id}-${Date.now().toString(36)}`;
+  const h = await prisma.hackathon.findUnique({ where: { id: hackathonId }, select: { title: true, createdById: true, status: true } });
+  if (!h) throw notFound("Hackathon introuvable.");
+  if (h.status === "DONE") throw new DomainError("done", "Les résultats sont publiés : le jury est figé.", 409);
+  if (h.createdById && jurors.includes(h.createdById)) throw new DomainError("jury", "L’organisateur ne peut pas être juré.", 400, "jurorIds");
+  const ok = await prisma.user.count({ where: { id: { in: jurors }, seniorVerifiedAt: { not: null }, suspendedAt: null } });
+  if (ok !== 3) throw new DomainError("jury", "Les jurés doivent être des mentors KABAD.", 400, "jurorIds");
+  if (await prisma.teamMember.count({ where: { hackathonId, userId: { in: jurors } } })) throw new DomainError("jury", "Un juré participe à ce hackathon.", 400, "jurorIds");
   return prisma.$transaction(async (tx) => {
-    await tx.challenge.create({
-      data: {
-        id,
-        title: input.title,
-        kind: input.kind,
-        level: input.level,
-        stack: input.stack,
-        description: input.description,
-        closesAt,
-        requiresMentoring: input.requiresMentoring,
-        prizeLabel: input.kind === "LOT" ? input.prizeLabel : null,
-        sponsorName: input.kind === "SPONSORISE" ? input.sponsorName : null,
-        sponsorAmount: input.kind === "SPONSORISE" ? (input.sponsorAmount ?? 0) : 0,
-        jurors: { create: jurors.map((userId) => ({ userId })) },
-      },
-    });
-    await pushNotifications(
-      tx,
-      jurors.map((userId) => ({ userId, actor: "Équipe KABAD", text: `vous a nommé au jury du défi « ${input.title} ».`, href: `/defis/${id}`, icon: "trophy" as const, tone: "accent" as const })),
-    );
-    await logAction(tx, adminId, "challenge:create", id, input.title);
-    return { id };
+    const before = (await tx.hackathonJuror.findMany({ where: { hackathonId }, select: { userId: true } })).map((j) => j.userId);
+    await tx.hackathonJuror.deleteMany({ where: { hackathonId } });
+    await tx.hackathonJuror.createMany({ data: jurors.map((userId) => ({ hackathonId, userId })) });
+    const added = jurors.filter((id) => !before.includes(id));
+    await pushNotifications(tx, added.map((userId) => ({ userId, actor: "Équipe KABAD", text: ` t’a nommé au jury du hackathon « ${h.title} ».`, href: `/hackathons/${hackathonId}`, icon: "trophy" as const, tone: "accent" as const })));
+    await logAction(tx, adminId, "hackathon:jury", hackathonId, jurors.join(","));
+    return { ok: true };
   });
 }
 
-export async function adminChallenges(adminId: string, prisma: Db = db) {
+export async function badgedMentors(adminId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
-  const rows = await prisma.challenge.findMany({
-    orderBy: [{ status: "asc" }, { closesAt: "asc" }],
-    include: { jurors: { select: { user: { select: { id: true, name: true } } } }, _count: { select: { submissions: true } } },
-  });
-  return rows.map((c) => ({ id: c.id, title: c.title, kind: c.kind, status: c.status, closesAt: c.closesAt.toISOString(), submissions: c._count.submissions, jury: c.jurors.map((j) => j.user.name) }));
-}
-
-export async function verifiedSeniors(adminId: string, prisma: Db = db) {
-  await requireAdmin(adminId, prisma);
-  return prisma.user.findMany({ where: { role: "SENIOR", seniorVerifiedAt: { not: null }, suspendedAt: null }, select: { id: true, name: true, city: true }, orderBy: { name: "asc" } });
+  return prisma.user.findMany({ where: { seniorVerifiedAt: { not: null }, suspendedAt: null }, select: { id: true, name: true, city: true }, orderBy: { name: "asc" } });
 }
 
 export async function auditLog(adminId: string, prisma: Db = db) {

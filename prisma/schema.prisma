@@ -1,4 +1,5 @@
-// KABAD data model: members, messaging, mentoring, challenges and their prize pots, community tests.
+// KABAD data model: members, mentor badges, mentoring by time slots, hackathons and their prize pots,
+// community tests, messaging and Africa Rise-Up projects.
 
 generator client {
   provider = "prisma-client"
@@ -14,6 +15,14 @@ enum Role {
   SENIOR
 }
 
+/// Self-declared level, chosen at sign-up (profile step 1).
+enum Level {
+  ASPIRANT
+  DEBUTANT
+  INTERMEDIAIRE
+  SENIOR
+}
+
 model User {
   id               String    @id @default(cuid())
   email            String    @unique
@@ -21,21 +30,20 @@ model User {
   passwordHash     String?
   githubId         Int?      @unique
   githubLogin      String?
-  /// GitHub or LinkedIn profile, required to verify a senior.
+  /// GitHub or LinkedIn profile, shown on the public profile.
   profileLink      String    @default("")
   isAdmin          Boolean   @default(false)
-  /// Set by a KABAD admin after checking the GitHub or LinkedIn profile. Only verified seniors mentor and judge.
+  /// Set when the KABAD team grants the mentor badge. Only badged mentors open slots and judge hackathons.
   seniorVerifiedAt DateTime?
-  /// Set when the member opens the link sent by e-mail. Until then they read but cannot contact anyone.
+  /// Set when the member types the code sent by e-mail. Until then they read but cannot contact anyone.
   emailVerifiedAt  DateTime?
   /// Set by a KABAD admin. A suspended member cannot sign in; their sessions are closed.
   suspendedAt      DateTime?
   suspensionReason String?   @db.VarChar(300)
-  /// How many pairs a senior accepts at the same time.
-  mentorCapacity   Int       @default(0)
-  replyTime        String    @default("")
   name             String
+  /// SENIOR once the mentor badge is granted, JUNIOR otherwise.
   role             Role      @default(JUNIOR)
+  level            Level     @default(DEBUTANT)
   city             String    @default("")
   country          String    @default("")
   diaspora         Boolean   @default(false)
@@ -43,6 +51,14 @@ model User {
   headline         String    @default("")
   bio              String    @default("")
   stack            String[]  @default([])
+  /// What the member came for: a mentor, hackathons, testers… (profile step 2).
+  goals            String[]  @default([])
+  /// Interface language, remembered across devices.
+  locale           String    @default("fr") @db.VarChar(5)
+  /// IANA time zone used to show slots and events at the member's local time.
+  timeZone         String    @default("Africa/Lome") @db.VarChar(40)
+  /// Video link a mentor uses for every session (Meet, Jitsi…). Empty: KABAD creates a Jitsi room per session.
+  meetingUrl       String    @default("") @db.VarChar(200)
   createdAt        DateTime  @default(now())
 
   sessions             Session[]
@@ -56,18 +72,28 @@ model User {
   blocks               Block[]              @relation("Blocker")
   blockedBy            Block[]              @relation("Blocked")
   reports              Report[]
-  requestsSent         MentorRequest[]      @relation("RequestMentee")
-  requestsReceived     MentorRequest[]      @relation("RequestMentor")
-  pairsAsMentor        Pair[]               @relation("PairMentor")
-  pairsAsMentee        Pair[]               @relation("PairMentee")
-  sessionsNoted        MentoringSession[]
+  badgeRequests        MentorBadgeRequest[] @relation("BadgeCandidate")
+  badgeReviews         MentorBadgeRequest[] @relation("BadgeReviewer")
+  availability         Availability[]
+  blockedDates         BlockedDate[]
+  bookingsAsMentor     MentoringBooking[]   @relation("BookingMentor")
+  bookingsAsMentee     MentoringBooking[]   @relation("BookingMentee")
   capsules             Capsule[]
-  juries               ChallengeJuror[]
-  submissions          Submission[]
+  hackathonsCreated    Hackathon[]
+  juries               HackathonJuror[]
+  teamsCaptained       Team[]
+  teamSeats            TeamMember[]
+  teamRequests         TeamJoinRequest[]
+  missions             InstructorMission[]
   scores               JuryScore[]
   payouts              Payout[]
   testApps             TestApp[]
+  testSeats            TestParticipant[]
   testReports          TestReport[]
+  riseProjects         RiseProject[]
+  riseSeats            RiseMember[]
+  risePosts            RisePost[]
+  riseEvents           RiseEvent[]
   notifications        Notification[]
   emailTokens          EmailToken[]
   adminActions         AdminAction[]        @relation("AdminActor")
@@ -130,6 +156,8 @@ model Conversation {
   id            String           @id @default(cuid())
   kind          ConversationKind
   name          String?          @db.VarChar(60)
+  /// Group theme shown as a tag: Fintech, Hackathon, Entraide…
+  theme         String?          @db.VarChar(30)
   /// For DIRECT conversations: the two user ids sorted and joined, so a pair has one conversation only.
   directKey     String?          @unique
   createdById   String?
@@ -139,6 +167,8 @@ model Conversation {
 
   members  ConversationMember[]
   messages Message[]
+  testApp  TestApp?
+  project  RiseProject?
 }
 
 enum MemberRole {
@@ -162,6 +192,9 @@ model ConversationMember {
 enum MessageKind {
   TEXT
   SYSTEM
+  /// A file or a voice note: the body holds an optional caption, the file is in Attachment.
+  FILE
+  VOICE
 }
 
 model Message {
@@ -177,9 +210,24 @@ model Message {
   createdAt      DateTime     @default(now())
   /// Hidden by the moderation team: the members see that a message was removed, not its content.
   hiddenAt       DateTime?
+  attachment     Attachment?
 
   @@unique([authorId, clientId])
   @@index([conversationId, createdAt])
+}
+
+/// A file sent in a conversation (PDF, image, voice note). Small files only (2 MB), kept in PostgreSQL
+/// and served to the conversation's members only.
+model Attachment {
+  id        String  @id @default(cuid())
+  messageId String  @unique
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  name      String  @db.VarChar(120)
+  mime      String  @db.VarChar(80)
+  size      Int
+  /// Length of a voice note, in seconds.
+  seconds   Int?
+  data      Bytes
 }
 
 model Block {
@@ -228,68 +276,102 @@ model Report {
 }
 
 /**
- * Mentoring
+ * Mentor badge: a member asks, the KABAD team checks the links and grants or refuses it.
  */
 
-enum RequestStatus {
+enum BadgeStatus {
+  PENDING
+  APPROVED
+  REFUSED
+}
+
+model MentorBadgeRequest {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation("BadgeCandidate", fields: [userId], references: [id], onDelete: Cascade)
+  /// Up to 3 areas: Backend, Mobile, Data et IA…
+  domains       String[]
+  technologies  String[]
+  /// "3-5", "5-10" or "10+" years.
+  experience    String      @db.VarChar(10)
+  jobTitle      String      @db.VarChar(80)
+  company       String?     @db.VarChar(80)
+  githubUrl     String?     @db.VarChar(200)
+  linkedinUrl   String?     @db.VarChar(200)
+  portfolioUrl  String?     @db.VarChar(200)
+  /// Public presentation, copied to the profile once granted.
+  bio           String      @db.VarChar(280)
+  /// What the mentor can help with.
+  topics        String      @db.VarChar(300)
+  status        BadgeStatus @default(PENDING)
+  refusalReason String?     @db.VarChar(500)
+  reviewedById  String?
+  reviewedBy    User?       @relation("BadgeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime    @default(now())
+  reviewedAt    DateTime?
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+}
+
+/**
+ * Mentoring by time slots: a mentor opens weekly ranges, KABAD cuts them into 30-minute slots,
+ * a member books one with a topic and a precise problem, the mentor accepts or declines.
+ */
+
+/// A weekly range in the mentor's time zone. weekday: 1 = Monday … 7 = Sunday; minutes from midnight.
+model Availability {
+  id       String @id @default(cuid())
+  mentorId String
+  mentor   User   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  weekday  Int
+  startMin Int
+  endMin   Int
+
+  @@index([mentorId, weekday])
+}
+
+/// A day off (travel, exams…): no slot is offered that day.
+model BlockedDate {
+  id       String   @id @default(cuid())
+  mentorId String
+  mentor   User     @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  day      DateTime @db.Date
+  reason   String?  @db.VarChar(80)
+
+  @@unique([mentorId, day])
+}
+
+enum BookingStatus {
   PENDING
   ACCEPTED
   DECLINED
+  CANCELLED
 }
 
-model MentorRequest {
-  id         String        @id @default(cuid())
-  menteeId   String
-  mentorId   String
-  mentee     User          @relation("RequestMentee", fields: [menteeId], references: [id], onDelete: Cascade)
-  mentor     User          @relation("RequestMentor", fields: [mentorId], references: [id], onDelete: Cascade)
-  project    String        @db.VarChar(120)
-  situation  String        @db.VarChar(1000)
-  repo       String?       @db.VarChar(200)
-  topics     String[]      @default([])
-  status     RequestStatus @default(PENDING)
-  createdAt  DateTime      @default(now())
-  answeredAt DateTime?
-
-  @@index([mentorId, status])
-  @@index([menteeId, status])
-}
-
-/// A senior and a junior working on one real project. No imposed rhythm.
-model Pair {
-  id            String             @id @default(cuid())
+/// One session of 30 minutes. A slot can carry only one PENDING or ACCEPTED booking
+/// (partial unique index written in the migration).
+model MentoringBooking {
+  id            String        @id @default(cuid())
   mentorId      String
   menteeId      String
-  mentor        User               @relation("PairMentor", fields: [mentorId], references: [id], onDelete: Cascade)
-  mentee        User               @relation("PairMentee", fields: [menteeId], references: [id], onDelete: Cascade)
-  project       String             @db.VarChar(120)
-  repo          String?            @db.VarChar(200)
-  active        Boolean            @default(true)
-  nextSessionAt DateTime?
-  createdAt     DateTime           @default(now())
-  sessions      MentoringSession[]
+  mentor        User          @relation("BookingMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee        User          @relation("BookingMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  startsAt      DateTime
+  minutes       Int           @default(30)
+  topic         String        @db.VarChar(120)
+  problem       String        @db.VarChar(1000)
+  link          String?       @db.VarChar(200)
+  status        BookingStatus @default(PENDING)
+  /// Set when the mentor accepts: their own link, or a Jitsi room created for the session.
+  meetingUrl    String?       @db.VarChar(200)
+  declineReason String?       @db.VarChar(300)
+  createdAt     DateTime      @default(now())
+  answeredAt    DateTime?
 
-  @@unique([mentorId, menteeId])
-  @@index([menteeId])
-}
-
-/// Counts toward cash-prize challenges only once both members confirm it.
-model MentoringSession {
-  id                String   @id @default(cuid())
-  pairId            String
-  pair              Pair     @relation(fields: [pairId], references: [id], onDelete: Cascade)
-  startsAt          DateTime
-  minutes           Int
-  topic             String   @db.VarChar(120)
-  done              String   @db.VarChar(1000)
-  next              String   @db.VarChar(500)
-  notedById         String
-  notedBy           User     @relation(fields: [notedById], references: [id], onDelete: Cascade)
-  confirmedByMentor Boolean  @default(false)
-  confirmedByMentee Boolean  @default(false)
-  createdAt         DateTime @default(now())
-
-  @@index([pairId, startsAt])
+  @@index([mentorId, startsAt])
+  @@index([menteeId, startsAt])
+  @@index([status, startsAt])
 }
 
 enum CapsuleTheme {
@@ -316,61 +398,148 @@ model Capsule {
 }
 
 /**
- * Challenges and prize pots
+ * Hackathons (the former code challenges) and their prize pots
  */
 
-enum ChallengeKind {
+/// How the winner is rewarded (decision D6). LOT: a physical prize; CAGNOTTE and SPONSORISE: money.
+enum PrizeKind {
   CAGNOTTE
   SPONSORISE
   LOT
 }
 
-enum ChallengeStatus {
+enum HackathonStatus {
   OPEN
   JURY
   DONE
 }
 
-model Challenge {
-  id                String          @id
-  title             String          @db.VarChar(120)
-  kind              ChallengeKind
-  status            ChallengeStatus @default(OPEN)
-  level             String          @db.VarChar(20)
-  stack             String          @db.VarChar(60)
-  description       String          @db.VarChar(2000)
-  closesAt          DateTime
-  resultsAt         DateTime?
-  requiresMentoring Boolean         @default(false)
-  /// Physical prize, for LOT challenges.
-  prizeLabel        String?         @db.VarChar(120)
-  sponsorName       String?         @db.VarChar(120)
-  /// Amount committed by the sponsor, in F CFA. Paid contributions add to it.
-  sponsorAmount     Int             @default(0)
-  publishedAt       DateTime?
-  createdAt         DateTime        @default(now())
+enum HackathonFormat {
+  ONLINE
+  ONSITE
+  HYBRID
+}
 
-  jurors        ChallengeJuror[]
+model Hackathon {
+  id               String          @id
+  title            String          @db.VarChar(120)
+  /// Shown as "par FinLab Cotonou": a company, a school or a community.
+  organizerName    String          @db.VarChar(80)
+  createdById      String?
+  createdBy        User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  format           HackathonFormat
+  city             String?         @db.VarChar(60)
+  startsAt         DateTime
+  endsAt           DateTime
+  /// Registrations close at this date; solutions are due at endsAt.
+  closesAt         DateTime
+  /// 1 allows solo entries. teamMax 1: solo only.
+  teamMin          Int             @default(1)
+  teamMax          Int             @default(5)
+  level            String          @db.VarChar(20)
+  stack            String          @db.VarChar(60)
+  /// The challenge to solve.
+  description      String          @db.VarChar(2000)
+  rulesUrl         String?         @db.VarChar(200)
+  status           HackathonStatus @default(OPEN)
+  resultsAt        DateTime?
+  /// Members must have held this many minutes of mentoring to enter (level 3 of D6).
+  mentoringMinutes Int             @default(0)
+  prizeKind        PrizeKind?
+  /// Prizes in order: ["Un ordinateur portable", "Un an d’hébergement"]. For LOT and to announce money prizes.
+  prizes           String[]        @default([])
+  sponsorName      String?         @db.VarChar(120)
+  /// Amount committed by the sponsor, in F CFA. Paid contributions add to it.
+  sponsorAmount    Int             @default(0)
+  /// Instructor missions offered to KABAD mentors.
+  missionText      String?         @db.VarChar(600)
+  instructorFee    Int?
+  instructorCount  Int             @default(0)
+  /// Set by a moderator. Until then only its author and the team see it.
+  publishedAt      DateTime?
+  createdAt        DateTime        @default(now())
+
+  jurors        HackathonJuror[]
+  teams         Team[]
   submissions   Submission[]
+  missions      InstructorMission[]
   contributions Contribution[]
   payouts       Payout[]
+
+  @@index([status, startsAt])
 }
 
-model ChallengeJuror {
-  challengeId String
+model HackathonJuror {
+  hackathonId String
   userId      String
-  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@id([challengeId, userId])
+  @@id([hackathonId, userId])
 }
 
+/// Every entry is a team; a solo entry is a team of one.
+model Team {
+  id          String            @id @default(cuid())
+  hackathonId String
+  hackathon   Hackathon         @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  name        String            @db.VarChar(40)
+  captainId   String
+  captain     User              @relation(fields: [captainId], references: [id], onDelete: Cascade)
+  solo        Boolean           @default(false)
+  /// Open call shown to other participants: "Cherche un·e dev backend".
+  lookingFor  String?           @db.VarChar(80)
+  createdAt   DateTime          @default(now())
+  members     TeamMember[]
+  requests    TeamJoinRequest[]
+  submission  Submission?
+
+  @@unique([hackathonId, name])
+}
+
+model TeamMember {
+  teamId      String
+  userId      String
+  /// Repeated from the team so that a member joins one team per hackathon (unique below).
+  hackathonId String
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Front, Mobile, Data…
+  skill       String   @default("") @db.VarChar(30)
+  joinedAt    DateTime @default(now())
+
+  @@id([teamId, userId])
+  @@unique([hackathonId, userId])
+}
+
+enum TeamRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+/// A participant asks to join a team; the captain answers.
+model TeamJoinRequest {
+  id         String            @id @default(cuid())
+  teamId     String
+  userId     String
+  team       Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status     TeamRequestStatus @default(PENDING)
+  createdAt  DateTime          @default(now())
+  answeredAt DateTime?
+
+  @@unique([teamId, userId])
+}
+
+/// One solution per team, due at the end of the hackathon.
 model Submission {
   id             String      @id @default(cuid())
-  challengeId    String
-  userId         String
-  challenge      Challenge   @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hackathonId    String
+  teamId         String      @unique
+  hackathon      Hackathon   @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  team           Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  projectName    String      @db.VarChar(60)
   repoUrl        String      @db.VarChar(200)
   demoUrl        String?     @db.VarChar(200)
   explanation    String      @db.VarChar(800)
@@ -380,7 +549,7 @@ model Submission {
   updatedAt      DateTime    @updatedAt
   scores         JuryScore[]
 
-  @@unique([challengeId, userId])
+  @@index([hackathonId])
 }
 
 /// Each juror scores each solution on 4 criteria from 1 to 5.
@@ -399,6 +568,29 @@ model JuryScore {
   @@id([submissionId, jurorId])
 }
 
+enum MissionStatus {
+  PROPOSED
+  ACCEPTED
+  DECLINED
+}
+
+/// A paid instructor mission offered by the organizer to a badged mentor. KABAD records it;
+/// the organizer pays the instructor directly.
+model InstructorMission {
+  id          String        @id @default(cuid())
+  hackathonId String
+  mentorId    String
+  hackathon   Hackathon     @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  mentor      User          @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  fee         Int
+  status      MissionStatus @default(PROPOSED)
+  createdAt   DateTime      @default(now())
+  answeredAt  DateTime?
+
+  @@unique([hackathonId, mentorId])
+  @@index([mentorId, status])
+}
+
 enum ContributionStatus {
   PENDING
   PAID
@@ -408,8 +600,8 @@ enum ContributionStatus {
 /// A sponsor's payment. Counted in the pot only once PAID.
 model Contribution {
   id          String             @id @default(cuid())
-  challengeId String
-  challenge   Challenge          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  hackathonId String
+  hackathon   Hackathon          @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   amount      Int
   displayName String             @db.VarChar(80)
   email       String             @db.VarChar(200)
@@ -419,7 +611,7 @@ model Contribution {
   createdAt   DateTime           @default(now())
   paidAt      DateTime?
 
-  @@index([challengeId, status])
+  @@index([hackathonId, status])
 }
 
 enum PayoutRole {
@@ -433,11 +625,11 @@ enum PayoutStatus {
   SENT
 }
 
-/// The 60/30/10 split of a pot, sent by Mobile Money after the 48 h contest period.
+/// The split of a pot (90/10 or 60/30/10, decision D6), sent by Mobile Money after the 48 h contest period.
 model Payout {
   id            String       @id @default(cuid())
-  challengeId   String
-  challenge     Challenge    @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  hackathonId   String
+  hackathon     Hackathon    @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   role          PayoutRole
   beneficiaryId String?
   beneficiary   User?        @relation(fields: [beneficiaryId], references: [id], onDelete: SetNull)
@@ -449,7 +641,7 @@ model Payout {
   createdAt     DateTime     @default(now())
   sentAt        DateTime?
 
-  @@unique([challengeId, role])
+  @@unique([hackathonId, role])
 }
 
 /**
@@ -459,27 +651,47 @@ model Payout {
 enum Platform {
   WEB
   ANDROID
+  IOS
 }
 
+/// An app looking for testers. Joining opens its testers' group conversation, where the install link is shared.
 model TestApp {
-  id        String       @id @default(cuid())
-  ownerId   String
-  owner     User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  name      String       @db.VarChar(40)
-  platform  Platform
-  url       String       @db.VarChar(300)
-  minutes   Int
-  slots     Int
-  pitch     String       @db.VarChar(500)
-  task      String       @db.VarChar(200)
-  steps     String[]
+  id             String            @id @default(cuid())
+  ownerId        String
+  owner          User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name           String            @db.VarChar(40)
+  platforms      Platform[]
+  url            String            @db.VarChar(300)
+  minutes        Int
+  slots          Int
+  pitch          String            @db.VarChar(500)
+  task           String            @db.VarChar(200)
+  steps          String[]
   /// [{ q, options?, answer }]: control questions that prove the tester went through the app.
-  questions Json
-  active    Boolean      @default(true)
-  createdAt DateTime     @default(now())
-  reports   TestReport[]
+  questions      Json
+  /// The testers' group, created with the app.
+  conversationId String?           @unique
+  conversation   Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  active         Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  participants   TestParticipant[]
+  reports        TestReport[]
 
   @@index([active, createdAt])
+}
+
+/// A tester who joined an app's group, with the steps they ticked.
+model TestParticipant {
+  testAppId String
+  userId    String
+  testApp   TestApp  @relation(fields: [testAppId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Indexes of the steps done, from 0.
+  doneSteps Int[]    @default([])
+  joinedAt  DateTime @default(now())
+
+  @@id([testAppId, userId])
+  @@index([userId])
 }
 
 enum TestReportStatus {
@@ -520,6 +732,94 @@ model Screenshot {
 }
 
 /**
+ * Africa Rise-Up: developers of Africa and the diaspora join forces on a real problem of the continent.
+ * Each project has a discussion feed, a members' chat and scheduled events with an external video link (D7).
+ */
+
+enum RiseDomain {
+  WATER
+  HEALTH
+  AGRICULTURE
+  EDUCATION
+  ENERGY
+  FINANCE
+  OTHER
+}
+
+model RiseProject {
+  id             String        @id @default(cuid())
+  name           String        @db.VarChar(80)
+  domain         RiseDomain
+  /// One sentence shown on the project card.
+  summary        String        @db.VarChar(200)
+  problem        String        @db.VarChar(1500)
+  /// Skills the project looks for: backend, sécurité, mobile…
+  skills         String[]      @default([])
+  initiatorId    String
+  initiator      User          @relation(fields: [initiatorId], references: [id], onDelete: Cascade)
+  /// The members' chat, created with the project.
+  conversationId String?       @unique
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  members        RiseMember[]
+  posts          RisePost[]
+  events         RiseEvent[]
+
+  @@index([domain, createdAt])
+}
+
+model RiseMember {
+  projectId String
+  userId    String
+  project   RiseProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Mobile, Data, Backend…
+  skill     String      @default("") @db.VarChar(30)
+  joinedAt  DateTime    @default(now())
+
+  @@id([projectId, userId])
+  @@index([userId])
+}
+
+/// A post in the project's discussion feed. A reply points to its parent post.
+model RisePost {
+  id        String      @id @default(cuid())
+  projectId String
+  project   RiseProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  parentId  String?
+  parent    RisePost?   @relation("RiseReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   RisePost[]  @relation("RiseReplies")
+  body      String      @db.VarChar(2000)
+  createdAt DateTime    @default(now())
+  hiddenAt  DateTime?
+
+  @@index([projectId, parentId, createdAt])
+}
+
+/// A scheduled meeting of the project: a monthly checkpoint, a workshop… held on an external video link.
+model RiseEvent {
+  id          String      @id @default(cuid())
+  projectId   String
+  project     RiseProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  title       String      @db.VarChar(100)
+  agenda      String      @db.VarChar(600)
+  startsAt    DateTime
+  minutes     Int
+  /// Meet, Jitsi or any video link. Empty: KABAD creates a Jitsi room.
+  meetingUrl  String      @db.VarChar(200)
+  /// A reminder is sent to the members one hour before.
+  remindedAt  DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([projectId, startsAt])
+  @@index([startsAt])
+}
+
+/**
  * Notifications
  */
 
@@ -555,12 +855,15 @@ enum EmailTokenPurpose {
   RESET_PASSWORD
 }
 
-/// One-time link sent by e-mail. Only the SHA-256 of the token is stored.
+/// One-time link or code sent by e-mail. Only SHA-256 hashes are stored.
 model EmailToken {
   id        String            @id
   userId    String
   user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   purpose   EmailTokenPurpose
+  /// SHA-256 of the 6-digit code typed by the member (VERIFY). Locked after 5 wrong attempts.
+  codeHash  String?
+  attempts  Int               @default(0)
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime          @default(now())

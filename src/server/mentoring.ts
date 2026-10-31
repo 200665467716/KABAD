@@ -1,295 +1,309 @@
 /*
- * Mentoring rules, enforced on the server:
- * - a junior asks a verified senior for mentoring on one project; the senior accepts while they have an open place;
- * - accepting forms a pair, makes both members contacts and opens their conversation;
- * - either member notes a session; it counts only once both have confirmed it;
- * - a session can be corrected until both have confirmed it, and a correction asks the other member again.
+ * Mentoring by time slots, enforced on the server:
+ * - only members holding the mentor badge open slots; KABAD cuts their weekly ranges into 30-minute slots;
+ * - a member books a free slot with a topic and a precise problem; one slot holds one active booking
+ *   (a partial unique index in PostgreSQL settles two clicks at the same instant);
+ * - the mentor accepts or declines; accepting gives both of them the video link;
+ * - a request not answered before its slot starts lapses on its own.
  */
 import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
-import { mentorStats } from "./members";
 import { pushNotifications } from "./notifications";
-import { notify } from "./realtime-events";
-import { formatDuration } from "@/lib/format";
-import { cashChallengeEligibility } from "@/lib/mentoring";
-import type { Eligibility, MentorRequestView, PairView, SessionView } from "@/lib/domain-types";
+import { freeSlots, isOfferedSlot, rangesProblem, type WeeklyRange } from "@/lib/slots";
+import { heldMinutes, jitsiRoom, MAX_PENDING_BOOKINGS, mentoringEligibility, SESSION_MINUTES, type Eligibility } from "@/lib/mentoring";
+import { formatSlot } from "@/lib/time";
+import type { AvailabilityView, BookingView, MentorCard, MentorDetail } from "@/lib/domain-types";
+
+/** How far ahead slots are offered. */
+export const BOOKING_WINDOW_DAYS = 30;
+type Tx = Db | Prisma.TransactionClient;
 
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
-/** A session is noted within two weeks; older ones are no longer believable. */
-export const SESSION_MAX_AGE_DAYS = 14;
-/** At most this much confirmed mentoring per pair and per day. */
-export const DAILY_MINUTES_MAX = 4 * 60;
-/** After a refusal, the same mentor can be asked again only after this delay. */
-export const REQUEST_AGAIN_AFTER_DAYS = 30;
-/** A request with no answer after this delay lapses, so the junior can turn to another mentor. */
-export const REQUEST_EXPIRES_DAYS = 7;
 
-/** Lapsed requests are closed when read: no background job needed. */
-async function expireRequests(prisma: Db) {
-  await prisma.mentorRequest.updateMany({ where: { status: "PENDING", createdAt: { lt: new Date(Date.now() - REQUEST_EXPIRES_DAYS * 86_400_000) } }, data: { status: "DECLINED", answeredAt: new Date() } });
+/** Requests nobody answered before their slot lapse. Cheap and idempotent: run before reading. */
+export async function lapseUnanswered(prisma: Tx = db) {
+  await prisma.mentoringBooking.updateMany({
+    where: { status: "PENDING", startsAt: { lte: new Date() } },
+    data: { status: "DECLINED", declineReason: "Demande expirée : le mentor n’a pas répondu avant la séance.", answeredAt: new Date() },
+  });
 }
-const directKey = (a: string, b: string) => [a, b].sort().join(":");
 
-const sessionInclude = { notedBy: { select: { id: true, name: true } } } as const;
-type SessionRow = Prisma.MentoringSessionGetPayload<{ include: typeof sessionInclude }>;
+async function badgeOf(prisma: Tx, userIds: string[]) {
+  const rows = await prisma.mentorBadgeRequest.findMany({
+    where: { userId: { in: userIds }, status: "APPROVED" },
+    orderBy: { reviewedAt: "desc" },
+    select: { userId: true, domains: true, technologies: true, topics: true },
+  });
+  const out = new Map<string, { domains: string[]; technologies: string[]; topics: string }>();
+  for (const r of rows) if (!out.has(r.userId)) out.set(r.userId, r);
+  return out;
+}
 
-const toSession = (s: SessionRow): SessionView => ({
-  id: s.id,
-  pairId: s.pairId,
-  startsAt: s.startsAt.toISOString(),
-  minutes: s.minutes,
-  topic: s.topic,
-  done: s.done,
-  next: s.next,
-  notedBy: s.notedBy,
-  confirmedByMentor: s.confirmedByMentor,
-  confirmedByMentee: s.confirmedByMentee,
-});
+async function slotsOf(prisma: Tx, mentorIds: string[], from: Date, to: Date) {
+  const now = new Date();
+  const [mentors, taken] = await Promise.all([
+    prisma.user.findMany({
+      where: { id: { in: mentorIds } },
+      select: { id: true, timeZone: true, availability: { select: { weekday: true, startMin: true, endMin: true } }, blockedDates: { select: { day: true } } },
+    }),
+    prisma.mentoringBooking.findMany({ where: { mentorId: { in: mentorIds }, status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gte: from, lt: to } }, select: { mentorId: true, startsAt: true } }),
+  ]);
+  const out = new Map<string, Date[]>();
+  for (const m of mentors) {
+    out.set(
+      m.id,
+      freeSlots({
+        ranges: m.availability,
+        timeZone: m.timeZone,
+        from,
+        to,
+        now,
+        blocked: m.blockedDates.map((b) => b.day.toISOString().slice(0, 10)),
+        taken: taken.filter((t) => t.mentorId === m.id).map((t) => t.startsAt.getTime()),
+      }),
+    );
+  }
+  return out;
+}
 
-const pairInclude = {
-  mentor: { select: { id: true, name: true } },
-  mentee: { select: { id: true, name: true } },
-  sessions: { include: sessionInclude, orderBy: { startsAt: "desc" } },
-} as const;
-type PairRow = Prisma.PairGetPayload<{ include: typeof pairInclude }>;
+async function sessionsHeld(prisma: Tx, mentorIds: string[]) {
+  const rows = await prisma.mentoringBooking.groupBy({ by: ["mentorId"], where: { mentorId: { in: mentorIds }, status: "ACCEPTED", startsAt: { lt: new Date() } }, _count: { _all: true } });
+  return new Map(rows.map((r) => [r.mentorId, r._count._all]));
+}
 
-function toPair(p: PairRow, userId: string): PairView {
-  const sessions = p.sessions.map(toSession);
+const mentorWhere = { seniorVerifiedAt: { not: null }, suspendedAt: null } as const;
+
+/** The catalogue of badged mentors, optionally narrowed to one area ("Paiements et fintech"). */
+export async function listMentors(opts: { domain?: string; excludeId?: string } = {}, prisma: Db = db): Promise<MentorCard[]> {
+  const users = await prisma.user.findMany({ where: { ...mentorWhere, ...(opts.excludeId ? { id: { not: opts.excludeId } } : {}) }, select: { id: true, name: true, city: true, country: true, headline: true }, orderBy: { name: "asc" } });
+  const ids = users.map((u) => u.id);
+  const from = new Date();
+  const to = new Date(from.getTime() + 14 * 86_400_000);
+  const [badges, slots, held] = await Promise.all([badgeOf(prisma, ids), slotsOf(prisma, ids, from, to), sessionsHeld(prisma, ids)]);
+  return users
+    .map((u) => ({
+      ...u,
+      domains: badges.get(u.id)?.domains ?? [],
+      technologies: badges.get(u.id)?.technologies ?? [],
+      nextSlot: slots.get(u.id)?.[0]?.toISOString() ?? null,
+      sessionsHeld: held.get(u.id) ?? 0,
+    }))
+    .filter((m) => !opts.domain || m.domains.includes(opts.domain))
+    // Mentors with a slot soon come first.
+    .sort((a, b) => (a.nextSlot ?? "~").localeCompare(b.nextSlot ?? "~"));
+}
+
+export async function getMentor(mentorId: string, prisma: Db = db): Promise<MentorDetail> {
+  const u = await prisma.user.findFirst({ where: { id: mentorId, ...mentorWhere }, select: { id: true, name: true, city: true, country: true, headline: true, bio: true, timeZone: true } });
+  if (!u) throw notFound("Mentor introuvable.");
+  const from = new Date();
+  const to = new Date(from.getTime() + BOOKING_WINDOW_DAYS * 86_400_000);
+  const [badges, slots, held] = await Promise.all([badgeOf(prisma, [u.id]), slotsOf(prisma, [u.id], from, to), sessionsHeld(prisma, [u.id])]);
+  const all = slots.get(u.id) ?? [];
   return {
-    id: p.id,
-    project: p.project,
-    repo: p.repo,
-    since: p.createdAt.toISOString(),
-    nextSessionAt: p.nextSessionAt?.toISOString() ?? null,
-    mentor: p.mentor,
-    mentee: p.mentee,
-    iAm: p.mentorId === userId ? "MENTOR" : "MENTEE",
-    sessions,
-    confirmedMinutes: sessions.filter((s) => s.confirmedByMentor && s.confirmedByMentee).reduce((n, s) => n + s.minutes, 0),
-    // One stable room per pair on the public Jitsi Meet server: no account, screen sharing included.
-    visioUrl: `https://meet.jit.si/kabad-${p.id}`,
+    ...u,
+    domains: badges.get(u.id)?.domains ?? [],
+    technologies: badges.get(u.id)?.technologies ?? [],
+    topics: badges.get(u.id)?.topics ?? "",
+    nextSlot: all[0]?.toISOString() ?? null,
+    sessionsHeld: held.get(u.id) ?? 0,
+    slots: all.map((d) => d.toISOString()),
   };
 }
 
-/* Requests */
+/* Booking */
 
-export async function requestMentoring(menteeId: string, input: { mentorId: string; project: string; situation: string; repo?: string; topics: string[] }, prisma: Db = db) {
-  if (input.mentorId === menteeId) throw new DomainError("self", "Vous ne pouvez pas être votre propre mentor.");
-  const mentor = await prisma.user.findUnique({ where: { id: input.mentorId }, select: { id: true, name: true, role: true, seniorVerifiedAt: true, mentorCapacity: true } });
-  if (!mentor || mentor.role !== "SENIOR" || !mentor.seniorVerifiedAt) throw notFound("Mentor introuvable.");
-  const first = firstName(mentor.name);
-  await expireRequests(prisma);
-  const [pair, pending, blocked] = await Promise.all([
-    prisma.pair.findUnique({ where: { mentorId_menteeId: { mentorId: mentor.id, menteeId } } }),
-    prisma.mentorRequest.count({ where: { mentorId: mentor.id, menteeId, status: "PENDING" } }),
-    prisma.block.count({ where: { OR: [{ blockerId: menteeId, blockedId: mentor.id }, { blockerId: mentor.id, blockedId: menteeId }] } }),
+export async function bookSlot(menteeId: string, input: { mentorId: string; startsAt: string; topic: string; problem: string; link?: string }, prisma: Db = db) {
+  if (input.mentorId === menteeId) throw new DomainError("self", "Vous ne pouvez pas réserver vos propres créneaux.");
+  const startsAt = new Date(input.startsAt);
+  if (Number.isNaN(startsAt.getTime())) throw new DomainError("bad_slot", "Créneau invalide.", 400, "startsAt");
+  await lapseUnanswered(prisma);
+  const [mentor, mentee, blocked, pending] = await Promise.all([
+    prisma.user.findFirst({ where: { id: input.mentorId, ...mentorWhere }, select: { id: true, name: true, timeZone: true, availability: { select: { weekday: true, startMin: true, endMin: true } }, blockedDates: { select: { day: true } } } }),
+    prisma.user.findUniqueOrThrow({ where: { id: menteeId }, select: { name: true } }),
+    prisma.block.count({ where: { OR: [{ blockerId: menteeId, blockedId: input.mentorId }, { blockerId: input.mentorId, blockedId: menteeId }] } }),
+    prisma.mentoringBooking.count({ where: { menteeId, status: "PENDING" } }),
   ]);
-  if (blocked) throw forbidden("Vous ne pouvez pas contacter ce membre.");
-  if (pair?.active) throw new DomainError("already_pair", `Vous êtes déjà en binôme avec ${first}.`, 409);
-  if (pending) throw new DomainError("already_sent", `Vous avez déjà envoyé une demande à ${first}. Attendez sa réponse.`, 409);
-  const declined = await prisma.mentorRequest.count({ where: { mentorId: mentor.id, menteeId, status: "DECLINED", answeredAt: { gte: new Date(Date.now() - REQUEST_AGAIN_AFTER_DAYS * 86_400_000) } } });
-  if (declined) throw new DomainError("declined", `${first} n’est pas disponible pour vous accompagner en ce moment. Choisissez un autre mentor.`, 409);
-  const stats = (await mentorStats([mentor.id], prisma)).get(mentor.id)!;
-  if (mentor.mentorCapacity - stats.activePairs <= 0) throw new DomainError("full", `${first} n’a plus de place libre pour le moment.`, 409);
+  if (!mentor) throw notFound("Mentor introuvable.");
+  if (blocked) throw forbidden("Vous ne pouvez pas réserver de séance avec ce mentor.");
+  if (pending >= MAX_PENDING_BOOKINGS) throw new DomainError("too_many", `Vous attendez déjà ${MAX_PENDING_BOOKINGS} réponses. Patientez qu’un mentor réponde avant d’en demander d’autres.`, 429);
+  const offered = isOfferedSlot(startsAt, {
+    ranges: mentor.availability,
+    timeZone: mentor.timeZone,
+    now: new Date(),
+    blocked: mentor.blockedDates.map((b) => b.day.toISOString().slice(0, 10)),
+  });
+  if (!offered) throw new DomainError("bad_slot", "Ce créneau n’est pas proposé par le mentor.", 409, "startsAt");
 
-  const mentee = await prisma.user.findUniqueOrThrow({ where: { id: menteeId }, select: { name: true } });
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const b = await tx.mentoringBooking.create({
+        data: { mentorId: mentor.id, menteeId, startsAt, minutes: SESSION_MINUTES, topic: input.topic, problem: input.problem, link: input.link || null },
+      });
+      await pushNotifications(tx, [{ userId: mentor.id, actor: mentee.name, text: ` demande une séance le ${formatSlot(startsAt, mentor.timeZone)} : « ${input.topic} ».`, href: "/mentorat/demandes", icon: "clock", tone: "brand" }]);
+      return { id: b.id };
+    });
+  } catch (e) {
+    // The partial unique index: someone booked this slot a moment earlier.
+    if ((e as { code?: string }).code === "P2002") throw new DomainError("slot_taken", "Ce créneau vient d’être réservé. Choisissez-en un autre.", 409, "startsAt");
+    throw e;
+  }
+}
+
+const personSelect = { id: true, name: true, city: true, headline: true } as const;
+const bookingInclude = { mentor: { select: personSelect }, mentee: { select: personSelect } } as const;
+type BookingRow = Prisma.MentoringBookingGetPayload<{ include: typeof bookingInclude }>;
+
+function toView(b: BookingRow, viewerId: string): BookingView {
+  return {
+    id: b.id,
+    startsAt: b.startsAt.toISOString(),
+    minutes: b.minutes,
+    topic: b.topic,
+    problem: b.problem,
+    link: b.link,
+    status: b.status,
+    // The video link is shared only once the session is accepted.
+    meetingUrl: b.status === "ACCEPTED" ? b.meetingUrl : null,
+    declineReason: b.declineReason,
+    mentor: b.mentor,
+    mentee: b.mentee,
+    iAm: b.mentorId === viewerId ? "MENTOR" : "MENTEE",
+  };
+}
+
+export async function getBooking(userId: string, bookingId: string, prisma: Db = db): Promise<BookingView> {
+  await lapseUnanswered(prisma);
+  const b = await prisma.mentoringBooking.findUnique({ where: { id: bookingId }, include: bookingInclude });
+  if (!b || (b.mentorId !== userId && b.menteeId !== userId)) throw notFound("Séance introuvable.");
+  return toView(b, userId);
+}
+
+/** The member's sessions: as a mentee, and as a mentor when they hold the badge. */
+export async function myBookings(userId: string, prisma: Db = db) {
+  await lapseUnanswered(prisma);
+  const since = new Date(Date.now() - 60 * 86_400_000);
+  const rows = await prisma.mentoringBooking.findMany({
+    where: { OR: [{ mentorId: userId }, { menteeId: userId }], startsAt: { gte: since } },
+    include: bookingInclude,
+    orderBy: { startsAt: "asc" },
+  });
+  const now = Date.now();
+  const views = rows.map((b) => toView(b, userId));
+  const upcoming = (v: BookingView) => new Date(v.startsAt).getTime() + v.minutes * 60_000 > now;
+  return {
+    asMentee: views.filter((v) => v.iAm === "MENTEE"),
+    toAnswer: views.filter((v) => v.iAm === "MENTOR" && v.status === "PENDING"),
+    upcoming: views.filter((v) => v.status === "ACCEPTED" && upcoming(v)),
+    asMentorAccepted: views.filter((v) => v.iAm === "MENTOR" && v.status === "ACCEPTED"),
+  };
+}
+
+export async function answerBooking(mentorId: string, bookingId: string, input: { accept: boolean; reason?: string }, prisma: Db = db) {
+  await lapseUnanswered(prisma);
+  const b = await prisma.mentoringBooking.findUnique({ where: { id: bookingId }, include: { mentor: { select: { name: true, meetingUrl: true } }, mentee: { select: { timeZone: true } } } });
+  if (!b || b.mentorId !== mentorId) throw notFound("Demande introuvable.");
   return prisma.$transaction(async (tx) => {
-    const r = await tx.mentorRequest.create({ data: { menteeId, mentorId: mentor.id, project: input.project, situation: input.situation, repo: input.repo || null, topics: input.topics } });
-    await pushNotifications(tx, [{ userId: mentor.id, actor: mentee.name, text: `vous demande un mentorat sur « ${input.project} ».`, href: "/mentorat#demandes", icon: "user", tone: "brand" }]);
-    return { id: r.id };
+    const meetingUrl = input.accept ? b.mentor.meetingUrl || jitsiRoom() : null;
+    const { count } = await tx.mentoringBooking.updateMany({
+      where: { id: bookingId, status: "PENDING" },
+      data: input.accept ? { status: "ACCEPTED", meetingUrl, answeredAt: new Date() } : { status: "DECLINED", declineReason: input.reason || null, answeredAt: new Date() },
+    });
+    if (!count) throw new DomainError("answered", "Cette demande a déjà reçu une réponse ou a expiré.", 409);
+    const when = formatSlot(b.startsAt, b.mentee.timeZone);
+    await pushNotifications(tx, [
+      input.accept
+        ? { userId: b.menteeId, actor: b.mentor.name, text: ` a accepté ta séance du ${when}.`, href: `/mentorat/seances/${b.id}`, icon: "check", tone: "success" }
+        : { userId: b.menteeId, actor: b.mentor.name, text: ` ne peut pas assurer la séance du ${when}${input.reason ? ` : « ${input.reason} »` : "."}`, href: `/mentorat/seances/${b.id}`, icon: "clock", tone: "neutral" },
+    ]);
+    return { status: input.accept ? "ACCEPTED" : "DECLINED", meetingUrl };
   });
 }
 
-const requestInclude = { mentee: { select: { id: true, name: true, city: true } }, mentor: { select: { id: true, name: true } } } as const;
-
-export async function listRequests(userId: string, prisma: Db = db): Promise<{ received: MentorRequestView[]; sent: MentorRequestView[] }> {
-  await expireRequests(prisma);
-  const rows = await prisma.mentorRequest.findMany({
-    where: { status: "PENDING", OR: [{ mentorId: userId }, { menteeId: userId }] },
-    include: requestInclude,
-    orderBy: { createdAt: "desc" },
+/** Either member cancels a session that has not started. */
+export async function cancelBooking(userId: string, bookingId: string, prisma: Db = db) {
+  const b = await prisma.mentoringBooking.findUnique({ where: { id: bookingId }, include: { mentor: { select: { name: true, timeZone: true } }, mentee: { select: { name: true, timeZone: true } } } });
+  if (!b || (b.mentorId !== userId && b.menteeId !== userId)) throw notFound("Séance introuvable.");
+  if (b.startsAt.getTime() <= Date.now()) throw new DomainError("started", "La séance a déjà commencé.", 409);
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.mentoringBooking.updateMany({ where: { id: bookingId, status: { in: ["PENDING", "ACCEPTED"] } }, data: { status: "CANCELLED", answeredAt: new Date() } });
+    if (!count) throw new DomainError("closed", "Cette séance n’est plus active.", 409);
+    const byMentor = userId === b.mentorId;
+    const other = byMentor ? { id: b.menteeId, tz: b.mentee.timeZone } : { id: b.mentorId, tz: b.mentor.timeZone };
+    await pushNotifications(tx, [{ userId: other.id, actor: byMentor ? b.mentor.name : b.mentee.name, text: ` a annulé la séance du ${formatSlot(b.startsAt, other.tz)}.`, href: `/mentorat/seances/${b.id}`, icon: "clock", tone: "neutral" }]);
+    return { ok: true };
   });
-  const view = (r: (typeof rows)[number]): MentorRequestView => ({ id: r.id, project: r.project, situation: r.situation, repo: r.repo, topics: r.topics, createdAt: r.createdAt.toISOString(), mentee: r.mentee, mentor: r.mentor });
-  return { received: rows.filter((r) => r.mentorId === userId).map(view), sent: rows.filter((r) => r.menteeId === userId).map(view) };
 }
 
-export async function cancelRequest(menteeId: string, requestId: string, prisma: Db = db) {
-  const { count } = await prisma.mentorRequest.deleteMany({ where: { id: requestId, menteeId, status: "PENDING" } });
-  if (!count) throw notFound("Demande introuvable ou déjà traitée.");
+/* Availability */
+
+async function requireMentor(prisma: Tx, userId: string) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { seniorVerifiedAt: true } });
+  if (!u?.seniorVerifiedAt) throw forbidden("Ouvrez des créneaux une fois votre badge mentor accordé.");
+}
+
+export async function getAvailability(mentorId: string, prisma: Db = db): Promise<AvailabilityView> {
+  const u = await prisma.user.findUniqueOrThrow({
+    where: { id: mentorId },
+    select: { timeZone: true, meetingUrl: true, availability: { orderBy: [{ weekday: "asc" }, { startMin: "asc" }] }, blockedDates: { where: { day: { gte: new Date(new Date().toISOString().slice(0, 10)) } }, orderBy: { day: "asc" } } },
+  });
+  return {
+    timeZone: u.timeZone,
+    meetingUrl: u.meetingUrl,
+    ranges: u.availability.map((a) => ({ weekday: a.weekday, startMin: a.startMin, endMin: a.endMin })),
+    blocked: u.blockedDates.map((b) => ({ day: b.day.toISOString().slice(0, 10), reason: b.reason })),
+  };
+}
+
+/** Replaces the weekly ranges and the days off. Sessions already booked stay as they are. */
+export async function saveAvailability(
+  mentorId: string,
+  input: { timeZone: string; meetingUrl?: string; ranges: WeeklyRange[]; blocked: Array<{ day: string; reason?: string }> },
+  prisma: Db = db,
+) {
+  await requireMentor(prisma, mentorId);
+  const problem = rangesProblem(input.ranges);
+  if (problem) throw new DomainError("bad_ranges", problem, 400, "ranges");
+  try {
+    new Intl.DateTimeFormat("fr", { timeZone: input.timeZone });
+  } catch {
+    throw new DomainError("bad_zone", "Fuseau horaire inconnu.", 400, "timeZone");
+  }
+  await prisma.$transaction([
+    prisma.availability.deleteMany({ where: { mentorId } }),
+    prisma.availability.createMany({ data: input.ranges.map((r) => ({ mentorId, ...r })) }),
+    prisma.blockedDate.deleteMany({ where: { mentorId } }),
+    prisma.blockedDate.createMany({ data: input.blocked.map((b) => ({ mentorId, day: new Date(`${b.day}T00:00:00Z`), reason: b.reason || null })), skipDuplicates: true }),
+    prisma.user.update({ where: { id: mentorId }, data: { timeZone: input.timeZone, ...(input.meetingUrl !== undefined ? { meetingUrl: input.meetingUrl } : {}) } }),
+  ]);
   return { ok: true };
 }
 
-/** Either member ends the pair. Sessions stay in the history and keep counting. */
-export async function endPair(userId: string, pairId: string, prisma: Db = db) {
-  const p = await pairOf(prisma, userId, pairId);
-  if (!p.active) return { ok: true };
-  const me = p.mentorId === userId ? p.mentor : p.mentee;
-  const other = p.mentorId === userId ? p.mentee : p.mentor;
-  return prisma.$transaction(async (tx) => {
-    await tx.pair.update({ where: { id: p.id }, data: { active: false, nextSessionAt: null } });
-    await pushNotifications(tx, [{ userId: other.id, actor: me.name, text: `a mis fin au binôme sur « ${p.project} ». Vos séances confirmées restent comptées.`, href: "/mentorat", icon: "user", tone: "neutral" }]);
-    return { ok: true };
-  });
+/* Hackathon rules */
+
+/** Mentoring actually held by a member, compared with what a hackathon requires. */
+export async function eligibility(userId: string, required: number, prisma: Tx = db): Promise<Eligibility> {
+  const rows = await prisma.mentoringBooking.findMany({ where: { menteeId: userId, status: "ACCEPTED", startsAt: { lt: new Date() } }, select: { status: true, startsAt: true, minutes: true } });
+  return mentoringEligibility(heldMinutes(rows, new Date()), required);
 }
 
-export async function answerRequest(mentorId: string, requestId: string, accept: boolean, prisma: Db = db) {
-  await expireRequests(prisma);
-  const r = await prisma.mentorRequest.findUnique({ where: { id: requestId }, include: requestInclude });
-  if (!r || r.mentorId !== mentorId) throw notFound("Demande introuvable.");
-  if (r.status !== "PENDING") throw new DomainError("already_answered", "Vous avez déjà répondu à cette demande.", 409);
-  const blocked = await prisma.block.count({ where: { OR: [{ blockerId: mentorId, blockedId: r.menteeId }, { blockerId: r.menteeId, blockedId: mentorId }] } });
-  if (accept && blocked) throw forbidden("Vous ne pouvez pas accepter cette demande : l’un de vous a bloqué l’autre.");
+/** The winner's mentor (level 3 of D6): the mentor with whom they held the most mentoring time. */
+export async function mainMentor(userId: string, prisma: Tx = db): Promise<string | null> {
+  const rows = await prisma.mentoringBooking.groupBy({ by: ["mentorId"], where: { menteeId: userId, status: "ACCEPTED", startsAt: { lt: new Date() } }, _sum: { minutes: true } });
+  rows.sort((a, b) => (b._sum.minutes ?? 0) - (a._sum.minutes ?? 0));
+  return rows[0]?.mentorId ?? null;
+}
 
-  if (!accept) {
-    return prisma.$transaction(async (tx) => {
-      await tx.mentorRequest.update({ where: { id: r.id }, data: { status: "DECLINED", answeredAt: new Date() } });
-      await pushNotifications(tx, [{ userId: r.menteeId, actor: r.mentor.name, text: "ne peut pas vous accompagner pour le moment. Choisissez un autre mentor.", href: "/mentorat/mentors", icon: "user", tone: "neutral" }]);
-      return { pairId: null };
-    });
+/** Mentors who held a session with a member: a juror never scores a solution of someone they mentored. */
+export async function mentoredBy(userIds: string[], prisma: Tx = db): Promise<Map<string, Set<string>>> {
+  const rows = await prisma.mentoringBooking.findMany({ where: { menteeId: { in: userIds }, status: "ACCEPTED" }, select: { menteeId: true, mentorId: true }, distinct: ["menteeId", "mentorId"] });
+  const out = new Map<string, Set<string>>();
+  for (const r of rows) {
+    if (!out.has(r.menteeId)) out.set(r.menteeId, new Set());
+    out.get(r.menteeId)!.add(r.mentorId);
   }
-
-  const [mentor, stats] = await Promise.all([
-    prisma.user.findUniqueOrThrow({ where: { id: mentorId }, select: { mentorCapacity: true } }),
-    mentorStats([mentorId], prisma).then((m) => m.get(mentorId)!),
-  ]);
-  if (mentor.mentorCapacity - stats.activePairs <= 0) throw new DomainError("full", "Vous n’avez plus de place libre. Augmentez votre nombre de binômes ou terminez-en un.", 409);
-
-  return prisma.$transaction(async (tx) => {
-    const now = new Date();
-    const { count } = await tx.mentorRequest.updateMany({ where: { id: r.id, status: "PENDING" }, data: { status: "ACCEPTED", answeredAt: now } });
-    if (!count) throw new DomainError("already_answered", "Vous avez déjà répondu à cette demande.", 409);
-    const pair = await tx.pair.upsert({
-      where: { mentorId_menteeId: { mentorId, menteeId: r.menteeId } },
-      create: { mentorId, menteeId: r.menteeId, project: r.project, repo: r.repo },
-      update: { active: true, project: r.project, repo: r.repo },
-    });
-    // The pair talks in an ordinary direct conversation.
-    await tx.contact.createMany({ data: [{ userId: mentorId, contactId: r.menteeId }, { userId: r.menteeId, contactId: mentorId }], skipDuplicates: true });
-    const key = directKey(mentorId, r.menteeId);
-    const conversation =
-      (await tx.conversation.findUnique({ where: { directKey: key } })) ??
-      (await tx.conversation.create({ data: { kind: "DIRECT", directKey: key, members: { create: [{ userId: mentorId, lastReadAt: now }, { userId: r.menteeId, lastReadAt: now }] } } }));
-    await tx.message.create({ data: { conversationId: conversation.id, kind: "SYSTEM", body: `${firstName(r.mentor.name)} a accepté la demande de mentorat sur « ${r.project} »`, createdAt: now } });
-    await tx.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: now } });
-    await notify(tx, { t: "conversation", conversationId: conversation.id, recipients: [mentorId, r.menteeId] });
-    await pushNotifications(tx, [{ userId: r.menteeId, actor: r.mentor.name, text: "a accepté votre demande de mentorat. Votre binôme commence.", href: "/mentorat", icon: "user", tone: "success" }]);
-    return { pairId: pair.id };
-  });
+  return out;
 }
 
-/* Pairs and sessions */
-
-export async function myPairs(userId: string, prisma: Db = db): Promise<PairView[]> {
-  const rows = await prisma.pair.findMany({ where: { active: true, OR: [{ mentorId: userId }, { menteeId: userId }] }, include: pairInclude, orderBy: { createdAt: "asc" } });
-  return rows.map((p) => toPair(p, userId));
-}
-
-async function pairOf(prisma: Db | Prisma.TransactionClient, userId: string, pairId: string) {
-  const p = await prisma.pair.findUnique({ where: { id: pairId }, include: pairInclude });
-  if (!p || (p.mentorId !== userId && p.menteeId !== userId)) throw notFound("Binôme introuvable.");
-  return p;
-}
-
-export async function getPair(userId: string, pairId: string, prisma: Db = db) {
-  return toPair(await pairOf(prisma, userId, pairId), userId);
-}
-
-/** Confirmed mentoring time of a junior, across all their mentors. */
-export async function eligibility(userId: string, prisma: Db = db): Promise<Eligibility> {
-  const sessions = await prisma.mentoringSession.findMany({ where: { pair: { menteeId: userId } }, select: { minutes: true, confirmedByMentor: true, confirmedByMentee: true, pair: { select: { mentor: { select: { name: true } } } } } });
-  const e = cashChallengeEligibility(sessions);
-  const mentors = [...new Set(sessions.filter((s) => s.confirmedByMentor && s.confirmedByMentee).map((s) => s.pair.mentor.name))];
-  return { ...e, mentors };
-}
-
-export async function getSession(userId: string, sessionId: string, prisma: Db = db) {
-  const s = await prisma.mentoringSession.findUnique({ where: { id: sessionId }, include: { pair: { include: pairInclude } } });
-  if (!s || (s.pair.mentorId !== userId && s.pair.menteeId !== userId)) throw notFound("Séance introuvable.");
-  return { session: toSession(s.pair.sessions.find((x) => x.id === s.id)!), pair: toPair(s.pair, userId) };
-}
-
-type SessionInput = { startsAt: string; minutes: number; topic: string; done: string; next: string };
-
-/**
- * A session must fall between the start of the pair and now, within the last two weeks,
- * and a pair cannot declare more than 4 h on the same day: confirmed time unlocks prize money.
- */
-async function assertBelievable(prisma: Db, pair: { id: string; createdAt: Date }, startsAt: Date, minutes: number, excludeId?: string) {
-  const now = Date.now();
-  if (Number.isNaN(startsAt.getTime())) throw new DomainError("date", "Indiquez la date et l’heure de la séance.", 400, "startsAt");
-  if (startsAt.getTime() > now + 10 * 60_000) throw new DomainError("future", "Notez une séance une fois qu’elle a eu lieu.", 400, "startsAt");
-  if (startsAt < pair.createdAt) throw new DomainError("before_pair", "Cette date est antérieure au début de votre binôme.", 400, "startsAt");
-  if (startsAt.getTime() < now - SESSION_MAX_AGE_DAYS * 86_400_000) throw new DomainError("too_old", `Une séance se note dans les ${SESSION_MAX_AGE_DAYS} jours qui suivent.`, 400, "startsAt");
-  const dayStart = new Date(startsAt);
-  dayStart.setUTCHours(0, 0, 0, 0);
-  const sameDay = await prisma.mentoringSession.aggregate({
-    where: { pairId: pair.id, startsAt: { gte: dayStart, lt: new Date(dayStart.getTime() + 86_400_000) }, ...(excludeId ? { NOT: { id: excludeId } } : {}) },
-    _sum: { minutes: true },
-  });
-  if ((sameDay._sum.minutes ?? 0) + minutes > DAILY_MINUTES_MAX) throw new DomainError("too_much", "Votre binôme a déjà noté 4 heures ce jour-là.", 400, "minutes");
-}
-
-export async function noteSession(userId: string, input: SessionInput & { pairId: string }, prisma: Db = db) {
-  const p = await pairOf(prisma, userId, input.pairId);
-  if (!p.active) throw new DomainError("inactive", "Ce binôme est terminé.");
-  const startsAt = new Date(input.startsAt);
-  await assertBelievable(prisma, p, startsAt, input.minutes);
-  const iAmMentor = p.mentorId === userId;
-  const me = iAmMentor ? p.mentor : p.mentee;
-  const other = iAmMentor ? p.mentee : p.mentor;
-  return prisma.$transaction(async (tx) => {
-    const s = await tx.mentoringSession.create({
-      data: { pairId: p.id, startsAt, minutes: input.minutes, topic: input.topic, done: input.done, next: input.next, notedById: userId, confirmedByMentor: iAmMentor, confirmedByMentee: !iAmMentor },
-    });
-    await tx.pair.update({ where: { id: p.id }, data: { nextSessionAt: null } });
-    await pushNotifications(tx, [{ userId: other.id, actor: me.name, text: `a noté une séance de ${formatDuration(input.minutes)}. Confirmez-la pour qu’elle compte.`, href: `/mentorat/seances/${s.id}`, icon: "clock", tone: "brand" }]);
-    return { id: s.id };
-  });
-}
-
-export async function confirmSession(userId: string, sessionId: string, prisma: Db = db) {
-  const { session, pair } = await getSession(userId, sessionId, prisma);
-  const field = pair.iAm === "MENTOR" ? "confirmedByMentor" : "confirmedByMentee";
-  if (session[field]) return { ok: true };
-  const other = pair.iAm === "MENTOR" ? pair.mentee : pair.mentor;
-  const me = pair.iAm === "MENTOR" ? pair.mentor : pair.mentee;
-  return prisma.$transaction(async (tx) => {
-    await tx.mentoringSession.update({ where: { id: sessionId }, data: { [field]: true } });
-    await pushNotifications(tx, [{ userId: other.id, actor: me.name, text: `a confirmé la séance « ${session.topic} ». Elle compte maintenant.`, href: `/mentorat/seances/${sessionId}`, icon: "check", tone: "success" }]);
-    return { ok: true };
-  });
-}
-
-/** A correction is possible until both confirm; the other member is asked to confirm again. */
-export async function correctSession(userId: string, sessionId: string, input: SessionInput, prisma: Db = db) {
-  const { session, pair } = await getSession(userId, sessionId, prisma);
-  if (session.confirmedByMentor && session.confirmedByMentee) throw new DomainError("locked", "Cette séance est confirmée par vous deux : elle ne peut plus être modifiée.", 409);
-  await assertBelievable(prisma, { id: pair.id, createdAt: new Date(pair.since) }, new Date(input.startsAt), input.minutes, sessionId);
-  const iAmMentor = pair.iAm === "MENTOR";
-  const other = iAmMentor ? pair.mentee : pair.mentor;
-  const me = iAmMentor ? pair.mentor : pair.mentee;
-  return prisma.$transaction(async (tx) => {
-    await tx.mentoringSession.update({
-      where: { id: sessionId },
-      data: { startsAt: new Date(input.startsAt), minutes: input.minutes, topic: input.topic, done: input.done, next: input.next, confirmedByMentor: iAmMentor, confirmedByMentee: !iAmMentor },
-    });
-    await pushNotifications(tx, [{ userId: other.id, actor: me.name, text: "a corrigé une séance. Vérifiez-la et confirmez-la.", href: `/mentorat/seances/${sessionId}`, icon: "clock", tone: "brand" }]);
-    return { ok: true };
-  });
-}
-
-export async function planNextSession(userId: string, pairId: string, at: string | null, prisma: Db = db) {
-  const p = await pairOf(prisma, userId, pairId);
-  const when = at ? new Date(at) : null;
-  if (when && when.getTime() < Date.now() - 5 * 60_000) throw new DomainError("past", "Choisissez une date à venir.");
-  const iAmMentor = p.mentorId === userId;
-  const other = iAmMentor ? p.mentee : p.mentor;
-  const me = iAmMentor ? p.mentor : p.mentee;
-  return prisma.$transaction(async (tx) => {
-    await tx.pair.update({ where: { id: p.id }, data: { nextSessionAt: when } });
-    if (when) await pushNotifications(tx, [{ userId: other.id, actor: me.name, text: "a planifié votre prochaine séance.", href: "/mentorat", icon: "clock", tone: "brand" }]);
-    return { ok: true };
-  });
-}
-
+export { firstName };

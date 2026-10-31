@@ -1,8 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { DomainError } from "@/server/errors";
 import { createGroup, addGroupMembers, answerInvitation, block, createReport, sendInvitation } from "@/server/messaging";
-import { noteSession } from "@/server/mentoring";
-import { publishResults, scoreSubmission } from "@/server/challenges";
 import { signInWithGithub } from "@/server/github";
 import { resolveReport, suspendMember } from "@/server/admin";
 import { userFromToken, createSession } from "@/server/auth";
@@ -50,48 +48,6 @@ describe("invitations", () => {
     const results = await Promise.allSettled([answerInvitation("kossi", id, true, prisma), answerInvitation("kossi", id, true, prisma)]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(await prisma.message.count({ where: { kind: "TEXT" } })).toBe(1);
-  });
-});
-
-describe("mentorat", () => {
-  it("refuse une séance antidatée, antérieure au binôme ou au-delà de 4 h par jour", async () => {
-    await prisma.user.update({ where: { id: "awa" }, data: { role: "SENIOR", seniorVerifiedAt: new Date() } });
-    const pair = await prisma.pair.create({ data: { mentorId: "awa", menteeId: "kossi", project: "API", createdAt: new Date(Date.now() - 30 * 86_400_000) } });
-    const base = { pairId: pair.id, topic: "Tests", done: "Nous avons écrit des tests.", next: "Continuer" };
-    await refused(noteSession("awa", { ...base, startsAt: new Date(Date.now() - 20 * 86_400_000).toISOString(), minutes: 60 }, prisma), "too_old");
-    const yesterday = new Date(Date.now() - 86_400_000).toISOString();
-    await noteSession("awa", { ...base, startsAt: yesterday, minutes: 180 }, prisma);
-    await refused(noteSession("awa", { ...base, startsAt: yesterday, minutes: 90 }, prisma), "too_much");
-  });
-});
-
-describe("défis", () => {
-  async function challengeInJury() {
-    for (const id of ["awa", "nadia", "ibrahim"]) await prisma.user.update({ where: { id }, data: { role: "SENIOR", seniorVerifiedAt: new Date() } });
-    await prisma.challenge.create({
-      data: { id: "d", title: "Défi", kind: "CAGNOTTE", status: "JURY", level: "Débutant", stack: "JS", description: "…", closesAt: new Date(), sponsorAmount: 10000, jurors: { create: [{ userId: "awa" }, { userId: "nadia" }, { userId: "ibrahim" }] } },
-    });
-    // Awa mentors Kossi.
-    await prisma.pair.create({ data: { mentorId: "awa", menteeId: "kossi", project: "API" } });
-    const k = await prisma.submission.create({ data: { challengeId: "d", userId: "kossi", repoUrl: "https://github.com/k/r", explanation: "x".repeat(40), payoutOperator: "Moov Money", payoutPhone: "+22890000000" } });
-    const y = await prisma.submission.create({ data: { challengeId: "d", userId: "yao", repoUrl: "https://github.com/y/r", explanation: "x".repeat(40), payoutOperator: "Moov Money", payoutPhone: "+22890000001" } });
-    return { k, y };
-  }
-  const marks = { works: 4, code: 4, tests: 4, explain: 4 };
-
-  it("un juré ne note pas la solution de quelqu’un qu’il accompagne", async () => {
-    const { k } = await challengeInJury();
-    await refused(scoreSubmission("awa", "d", { submissionId: k.id, ...marks }, prisma), "forbidden");
-  });
-
-  it("publier deux fois en même temps ne crée qu’une série de versements", async () => {
-    const { k, y } = await challengeInJury();
-    for (const j of ["nadia", "ibrahim"]) for (const s of [k, y]) await scoreSubmission(j, "d", { submissionId: s.id, ...marks }, prisma);
-    await scoreSubmission("awa", "d", { submissionId: y.id, ...marks }, prisma);
-    const results = await Promise.allSettled([publishResults("equipe", "d", prisma), publishResults("equipe", "d", prisma)]);
-    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
-    expect(await prisma.payout.count()).toBeGreaterThan(0);
-    expect(await prisma.payout.groupBy({ by: ["role"], _count: { _all: true } })).toEqual(expect.not.arrayContaining([expect.objectContaining({ _count: { _all: 2 } })]));
   });
 });
 

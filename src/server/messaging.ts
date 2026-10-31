@@ -291,7 +291,7 @@ async function assertAllContacts(tx: Prisma.TransactionClient | Db, ownerId: str
   if (blocked) throw forbidden("Vous ne pouvez pas ajouter un membre avec qui un blocage est en place.");
 }
 
-export async function createGroup(userId: string, input: { name: string; memberIds: string[] }, prisma: Db = db) {
+export async function createGroup(userId: string, input: { name: string; theme?: string; memberIds: string[] }, prisma: Db = db) {
   const ids = [...new Set(input.memberIds)].filter((id) => id !== userId);
   if (ids.length === 0) throw new DomainError("no_members", "Choisissez au moins un participant.");
   if (ids.length + 1 > GROUP_MAX_MEMBERS) throw new DomainError("too_many", `Un groupe compte ${GROUP_MAX_MEMBERS} membres au plus.`);
@@ -305,6 +305,7 @@ export async function createGroup(userId: string, input: { name: string; memberI
       data: {
         kind: "GROUP",
         name: input.name,
+        theme: input.theme || null,
         createdById: userId,
         members: { create: [{ userId, role: "OWNER" }, ...ids.map((id) => ({ userId: id }))] },
       },
@@ -397,6 +398,37 @@ export async function leaveGroup(userId: string, conversationId: string, prisma:
   });
 }
 
+/*
+ * Community groups: the chat of an Africa Rise-Up project or of an app's testers.
+ * Members join by joining the project or the test, not through contacts, so the size limit of private groups does not apply.
+ */
+
+export async function openCommunityGroup(tx: Prisma.TransactionClient, input: { name: string; theme: string; ownerId: string; intro: string }) {
+  const group = await tx.conversation.create({
+    data: { kind: "GROUP", name: input.name.slice(0, 60), theme: input.theme, createdById: input.ownerId, members: { create: [{ userId: input.ownerId, role: "OWNER" }] } },
+  });
+  await tx.message.create({ data: { conversationId: group.id, kind: "SYSTEM", body: input.intro } });
+  await notify(tx, { t: "conversation", conversationId: group.id, recipients: [input.ownerId] });
+  return group.id;
+}
+
+export async function joinCommunityGroup(tx: Prisma.TransactionClient, conversationId: string, userId: string) {
+  const exists = await tx.conversationMember.findUnique({ where: { conversationId_userId: { conversationId, userId } } });
+  if (exists) return;
+  const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+  await tx.conversationMember.create({ data: { conversationId, userId } });
+  const msg = await tx.message.create({ data: { conversationId, kind: "SYSTEM", body: `${firstName(me.name)} a rejoint le groupe` } });
+  await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: msg.createdAt } });
+  const everyone = (await tx.conversationMember.findMany({ where: { conversationId }, select: { userId: true } })).map((m) => m.userId);
+  await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients: everyone });
+  await notify(tx, { t: "conversation", conversationId, recipients: [userId] });
+}
+
+export async function leaveCommunityGroup(tx: Prisma.TransactionClient, conversationId: string, userId: string) {
+  const { count } = await tx.conversationMember.deleteMany({ where: { conversationId, userId } });
+  if (count) await notify(tx, { t: "conversation", conversationId, recipients: [userId] });
+}
+
 /* Reports and blocks */
 
 export async function createReport(
@@ -464,11 +496,11 @@ export async function block(userId: string, blockedId: string, prisma: Db = db) 
       where: { status: "PENDING", OR: [{ fromId: userId, toId: blockedId }, { fromId: blockedId, toId: userId }] },
       data: { status: "DECLINED", answeredAt: new Date() },
     }),
-    prisma.mentorRequest.updateMany({
-      where: { status: "PENDING", OR: [{ mentorId: userId, menteeId: blockedId }, { mentorId: blockedId, menteeId: userId }] },
-      data: { status: "DECLINED", answeredAt: new Date() },
+    // Sessions to come between them are cancelled.
+    prisma.mentoringBooking.updateMany({
+      where: { status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gt: new Date() }, OR: [{ mentorId: userId, menteeId: blockedId }, { mentorId: blockedId, menteeId: userId }] },
+      data: { status: "CANCELLED", answeredAt: new Date() },
     }),
-    prisma.pair.updateMany({ where: { active: true, OR: [{ mentorId: userId, menteeId: blockedId }, { mentorId: blockedId, menteeId: userId }] }, data: { active: false } }),
   ]);
 }
 

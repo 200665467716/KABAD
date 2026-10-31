@@ -1,11 +1,13 @@
 /*
- * Community tests: a member publishes an app with a short scenario and control questions;
- * other members test it for free and send a report with one screenshot per step.
- * The owner reads each report, then validates or refuses it with a reason.
+ * Community tests: a member publishes an app with a short scenario and control questions.
+ * Other members join its testers' group (where the install link is shared), tick the steps as they go,
+ * then send a report with one screenshot per step. The owner reads each report, then validates or
+ * refuses it with a reason. Places are limited to the number of testers wanted.
  */
 import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
+import { joinCommunityGroup, leaveCommunityGroup, openCommunityGroup } from "./messaging";
 import { pushNotifications } from "./notifications";
 import type { TestAppDetail, TestAppSummary, TestQuestion, TestReportView } from "@/lib/domain-types";
 
@@ -28,44 +30,61 @@ export const normalizeAnswer = (s: string) =>
 const appInclude = {
   owner: { select: { id: true, name: true, city: true } },
   reports: { select: { testerId: true, status: true } },
+  participants: { select: { userId: true, doneSteps: true, user: { select: { id: true, name: true } } }, orderBy: { joinedAt: "asc" } },
 } as const;
 type AppRow = Prisma.TestAppGetPayload<{ include: typeof appInclude }>;
 
 function toSummary(a: AppRow, viewerId: string | null): TestAppSummary {
-  const counted = a.reports.filter((r) => r.status !== "REFUSED").length;
+  const me = a.participants.find((p) => p.userId === viewerId);
   return {
     id: a.id,
     name: a.name,
-    platform: a.platform,
+    platforms: a.platforms,
     url: a.url,
     minutes: a.minutes,
     slots: a.slots,
-    slotsLeft: Math.max(0, a.slots - counted),
+    slotsLeft: Math.max(0, a.slots - a.participants.length),
     pitch: a.pitch,
     task: a.task,
     owner: a.owner,
     reportsCount: a.reports.length,
     toRead: a.reports.filter((r) => r.status === "SUBMITTED").length,
     myReport: a.reports.find((r) => r.testerId === viewerId)?.status ?? null,
+    testers: a.participants.length,
+    joined: me !== undefined,
+    stepsCount: a.steps.length,
+    myDoneSteps: me?.doneSteps ?? [],
   };
 }
 
 export async function listTestApps(viewerId: string, prisma: Db = db) {
   const rows = await prisma.testApp.findMany({ where: { active: true }, include: appInclude, orderBy: { createdAt: "desc" } });
   const all = rows.map((a) => toSummary(a, viewerId));
-  return { toTest: all.filter((a) => a.owner.id !== viewerId), mine: all.filter((a) => a.owner.id === viewerId) };
+  return {
+    toTest: all.filter((a) => a.owner.id !== viewerId && !a.joined),
+    testing: all.filter((a) => a.joined),
+    mine: all.filter((a) => a.owner.id === viewerId),
+  };
 }
 
 export async function getTestApp(viewerId: string, id: string, prisma: Db = db): Promise<TestAppDetail> {
   const a = await prisma.testApp.findUnique({ where: { id }, include: appInclude });
   if (!a || (!a.active && a.ownerId !== viewerId)) throw notFound("Application introuvable.");
   const questions = (a.questions as TestQuestion[]).map(({ q, options }) => (options ? { q, options } : { q }));
-  return { ...toSummary(a, viewerId), steps: a.steps, questions };
+  const summary = toSummary(a, viewerId);
+  return {
+    ...summary,
+    steps: a.steps,
+    questions,
+    // The group (and its install link) is for testers and the owner.
+    conversationId: summary.joined || a.ownerId === viewerId ? a.conversationId : null,
+    testerAvatars: a.participants.slice(0, 3).map((p) => p.user),
+  };
 }
 
 export async function createTestApp(
   ownerId: string,
-  input: { name: string; platform: "WEB" | "ANDROID"; url: string; minutes: number; slots: number; pitch: string; task: string; steps: string[]; questions: TestQuestion[] },
+  input: { name: string; platforms: Array<"WEB" | "ANDROID" | "IOS">; url: string; minutes: number; slots: number; pitch: string; task: string; steps: string[]; questions: TestQuestion[] },
   prisma: Db = db,
 ) {
   for (const q of input.questions) {
@@ -73,19 +92,69 @@ export async function createTestApp(
       throw new DomainError("answer", `La bonne réponse de « ${q.q} » doit faire partie des choix.`);
     }
   }
-  const a = await prisma.testApp.create({ data: { ownerId, ...input, questions: input.questions } });
-  return { id: a.id };
+  return prisma.$transaction(async (tx) => {
+    const owner = await tx.user.findUniqueOrThrow({ where: { id: ownerId }, select: { name: true } });
+    const conversationId = await openCommunityGroup(tx, {
+      name: `Testeurs ${input.name}`,
+      theme: "Test",
+      ownerId,
+      intro: `${owner.name.split(" ")[0]} a ouvert le groupe de test. Installer l’app : ${input.url}`,
+    });
+    const a = await tx.testApp.create({ data: { ownerId, ...input, questions: input.questions, conversationId } });
+    return { id: a.id };
+  });
+}
+
+/** Takes one of the places and opens the testers' group. */
+export async function joinTest(userId: string, testAppId: string, prisma: Db = db) {
+  const a = await prisma.testApp.findUnique({ where: { id: testAppId }, include: { _count: { select: { participants: true } }, participants: { where: { userId }, select: { userId: true } } } });
+  if (!a || !a.active) throw notFound("Application introuvable.");
+  if (a.ownerId === userId) throw forbidden("Vous ne pouvez pas tester votre propre application.");
+  if (a.participants.length) return { conversationId: a.conversationId };
+  if (a._count.participants >= a.slots) throw new DomainError("full", "Toutes les places de test sont prises.", 409);
+  return prisma.$transaction(async (tx) => {
+    await tx.testParticipant.create({ data: { testAppId, userId } });
+    if (a.conversationId) await joinCommunityGroup(tx, a.conversationId, userId);
+    const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+    await pushNotifications(tx, [{ userId: a.ownerId, actor: me.name, text: ` a rejoint les testeurs de « ${a.name} ».`, href: `/tests/${a.id}`, icon: "users", tone: "brand" }]);
+    return { conversationId: a.conversationId };
+  });
+}
+
+/** Gives the place back, as long as no report was sent. */
+export async function leaveTest(userId: string, testAppId: string, prisma: Db = db) {
+  const a = await prisma.testApp.findUnique({ where: { id: testAppId }, select: { conversationId: true, reports: { where: { testerId: userId }, select: { id: true } } } });
+  if (!a) throw notFound("Application introuvable.");
+  if (a.reports.length) throw new DomainError("reported", "Vous avez déjà envoyé un rapport : votre place est comptée.", 409);
+  return prisma.$transaction(async (tx) => {
+    await tx.testParticipant.deleteMany({ where: { testAppId, userId } });
+    if (a.conversationId) await leaveCommunityGroup(tx, a.conversationId, userId);
+    return { ok: true };
+  });
+}
+
+/** Ticks or unticks a step of the scenario. */
+export async function setStep(userId: string, testAppId: string, index: number, done: boolean, prisma: Db = db) {
+  const p = await prisma.testParticipant.findUnique({ where: { testAppId_userId: { testAppId, userId } }, include: { testApp: { select: { steps: true } } } });
+  if (!p) throw forbidden("Rejoignez d’abord le groupe de testeurs.");
+  if (!Number.isInteger(index) || index < 0 || index >= p.testApp.steps.length) throw new DomainError("step", "Étape inconnue.");
+  const set = new Set(p.doneSteps);
+  if (done) set.add(index);
+  else set.delete(index);
+  const doneSteps = [...set].sort((x, y) => x - y);
+  await prisma.testParticipant.update({ where: { testAppId_userId: { testAppId, userId } }, data: { doneSteps } });
+  return { doneSteps };
 }
 
 export type ScreenshotInput = { mime: string; data: Uint8Array };
 
 export async function submitReport(testerId: string, testAppId: string, input: { device: string; answers: string[]; remarks: string }, screenshots: ScreenshotInput[], prisma: Db = db) {
-  const a = await prisma.testApp.findUnique({ where: { id: testAppId }, include: { reports: { select: { testerId: true, status: true } }, owner: { select: { id: true } } } });
+  const a = await prisma.testApp.findUnique({ where: { id: testAppId }, include: { reports: { select: { testerId: true, status: true } }, participants: { where: { userId: testerId }, select: { userId: true } } } });
   if (!a || !a.active) throw notFound("Application introuvable.");
   if (a.ownerId === testerId) throw forbidden("Vous ne pouvez pas tester votre propre application.");
+  if (!a.participants.length) throw forbidden("Rejoignez d’abord le groupe de testeurs.");
   const mine = a.reports.find((r) => r.testerId === testerId);
   if (mine && mine.status !== "REFUSED") throw new DomainError("already_sent", "Vous avez déjà envoyé un rapport pour cette application.", 409);
-  if (!mine && a.reports.filter((r) => r.status !== "REFUSED").length >= a.slots) throw new DomainError("full", "Toutes les places de test sont prises.", 409);
 
   const questions = a.questions as TestQuestion[];
   if (input.answers.length !== questions.length) throw new DomainError("answers", "Répondez aux questions de contrôle.");

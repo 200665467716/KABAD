@@ -1,4 +1,10 @@
-/* Shapes exchanged between the server and the screens for mentoring, challenges and tests. Dates are ISO strings. */
+/* Shapes exchanged between the server and the screens. Dates are ISO strings. */
+import type { WeeklyRange } from "./slots";
+import type { Eligibility } from "./mentoring";
+
+export type { Eligibility };
+
+export type Level = "ASPIRANT" | "DEBUTANT" | "INTERMEDIAIRE" | "SENIOR";
 
 export type MemberCard = {
   id: string;
@@ -11,7 +17,8 @@ export type MemberCard = {
   headline: string;
   bio: string;
   stack: string[];
-  /** A senior whose status a KABAD admin has checked. */
+  level: Level;
+  /** Holds the mentor badge granted by the KABAD team. */
   verified: boolean;
 };
 
@@ -20,14 +27,10 @@ export type Recommendation = MemberCard & { why: string };
 /** A member in the directory, with where the viewer stands with them. */
 export type DirectoryEntry = MemberCard & { relation: "contact" | "invited" | "invited_you" | "none"; conversationId: string | null; invitationId: string | null };
 
-export type MentorStats = { pairs: number; hours: number; judged: number };
-
-export type Mentor = MemberCard & { stats: MentorStats; openSlots: number; replyTime: string };
+export type MentorStats = { sessions: number; hours: number; judged: number };
 
 export type Profile = MemberCard & {
   stats: MentorStats | null;
-  openSlots: number | null;
-  replyTime: string;
   isContact: boolean;
   invited: boolean;
   /** The direct conversation with the viewer, once they are contacts. */
@@ -36,44 +39,65 @@ export type Profile = MemberCard & {
   testsValidated: number;
 };
 
-export type SessionView = {
+/* Mentoring by time slots */
+
+export type MentorCard = {
   id: string;
-  pairId: string;
+  name: string;
+  city: string;
+  country: string;
+  headline: string;
+  domains: string[];
+  technologies: string[];
+  /** Next free slot, or null when the mentor has none in the coming weeks. */
+  nextSlot: string | null;
+  sessionsHeld: number;
+};
+
+export type MentorDetail = MentorCard & { bio: string; topics: string; timeZone: string; slots: string[] };
+
+export type BookingStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "CANCELLED";
+
+export type BookingPerson = { id: string; name: string; city: string; headline: string };
+
+export type BookingView = {
+  id: string;
   startsAt: string;
   minutes: number;
   topic: string;
-  done: string;
-  next: string;
-  notedBy: { id: string; name: string };
-  confirmedByMentor: boolean;
-  confirmedByMentee: boolean;
-};
-
-export type PairView = {
-  id: string;
-  project: string;
-  repo: string | null;
-  since: string;
-  nextSessionAt: string | null;
-  mentor: { id: string; name: string };
-  mentee: { id: string; name: string };
+  problem: string;
+  link: string | null;
+  status: BookingStatus;
+  meetingUrl: string | null;
+  declineReason: string | null;
+  mentor: BookingPerson;
+  mentee: BookingPerson;
   iAm: "MENTOR" | "MENTEE";
-  sessions: SessionView[];
-  confirmedMinutes: number;
-  visioUrl: string;
 };
 
-export type Eligibility = { eligible: boolean; confirmed: number; missing: number; progress: number; mentors: string[] };
+export type AvailabilityView = { timeZone: string; meetingUrl: string; ranges: WeeklyRange[]; blocked: Array<{ day: string; reason: string | null }> };
 
-export type MentorRequestView = {
+/* Mentor badge */
+
+export type BadgeStatus = "PENDING" | "APPROVED" | "REFUSED";
+
+export type BadgeRequestView = {
   id: string;
-  project: string;
-  situation: string;
-  repo: string | null;
-  topics: string[];
+  status: BadgeStatus;
+  domains: string[];
+  technologies: string[];
+  experience: string;
+  jobTitle: string;
+  company: string | null;
+  githubUrl: string | null;
+  linkedinUrl: string | null;
+  portfolioUrl: string | null;
+  bio: string;
+  topics: string;
+  refusalReason: string | null;
   createdAt: string;
-  mentee: { id: string; name: string; city: string };
-  mentor: { id: string; name: string };
+  reviewedAt: string | null;
+  candidate: { id: string; name: string; city: string; country: string };
 };
 
 export type CapsuleView = {
@@ -89,53 +113,128 @@ export type CapsuleView = {
   author: { id: string; name: string };
 };
 
-export type ChallengeSummary = {
+/* Hackathons */
+
+export type HackathonFormat = "ONLINE" | "ONSITE" | "HYBRID";
+export type PrizeKind = "CAGNOTTE" | "SPONSORISE" | "LOT";
+
+export type HackathonSummary = {
   id: string;
   title: string;
-  kind: "CAGNOTTE" | "SPONSORISE" | "LOT";
+  organizerName: string;
+  format: HackathonFormat;
+  city: string | null;
+  startsAt: string;
+  endsAt: string;
+  closesAt: string;
+  teamMin: number;
+  teamMax: number;
   status: "OPEN" | "JURY" | "DONE";
   level: string;
   stack: string;
-  closesAt: string;
-  resultsAt: string | null;
-  requiresMentoring: boolean;
-  prizeLabel: string | null;
+  prizeKind: PrizeKind | null;
+  prizes: string[];
   sponsorName: string | null;
+  mentoringMinutes: number;
+  instructors: number;
   pot: number;
+  teams: number;
   participants: number;
   contributors: number;
   companies: number;
-  winner: { name: string; city: string } | null;
+  resultsAt: string | null;
+  winner: { team: string; captain: string } | null;
 };
 
-export type ChallengeDetail = ChallengeSummary & {
+export type TeamPerson = { id: string; name: string; city: string; skill: string };
+
+export type TeamView = {
+  id: string;
+  name: string;
+  solo: boolean;
+  lookingFor: string | null;
+  captainId: string;
+  members: TeamPerson[];
+  requests: Array<{ id: string; user: { id: string; name: string; city: string }; createdAt: string }>;
+  submission: { projectName: string; repoUrl: string; demoUrl: string | null; explanation: string; payoutOperator: string | null; payoutPhone: string | null; updatedAt: string } | null;
+};
+
+export type OpenTeam = { id: string; name: string; lookingFor: string | null; members: number; requested: boolean };
+
+export type HackathonDetail = HackathonSummary & {
   description: string;
+  rulesUrl: string | null;
+  missionText: string | null;
+  instructorFee: number | null;
   jury: Array<{ id: string; name: string }>;
-  mySubmission: { repoUrl: string; demoUrl: string | null; explanation: string; payoutOperator: string | null; payoutPhone: string | null } | null;
+  instructorsList: Array<{ id: string; name: string }>;
   amJuror: boolean;
+  myTeam: TeamView | null;
+  openTeams: OpenTeam[];
+  published: boolean;
+  canEdit: boolean;
 };
 
-export type RankingRow = { userId: string; name: string; city: string; mark: number };
+export type MissionView = {
+  id: string;
+  fee: number;
+  status: "PROPOSED" | "ACCEPTED" | "DECLINED";
+  createdAt: string;
+  hackathon: { id: string; title: string; organizerName: string; format: HackathonFormat; city: string | null; startsAt: string; endsAt: string; missionText: string | null };
+};
+
+export type RankingRow = { teamId: string; team: string; captainId: string; captain: string; mark: number };
 
 export type PayoutView = { role: "WINNER" | "MENTOR" | "PLATFORM"; amount: number; beneficiary: string | null; operator: string | null; phone: string | null; reference: string | null; status: "PENDING" | "SENT"; sentAt: string | null };
 
-export type ChallengeResults = ChallengeSummary & { ranking: RankingRow[]; payouts: PayoutView[]; publishedAt: string | null };
+export type HackathonResults = HackathonSummary & { ranking: RankingRow[]; payouts: PayoutView[]; publishedAt: string | null };
 
 export type JuryItem = {
-  challengeTitle: string;
+  hackathonTitle: string;
   total: number;
   scored: number;
-  submission: { id: string; index: number; repoUrl: string; demoUrl: string | null; explanation: string } | null;
+  submission: { id: string; index: number; projectName: string; repoUrl: string; demoUrl: string | null; explanation: string } | null;
 };
 
 export type ContributionView = { name: string; amount: number; createdAt: string };
+
+/* Africa Rise-Up */
+
+export type RiseDomain = "WATER" | "HEALTH" | "AGRICULTURE" | "EDUCATION" | "ENERGY" | "FINANCE" | "OTHER";
+
+export type RiseEventView = { id: string; title: string; agenda: string; startsAt: string; minutes: number; meetingUrl: string; live: boolean; projectId: string; projectName: string };
+
+export type RiseProjectSummary = {
+  id: string;
+  name: string;
+  domain: RiseDomain;
+  summary: string;
+  skills: string[];
+  members: number;
+  countries: number;
+  avatars: Array<{ id: string; name: string }>;
+  /** The event running now or the next one. */
+  event: RiseEventView | null;
+  isMember: boolean;
+};
+
+export type RisePostView = { id: string; body: string; createdAt: string; author: { id: string; name: string } | null; replies: number };
+
+export type RiseProjectDetail = RiseProjectSummary & {
+  problem: string;
+  initiator: { id: string; name: string };
+  conversationId: string | null;
+  posts: RisePostView[];
+  events: RiseEventView[];
+  people: Array<{ id: string; name: string; city: string; skill: string; initiator: boolean }>;
+};
 
 export type TestQuestion = { q: string; options?: string[]; answer: string };
 
 export type TestAppSummary = {
   id: string;
   name: string;
-  platform: "WEB" | "ANDROID";
+  platforms: Array<"WEB" | "ANDROID" | "IOS">;
   url: string;
   minutes: number;
   slots: number;
@@ -146,9 +245,19 @@ export type TestAppSummary = {
   reportsCount: number;
   toRead: number;
   myReport: "SUBMITTED" | "VALIDATED" | "REFUSED" | null;
+  testers: number;
+  /** The viewer joined the testers' group. */
+  joined: boolean;
+  stepsCount: number;
+  myDoneSteps: number[];
 };
 
-export type TestAppDetail = TestAppSummary & { steps: string[]; questions: Array<Omit<TestQuestion, "answer">> };
+export type TestAppDetail = TestAppSummary & {
+  steps: string[];
+  questions: Array<Omit<TestQuestion, "answer">>;
+  conversationId: string | null;
+  testerAvatars: Array<{ id: string; name: string }>;
+};
 
 export type TestReportView = {
   id: string;

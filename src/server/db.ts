@@ -9,7 +9,17 @@ export function createPrisma(connectionString = process.env.DATABASE_URL) {
 // One client per server process, reused across hot reloads in development.
 const globalForPrisma = globalThis as unknown as { kabadPrisma?: PrismaClient };
 
-export const db = globalForPrisma.kabadPrisma ?? createPrisma();
-if (process.env.NODE_ENV !== "production") globalForPrisma.kabadPrisma = db;
+/** Created on first use, not on import: `next build` loads the routes without a database. */
+function client(): PrismaClient {
+  globalForPrisma.kabadPrisma ??= createPrisma();
+  return globalForPrisma.kabadPrisma;
+}
+
+export const db = new Proxy({} as PrismaClient, {
+  get(_target, key) {
+    const value = Reflect.get(client(), key);
+    return typeof value === "function" ? value.bind(client()) : value;
+  },
+});
 
 export type Db = PrismaClient;

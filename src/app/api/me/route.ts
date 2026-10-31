@@ -10,7 +10,19 @@ import { destroySession } from "@/server/auth";
 export const GET = route(async () => {
   const user = await requireUser();
   const [unreadMessages, notifications] = await Promise.all([unreadTotal(user.id), unreadNotifications(user.id)]);
-  return Response.json({ id: user.id, name: user.name, role: user.role, city: user.city, isAdmin: user.isAdmin, emailVerified: user.emailVerifiedAt !== null, unreadMessages, unreadNotifications: notifications });
+  return Response.json({
+    id: user.id,
+    name: user.name,
+    role: user.role,
+    level: user.level,
+    city: user.city,
+    locale: user.locale,
+    isAdmin: user.isAdmin,
+    isMentor: user.seniorVerifiedAt !== null,
+    emailVerified: user.emailVerifiedAt !== null,
+    unreadMessages,
+    unreadNotifications: notifications,
+  });
 });
 
 /** Second sign-up step, and later profile changes. */

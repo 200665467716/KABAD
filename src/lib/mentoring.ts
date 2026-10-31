@@ -1,30 +1,28 @@
 /**
- * Mentoring has no imposed rhythm. A session counts only once both members of the pair confirm it.
- * Cash-prize challenges require a minimum of confirmed mentoring time, attested by a KABAD mentor.
+ * Mentoring by time slots: free sessions of 30 minutes, booked on a mentor's open slots.
+ * A session counts once it is accepted and over. Some hackathons require a minimum of mentoring time.
  */
-export const REQUIRED_MENTORING_MINUTES = 6 * 60;
+import { randomBytes } from "node:crypto";
 
-export type SessionConfirmation = {
-  minutes: number;
-  confirmedByMentor: boolean;
-  confirmedByMentee: boolean;
-};
+export const SESSION_MINUTES = 30;
+/** A member waits for answers on 3 requests at most, so mentors are not flooded. */
+export const MAX_PENDING_BOOKINGS = 3;
 
-export function isSessionCounted(session: SessionConfirmation): boolean {
-  return session.minutes > 0 && session.confirmedByMentor && session.confirmedByMentee;
+export type BookingTime = { status: string; startsAt: Date; minutes: number };
+
+/** Minutes of mentoring actually held: accepted sessions that are over. */
+export function heldMinutes(bookings: BookingTime[], now: Date): number {
+  return bookings.filter((b) => b.status === "ACCEPTED" && b.startsAt.getTime() + b.minutes * 60_000 <= now.getTime()).reduce((sum, b) => sum + b.minutes, 0);
 }
 
-export function confirmedMinutes(sessions: SessionConfirmation[]): number {
-  return sessions.filter(isSessionCounted).reduce((sum, s) => sum + s.minutes, 0);
+export type Eligibility = { eligible: boolean; held: number; required: number; missing: number; progress: number };
+
+export function mentoringEligibility(held: number, required: number): Eligibility {
+  const missing = Math.max(0, required - held);
+  return { eligible: missing === 0, held, required, missing, progress: required === 0 ? 1 : Math.min(1, held / required) };
 }
 
-export type Eligibility = { eligible: boolean; confirmed: number; missing: number; progress: number };
-
-export function cashChallengeEligibility(
-  sessions: SessionConfirmation[],
-  required: number = REQUIRED_MENTORING_MINUTES,
-): Eligibility {
-  const confirmed = confirmedMinutes(sessions);
-  const missing = Math.max(0, required - confirmed);
-  return { eligible: missing === 0, confirmed, missing, progress: required === 0 ? 1 : Math.min(1, confirmed / required) };
+/** A private Jitsi room for one session, when the mentor has not given their own video link. */
+export function jitsiRoom(prefix = "kabad"): string {
+  return `https://meet.jit.si/${prefix}-${randomBytes(9).toString("base64url")}`;
 }

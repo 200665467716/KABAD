@@ -2,56 +2,34 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { notFound } from "./errors";
-import type { DirectoryEntry, MemberCard, Mentor, MentorStats, Profile, Recommendation } from "@/lib/domain-types";
+import type { DirectoryEntry, Level, MemberCard, MentorStats, Profile, Recommendation } from "@/lib/domain-types";
 
-const cardSelect = { id: true, name: true, role: true, city: true, country: true, diaspora: true, years: true, headline: true, bio: true, stack: true, seniorVerifiedAt: true } as const;
+const cardSelect = { id: true, name: true, role: true, level: true, city: true, country: true, diaspora: true, years: true, headline: true, bio: true, stack: true, seniorVerifiedAt: true } as const;
 
-export const toCard = ({ seniorVerifiedAt, ...u }: Prisma.UserGetPayload<{ select: typeof cardSelect }>): MemberCard => ({ ...u, verified: u.role === "SENIOR" && seniorVerifiedAt !== null });
+export const toCard = ({ seniorVerifiedAt, ...u }: Prisma.UserGetPayload<{ select: typeof cardSelect }>): MemberCard => ({ ...u, verified: seniorVerifiedAt !== null });
 
-/** Pairs accompanied, hours confirmed by both members, challenges judged. */
-export async function mentorStats(ids: string[], prisma: Db = db): Promise<Map<string, MentorStats & { activePairs: number }>> {
+/** Sessions held, hours of mentoring held, hackathons judged. */
+export async function mentorStats(ids: string[], prisma: Db = db): Promise<Map<string, MentorStats>> {
   if (ids.length === 0) return new Map();
-  const [pairs, minutes, judged] = await Promise.all([
-    prisma.pair.groupBy({ by: ["mentorId", "active"], where: { mentorId: { in: ids } }, _count: { _all: true } }),
-    prisma.$queryRaw<Array<{ mentorId: string; minutes: bigint }>>`
-      SELECT p."mentorId", COALESCE(SUM(s.minutes), 0) AS minutes
-      FROM "Pair" p JOIN "MentoringSession" s ON s."pairId" = p.id
-      WHERE s."confirmedByMentor" AND s."confirmedByMentee" AND p."mentorId" = ANY(${ids})
-      GROUP BY p."mentorId"`,
-    prisma.challengeJuror.groupBy({ by: ["userId"], where: { userId: { in: ids }, challenge: { status: "DONE" } }, _count: { _all: true } }),
+  const [held, judged] = await Promise.all([
+    prisma.mentoringBooking.groupBy({ by: ["mentorId"], where: { mentorId: { in: ids }, status: "ACCEPTED", startsAt: { lt: new Date() } }, _count: { _all: true }, _sum: { minutes: true } }),
+    prisma.hackathonJuror.groupBy({ by: ["userId"], where: { userId: { in: ids }, hackathon: { status: "DONE" } }, _count: { _all: true } }),
   ]);
-  const out = new Map<string, MentorStats & { activePairs: number }>();
-  for (const id of ids) out.set(id, { pairs: 0, hours: 0, judged: 0, activePairs: 0 });
-  for (const p of pairs) {
-    const s = out.get(p.mentorId)!;
-    s.pairs += p._count._all;
-    if (p.active) s.activePairs += p._count._all;
+  const out = new Map<string, MentorStats>();
+  for (const id of ids) out.set(id, { sessions: 0, hours: 0, judged: 0 });
+  for (const h of held) {
+    const s = out.get(h.mentorId)!;
+    s.sessions = h._count._all;
+    s.hours = Math.floor((h._sum.minutes ?? 0) / 60);
   }
-  for (const m of minutes) out.get(m.mentorId)!.hours = Math.floor(Number(m.minutes) / 60);
   for (const j of judged) out.get(j.userId)!.judged = j._count._all;
   return out;
 }
 
-export async function listMentors(prisma: Db = db): Promise<Mentor[]> {
-  const seniors = await prisma.user.findMany({ where: { role: "SENIOR", seniorVerifiedAt: { not: null }, suspendedAt: null }, select: { ...cardSelect, mentorCapacity: true, replyTime: true }, orderBy: { name: "asc" } });
-  const stats = await mentorStats(seniors.map((s) => s.id), prisma);
-  return seniors.map(({ mentorCapacity, replyTime, ...u }) => {
-    const s = stats.get(u.id)!;
-    return { ...toCard(u), stats: { pairs: s.pairs, hours: s.hours, judged: s.judged }, openSlots: Math.max(0, mentorCapacity - s.activePairs), replyTime };
-  });
-}
-
 export async function getProfile(viewerId: string | null, id: string, prisma: Db = db): Promise<Profile> {
-  const u = await prisma.user.findUnique({ where: { id }, select: { ...cardSelect, mentorCapacity: true, replyTime: true } });
+  const u = await prisma.user.findUnique({ where: { id }, select: cardSelect });
   if (!u) throw notFound("Membre introuvable.");
-  const { mentorCapacity, replyTime, ...card } = u;
-  let stats: MentorStats | null = null;
-  let openSlots: number | null = null;
-  if (u.role === "SENIOR") {
-    const s = (await mentorStats([u.id], prisma)).get(u.id)!;
-    stats = { pairs: s.pairs, hours: s.hours, judged: s.judged };
-    openSlots = Math.max(0, mentorCapacity - s.activePairs);
-  }
+  const stats = u.seniorVerifiedAt ? (await mentorStats([u.id], prisma)).get(u.id)! : null;
   const [isContact, invited, conversation, blocked, testsValidated] = await Promise.all([
     viewerId ? prisma.contact.count({ where: { userId: viewerId, contactId: id } }).then(Boolean) : false,
     viewerId ? prisma.invitation.count({ where: { fromId: viewerId, toId: id, status: "PENDING" } }).then(Boolean) : false,
@@ -59,9 +37,8 @@ export async function getProfile(viewerId: string | null, id: string, prisma: Db
     viewerId ? prisma.block.count({ where: { blockerId: viewerId, blockedId: id } }).then(Boolean) : false,
     prisma.testReport.count({ where: { testerId: id, status: "VALIDATED" } }),
   ]);
-  return { ...toCard(card), stats, openSlots, replyTime, isContact, invited, conversationId: conversation?.id ?? null, blockedByMe: blocked, testsValidated };
+  return { ...toCard(u), stats, isContact, invited, conversationId: conversation?.id ?? null, blockedByMe: blocked, testsValidated };
 }
-
 
 /**
  * Members to meet at the end of sign-up: same stack, same city or country, available mentors.
@@ -79,7 +56,7 @@ export async function recommendations(userId: string, prisma: Db = db): Promise<
   const scored = others.map((o) => {
     const shared = o.stack.filter((s) => me.stack.includes(s));
     let score = shared.length * 2;
-    let why = shared.length ? (o.role === "SENIOR" ? `Mentore en ${shared[0]}` : "Même stack que vous") : "";
+    let why = shared.length ? (o.seniorVerifiedAt ? `Mentor en ${shared[0]}` : `${shared.slice(0, 2).join(", ")} en commun`) : "";
     if (me.city && o.city === me.city) {
       score += 3;
       why ||= "Même ville";
@@ -87,7 +64,7 @@ export async function recommendations(userId: string, prisma: Db = db): Promise<
       score += 1;
       why ||= "Même pays";
     }
-    if (o.role === "SENIOR" && me.role === "JUNIOR") {
+    if (o.seniorVerifiedAt && !me.seniorVerifiedAt) {
       score += 1;
       why ||= "Mentor disponible";
     }
@@ -99,25 +76,24 @@ export async function recommendations(userId: string, prisma: Db = db): Promise<
     .map(({ score: _score, ...r }) => r);
 }
 
+/**
+ * The member edits their profile, at sign-up (steps 1 and 2) or later. Every field is optional.
+ * The mentor role is not edited here: it comes with the badge (src/server/badges.ts).
+ */
 export async function updateProfile(
   userId: string,
-  input: { role: "JUNIOR" | "SENIOR"; country: string; city: string; diaspora: boolean; stack: string[]; profileLink: string; headline?: string; bio?: string; years?: number; mentorCapacity?: number },
+  input: { country?: string; city?: string; diaspora?: boolean; level?: Level; stack?: string[]; goals?: string[]; profileLink?: string; headline?: string; bio?: string; years?: number; timeZone?: string },
   prisma: Db = db,
 ) {
-  const current = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { mentorCapacity: true, profileLink: true, role: true } });
-  // The senior status was checked against one profile: a new profile, or becoming senior, needs a new check.
-  const recheck = input.role === "SENIOR" && (current.role !== "SENIOR" || current.profileLink !== input.profileLink);
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      ...input,
-      // A new senior starts with one open place.
-      mentorCapacity: input.role === "SENIOR" ? (input.mentorCapacity ?? Math.max(1, current.mentorCapacity)) : 0,
-      ...(recheck || input.role === "JUNIOR" ? { seniorVerifiedAt: null } : {}),
-    },
-  });
+  if (input.timeZone) {
+    try {
+      new Intl.DateTimeFormat("fr", { timeZone: input.timeZone });
+    } catch {
+      input.timeZone = undefined;
+    }
+  }
+  await prisma.user.update({ where: { id: userId }, data: input });
 }
-
 
 /**
  * The member directory: every active member except the viewer, the team accounts, suspended members

@@ -1,7 +1,7 @@
 /*
  * The member's own account: e-mail check, password reset and change, sessions, export and deletion.
  */
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import type { EmailTokenPurpose } from "@/generated/prisma/client";
 import { hashPassword, verifyPassword } from "./auth";
 import { db, type Db } from "./db";
@@ -11,13 +11,16 @@ import { sendMail } from "./mailer";
 const hash = (token: string) => createHash("sha256").update(token).digest("hex");
 const appUrl = () => (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
-async function issueToken(userId: string, purpose: EmailTokenPurpose, hours: number, prisma: Db) {
+async function issueToken(userId: string, purpose: EmailTokenPurpose, hours: number, prisma: Db, code?: string) {
   const token = randomBytes(32).toString("base64url");
   // A new link replaces the previous ones.
   await prisma.emailToken.deleteMany({ where: { userId, purpose, usedAt: null } });
-  await prisma.emailToken.create({ data: { id: hash(token), userId, purpose, expiresAt: new Date(Date.now() + hours * 3600_000) } });
+  await prisma.emailToken.create({ data: { id: hash(token), userId, purpose, expiresAt: new Date(Date.now() + hours * 3600_000), codeHash: code ? hash(code) : null } });
   return token;
 }
+
+/** Wrong codes allowed before the code is locked and a new one must be requested. */
+export const CODE_ATTEMPTS = 5;
 
 async function consumeToken(token: string, purpose: EmailTokenPurpose, prisma: Db) {
   const row = await prisma.emailToken.findUnique({ where: { id: hash(token) } });
@@ -29,14 +32,16 @@ async function consumeToken(token: string, purpose: EmailTokenPurpose, prisma: D
   return row.userId;
 }
 
+/** Sends a 6-digit code (typed in the sign-up screen) and the same check as a link (opened from the e-mail). */
 export async function sendVerificationEmail(userId: string, prisma: Db = db) {
   const u = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true, name: true, emailVerifiedAt: true } });
   if (u.emailVerifiedAt) return { alreadyVerified: true };
-  const token = await issueToken(userId, "VERIFY", 48, prisma);
+  const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  const token = await issueToken(userId, "VERIFY", 48, prisma, code);
   await sendMail(
     u.email,
-    "Confirmez votre adresse e-mail KABAD",
-    `Bonjour ${u.name.split(" ")[0]},\n\nConfirmez votre adresse pour écrire aux membres de KABAD :\n${appUrl()}/verifier-email?jeton=${token}\n\nCe lien est valable 48 heures. Si vous n’avez pas créé de compte, ignorez ce message.\n\nL’équipe KABAD`,
+    `${code} : ton code de confirmation KABAD`,
+    `Bonjour ${u.name.split(" ")[0]},\n\nTon code de confirmation : ${code}\n\nTu peux aussi ouvrir ce lien :\n${appUrl()}/verifier-email?jeton=${token}\n\nCe code est valable 48 heures. Si tu n’as pas créé de compte, ignore ce message.\n\nL’équipe KABAD`,
   );
   return { alreadyVerified: false };
 }
@@ -45,6 +50,39 @@ export async function verifyEmail(token: string, prisma: Db = db) {
   const userId = await consumeToken(token, "VERIFY", prisma);
   await prisma.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } });
   return { userId };
+}
+
+/** Checks the code typed by the signed-in member. After 5 wrong codes, a new one must be requested. */
+export async function verifyEmailCode(userId: string, code: string, prisma: Db = db) {
+  const row = await prisma.emailToken.findFirst({ where: { userId, purpose: "VERIFY", usedAt: null, codeHash: { not: null } }, orderBy: { createdAt: "desc" } });
+  if (!row || row.expiresAt <= new Date()) throw new DomainError("bad_code", "Ce code n’est plus valable. Demande un nouveau code.", 400, "code");
+  if (row.attempts >= CODE_ATTEMPTS) throw new DomainError("locked", "Trop d’essais. Demande un nouveau code.", 429, "code");
+  const ok = timingSafeEqual(Buffer.from(hash(code.trim())), Buffer.from(row.codeHash!));
+  if (!ok) {
+    await prisma.emailToken.update({ where: { id: row.id }, data: { attempts: { increment: 1 } } });
+    const left = CODE_ATTEMPTS - row.attempts - 1;
+    throw new DomainError("bad_code", left > 0 ? `Code incorrect. Encore ${left} essai${left > 1 ? "s" : ""}.` : "Code incorrect. Demande un nouveau code.", 400, "code");
+  }
+  await prisma.$transaction([
+    prisma.emailToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
+    prisma.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } }),
+  ]);
+  return { ok: true };
+}
+
+/** Changes the address before it is confirmed (typo at sign-up), then sends a new code. */
+export async function changeUnverifiedEmail(userId: string, email: string, prisma: Db = db) {
+  const u = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { emailVerifiedAt: true } });
+  if (u.emailVerifiedAt) throw new DomainError("verified", "Ton adresse est déjà confirmée.", 409);
+  const normalized = email.trim().toLowerCase();
+  if (await prisma.user.count({ where: { email: normalized, id: { not: userId } } })) throw new DomainError("email_taken", "Cette adresse est déjà utilisée.", 409, "email");
+  await prisma.user.update({ where: { id: userId }, data: { email: normalized } });
+  return sendVerificationEmail(userId, prisma);
+}
+
+/** Remembers the interface language on the account, so it follows the member across devices. */
+export async function setLocale(userId: string, locale: "fr" | "en", prisma: Db = db) {
+  await prisma.user.update({ where: { id: userId }, data: { locale } });
 }
 
 /** Always answers the same way, so the form does not reveal which addresses have an account. */
@@ -84,20 +122,23 @@ export async function signOutEverywhere(userId: string, prisma: Db = db) {
 
 /** Everything the member wrote or declared, in one JSON file. */
 export async function exportData(userId: string, prisma: Db = db) {
-  const [user, messages, invitations, pairs, submissions, reports, capsules, testApps] = await Promise.all([
+  const [user, messages, invitations, bookings, teams, badgeRequests, riseProjects, risePosts, reports, capsules, testApps] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { id: true, email: true, name: true, role: true, city: true, country: true, diaspora: true, years: true, headline: true, bio: true, stack: true, profileLink: true, githubLogin: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, level: true, city: true, country: true, diaspora: true, years: true, headline: true, bio: true, stack: true, goals: true, locale: true, timeZone: true, profileLink: true, githubLogin: true, createdAt: true },
     }),
     prisma.message.findMany({ where: { authorId: userId }, select: { conversationId: true, body: true, createdAt: true } }),
     prisma.invitation.findMany({ where: { OR: [{ fromId: userId }, { toId: userId }] }, select: { fromId: true, toId: true, message: true, status: true, createdAt: true } }),
-    prisma.pair.findMany({ where: { OR: [{ mentorId: userId }, { menteeId: userId }] }, include: { sessions: true } }),
-    prisma.submission.findMany({ where: { userId } }),
+    prisma.mentoringBooking.findMany({ where: { OR: [{ mentorId: userId }, { menteeId: userId }] }, select: { mentorId: true, menteeId: true, startsAt: true, minutes: true, topic: true, problem: true, status: true, createdAt: true } }),
+    prisma.teamMember.findMany({ where: { userId }, select: { hackathonId: true, skill: true, team: { select: { name: true, submission: true } } } }),
+    prisma.mentorBadgeRequest.findMany({ where: { userId } }),
+    prisma.riseMember.findMany({ where: { userId }, select: { projectId: true, skill: true, joinedAt: true } }),
+    prisma.risePost.findMany({ where: { authorId: userId }, select: { projectId: true, body: true, createdAt: true } }),
     prisma.testReport.findMany({ where: { testerId: userId }, select: { testAppId: true, device: true, answers: true, remarks: true, status: true, createdAt: true } }),
     prisma.capsule.findMany({ where: { authorId: userId } }),
     prisma.testApp.findMany({ where: { ownerId: userId } }),
   ]);
-  return { exportedAt: new Date().toISOString(), user, messages, invitations, pairs, submissions, testReports: reports, capsules, testApps };
+  return { exportedAt: new Date().toISOString(), user, messages, invitations, mentoring: bookings, hackathons: teams, badgeRequests, riseProjects, risePosts, testReports: reports, capsules, testApps };
 }
 
 /**
