@@ -211,7 +211,7 @@ export async function adminMembers(adminId: string, q: string | undefined, filte
 /** A suspended member cannot sign in: sessions are closed, open sockets cut, live rooms they host ended. */
 export async function suspendMember(adminId: string, userId: string, reason: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
-  if (adminId === userId) throw new DomainError("self", "Vous ne pouvez pas vous suspendre vous-même.");
+  if (adminId === userId) throw new DomainError("self", "Tu ne peux pas te suspendre toi-même.");
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
   if (!u) throw notFound("Membre introuvable.");
   if (u.isAdmin) throw new DomainError("admin", "Un administrateur ne peut pas être suspendu depuis cet écran.");
@@ -252,7 +252,7 @@ export async function revokeBadge(adminId: string, userId: string, reason: strin
 export async function setJury(adminId: string, hackathonId: string, jurorIds: string[], prisma: Db = db) {
   await requireAdmin(adminId, prisma);
   const jurors = [...new Set(jurorIds)];
-  if (jurors.length !== 3) throw new DomainError("jury", "Choisissez exactement trois jurés.", 400, "jurorIds");
+  if (jurors.length !== 3) throw new DomainError("jury", "Choisis exactement trois jurés.", 400, "jurorIds");
   const h = await prisma.hackathon.findUnique({ where: { id: hackathonId }, select: { title: true, createdById: true, status: true } });
   if (!h) throw notFound("Hackathon introuvable.");
   if (h.status === "DONE") throw new DomainError("done", "Les résultats sont publiés : le jury est figé.", 409);

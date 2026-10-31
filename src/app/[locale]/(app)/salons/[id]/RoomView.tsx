@@ -88,7 +88,7 @@ export function RoomView({ initial, me }: { initial: RoomDetail; me: { id: strin
         lk.current = null;
         setAudio("off");
         setMicOn(false);
-        if (reason === DisconnectReason.PARTICIPANT_REMOVED) setNotice("L’hôte vous a retiré de ce salon.");
+        if (reason === DisconnectReason.PARTICIPANT_REMOVED) setNotice("L’hôte t’a retiré de ce salon.");
         else if (reason === DisconnectReason.ROOM_DELETED) setNotice("Le salon est terminé.");
         refresh();
       });
@@ -100,7 +100,7 @@ export function RoomView({ initial, me }: { initial: RoomDetail; me: { id: strin
       refresh();
     } catch (e) {
       setAudio("off");
-      setError(e instanceof ApiError ? e.message : "Connexion audio impossible. Vérifiez votre réseau et réessayez.");
+      setError(e instanceof ApiError ? e.message : "Connexion audio impossible. Vérifie ton réseau et réessaie.");
     }
   }
 
@@ -117,7 +117,7 @@ export function RoomView({ initial, me }: { initial: RoomDetail; me: { id: strin
       await r.localParticipant.setMicrophoneEnabled(!micOn);
       setMicOn(!micOn);
     } catch {
-      setError("Le micro n’est pas accessible. Autorisez-le dans votre navigateur.");
+      setError("Le micro n’est pas accessible. Autorise-le dans ton navigateur.");
     }
   }
 
@@ -142,7 +142,7 @@ export function RoomView({ initial, me }: { initial: RoomDetail; me: { id: strin
           <Avatar initials={initials(p.name)} size={big ? "lg" : "md"} tone={p.role === "HOST" ? "accent" : "brand"} />
         </span>
         <span className="max-w-[88px] truncate text-xs font-bold">
-          {p.id === me.id ? "Vous" : p.name.split(" ")[0]}
+          {p.id === me.id ? "Toi" : p.name.split(" ")[0]}
           {p.handRaised && (
             <span aria-label="a levé la main" role="img">
               {" "}
@@ -208,7 +208,7 @@ export function RoomView({ initial, me }: { initial: RoomDetail; me: { id: strin
           </>
         )}
         {room.status === "SCHEDULED" && !isHost && (
-          <p className="text-sm text-muted">Le salon commence {sessionWhen(room.startsAt).toLowerCase()}. Demandez un rappel : vous serez prévenu dès qu’il est en direct.</p>
+          <p className="text-sm text-muted">Le salon commence {sessionWhen(room.startsAt).toLowerCase()}. Demande un rappel : tu seras prévenu dès qu’il est en direct.</p>
         )}
         {error && (
           <Alert tone="danger" role="alert">
@@ -216,7 +216,7 @@ export function RoomView({ initial, me }: { initial: RoomDetail; me: { id: strin
           </Alert>
         )}
         <p className="text-xs text-muted">
-          Audio en direct, non enregistré. Restez bienveillant :{" "}
+          Audio en direct, non enregistré. Reste bienveillant :{" "}
           <Link href="/salons" className="text-muted">
             tout salon peut être signalé à l’équipe
           </Link>
@@ -247,7 +247,7 @@ export function RoomView({ initial, me }: { initial: RoomDetail; me: { id: strin
           </Button>
         ) : audio === "off" ? (
           <Button size="lg" icon="radio" onClick={join} disabled={room.me.removed}>
-            {room.me.removed ? "Vous avez été retiré" : "Rejoindre le salon"}
+            {room.me.removed ? "Tu as été retiré" : "Rejoindre le salon"}
           </Button>
         ) : (
           <>

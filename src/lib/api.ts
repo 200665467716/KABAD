@@ -29,7 +29,7 @@ export async function api<T = unknown>(path: string, init: { method?: "GET" | "P
       body: init.body === undefined ? undefined : form ? (init.body as FormData) : JSON.stringify(init.body),
     });
   } catch {
-    throw new ApiError(english ? "No connection. Check your network and try again." : "Pas de connexion. Vérifiez votre réseau et réessayez.", 0, "offline");
+    throw new ApiError(english ? "No connection. Check your network and try again." : "Pas de connexion. Vérifie ton réseau et réessaie.", 0, "offline");
   }
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => ({}));

@@ -11,7 +11,7 @@ type Ctx = { params: Promise<{ id: string }> };
 export const POST = route(async (request: Request, { params }: Ctx) => {
   const user = await requireVerifiedUser();
   const { id } = await params;
-  await rateLimit(`test-report:${user.id}`, 20, 24 * 3600_000, "Vous avez envoyé beaucoup de rapports aujourd’hui.");
+  await rateLimit(`test-report:${user.id}`, 20, 24 * 3600_000, "Tu as envoyé beaucoup de rapports aujourd’hui.");
   // Read with a hard limit, whatever the headers claim: one screenshot of 2 MB at most per step (5 steps).
   const body = await readLimitedBody(request, 5 * SCREENSHOT_MAX_BYTES + 64 * 1024);
   const form = await new Response(body as BodyInit, { headers: { "content-type": request.headers.get("content-type") ?? "" } }).formData().catch(() => null);

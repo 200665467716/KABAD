@@ -42,7 +42,7 @@ export function NewRoomForm({ verified }: { verified: boolean }) {
     <form onSubmit={submit} noValidate className="flex flex-1 flex-col">
       <TopBar back="/salons" close title="Créer un salon" />
       <Page narrow className="flex-1">
-        {!verified && <Alert tone="info">Confirmez d’abord votre adresse e-mail pour animer un salon.</Alert>}
+        {!verified && <Alert tone="info">Confirme d’abord ton adresse e-mail pour animer un salon.</Alert>}
         <TextField id="title" name="title" label="Sujet" placeholder="Par exemple : réussir son premier entretien tech" maxLength={100} error={fieldError("title")} />
         <TextArea id="description" name="description" label="En une ou deux phrases" rows={3} maxLength={600} error={fieldError("description")} />
         <fieldset className="grid gap-2">
@@ -51,7 +51,7 @@ export function NewRoomForm({ verified }: { verified: boolean }) {
           <RadioCard name="when" value="later" checked={!now} onChange={() => setNow(false)} heading="Programmer" description="Les membres peuvent demander un rappel." />
         </fieldset>
         {!now && <TextField id="startsAt" name="startsAt" type="datetime-local" label="Date et heure" defaultValue={defaultStart} error={fieldError("startsAt")} />}
-        <p className="text-xs text-muted">Vous êtes l’hôte : vous invitez des membres sur scène, vous pouvez retirer quelqu’un, et vous terminez le salon. Respectez les règles de la communauté : les salons peuvent être signalés.</p>
+        <p className="text-xs text-muted">Tu es l’hôte : tu invites des membres sur scène, tu peux retirer quelqu’un, et tu termines le salon. Respectez les règles de la communauté : les salons peuvent être signalés.</p>
         {error && !error.field && (
           <Alert tone="danger" role="alert">
             {error.text}

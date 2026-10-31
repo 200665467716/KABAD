@@ -32,6 +32,7 @@ KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora
 - **Argent** (cagnottes, répartition 60/30/10, versements, remboursements) : uniquement dans la couche serveur, dans une transaction PostgreSQL, avec une clé d'idempotence. Le paiement réel reste en **sandbox**.
 - **Tâches différées** (relances, rappels, expirations, passage au jury, versements à 48 h) : jamais pendant une requête web. Elles vivent dans `src/server/jobs.ts`, idempotentes, et le worker (`worker/index.ts`, pg-boss) les planifie.
 - **Langue** : interface, messages de commit, commentaires et documentation en **français**, dans le style déjà présent (phrases courtes, termes simples). Respecter la densité de commentaires du fichier modifié.
+- **Ton** : l'interface, les e-mails et les erreurs tutoient le membre ; seules les conditions d'utilisation vouvoient. Un message d'erreur français est aussi la clé de sa traduction dans `src/server/error-messages.en.json` : changer l'un, c'est changer l'autre.
 - **Cible mobile** : Android d'entrée de gamme en 4G lente. LCP < 2,5 s, JS initial < 200 Ko gzip, images WebP, pas de vidéo chargée sans action, 360 à 1 920 px, WCAG 2.1 AA.
 
 ## Commandes

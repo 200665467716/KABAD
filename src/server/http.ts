@@ -45,7 +45,7 @@ export function route<A extends unknown[]>(handler: (request: Request, ...rest: 
         return Response.json({ error: say(first?.message ?? "Données invalides."), code: "invalid", field: first?.path.join(".") }, { status: 400 });
       }
       console.error(e);
-      return Response.json({ error: say("Une erreur est survenue. Réessayez dans un instant."), code: "internal" }, { status: 500 });
+      return Response.json({ error: say("Une erreur est survenue. Réessaie dans un instant."), code: "internal" }, { status: 500 });
     }
   };
 }

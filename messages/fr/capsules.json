@@ -24,14 +24,14 @@
       "loading": "Chargement…",
       "title": "Publier une capsule",
       "titleLabel": "Titre",
-      "titlePlaceholder": "Ce que vous avez appris, en une phrase",
+      "titlePlaceholder": "Ce que tu as appris, en une phrase",
       "theme": "Thème",
-      "body": "Votre capsule",
-      "bodyHint": "Séparez les paragraphes par une ligne vide.",
+      "body": "Ta capsule",
+      "bodyHint": "Sépare les paragraphes par une ligne vide.",
       "code": "Extrait de code (facultatif)",
       "tags": "Mots-clés (facultatif, séparés par des virgules)",
       "tagsPlaceholder": "Paiement, Tests",
-      "error": "La capsule n’a pas été publiée. Réessayez.",
+      "error": "La capsule n’a pas été publiée. Réessaie.",
       "submitting": "Publication…",
       "submit": "Publier la capsule"
     }

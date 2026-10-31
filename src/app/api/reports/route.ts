@@ -6,7 +6,7 @@ import { reportSchema } from "@/lib/schemas";
 
 export const POST = route(async (request) => {
   const user = await requireUser();
-  await rateLimit(`report:${user.id}`, 20, 3600_000, "Vous avez envoyé beaucoup de signalements.");
+  await rateLimit(`report:${user.id}`, 20, 3600_000, "Tu as envoyé beaucoup de signalements.");
   const input = await readJson(request, reportSchema);
   return Response.json(await createReport(user.id, input), { status: 201 });
 });

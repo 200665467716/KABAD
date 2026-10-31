@@ -146,7 +146,7 @@ export async function joinProject(userId: string, projectId: string, input: { sk
 export async function leaveProject(userId: string, projectId: string, prisma: Db = db) {
   const p = await prisma.riseProject.findUnique({ where: { id: projectId }, select: { initiatorId: true, conversationId: true, _count: { select: { members: true } } } });
   if (!p || !(await memberOf(prisma, projectId, userId))) throw notFound("Projet introuvable.");
-  if (p.initiatorId === userId && p._count.members > 1) throw new DomainError("initiator", "Vous avez lancé ce projet : il ne peut pas rester sans vous tant qu’il a des membres.", 409);
+  if (p.initiatorId === userId && p._count.members > 1) throw new DomainError("initiator", "Tu as lancé ce projet : il ne peut pas rester sans toi tant qu’il a des membres.", 409);
   return prisma.$transaction(async (tx) => {
     await tx.riseMember.delete({ where: { projectId_userId: { projectId, userId } } });
     if (p.conversationId) await leaveCommunityGroup(tx, p.conversationId, userId);
@@ -157,7 +157,7 @@ export async function leaveProject(userId: string, projectId: string, prisma: Db
 /* Discussion feed */
 
 export async function addPost(userId: string, projectId: string, input: { body: string; parentId?: string }, prisma: Db = db) {
-  if (!(await memberOf(prisma, projectId, userId))) throw forbidden("Rejoignez le projet pour participer à la discussion.");
+  if (!(await memberOf(prisma, projectId, userId))) throw forbidden("Rejoins le projet pour participer à la discussion.");
   if (input.parentId) {
     const parent = await prisma.risePost.findUnique({ where: { id: input.parentId }, select: { projectId: true, parentId: true, authorId: true } });
     // One level of replies, as in the design: a reply answers a post, not another reply.
@@ -182,7 +182,7 @@ export async function getThread(viewerId: string | null, projectId: string, post
 export async function createEvent(userId: string, projectId: string, input: { title: string; agenda: string; startsAt: string; minutes: number; meetingUrl?: string; notify: boolean }, prisma: Db = db) {
   if (!(await memberOf(prisma, projectId, userId))) throw forbidden("Seuls les membres du projet programment un événement.");
   const startsAt = new Date(input.startsAt);
-  if (Number.isNaN(startsAt.getTime()) || startsAt.getTime() < Date.now()) throw new DomainError("past", "Choisissez une date à venir.", 400, "startsAt");
+  if (Number.isNaN(startsAt.getTime()) || startsAt.getTime() < Date.now()) throw new DomainError("past", "Choisis une date à venir.", 400, "startsAt");
   return prisma.$transaction(async (tx) => {
     const p = await tx.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { name: true, members: { select: { userId: true, user: { select: { timeZone: true } } } } } });
     const e = await tx.riseEvent.create({

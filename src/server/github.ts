@@ -28,7 +28,7 @@ export function authorizeUrl(config: GithubConfig, state: string) {
   return u.toString();
 }
 
-const failed = () => new DomainError("github", "La connexion avec GitHub a échoué. Réessayez.", 502);
+const failed = () => new DomainError("github", "La connexion avec GitHub a échoué. Réessaie.", 502);
 
 type GithubUser = { id: number; login: string; name: string | null; html_url: string };
 type GithubEmail = { email: string; verified: boolean; primary: boolean };
@@ -51,7 +51,7 @@ export async function fetchGithubIdentity(config: GithubConfig, code: string, fe
   const user = (await userRes.json()) as GithubUser;
   const emails = (await emailsRes.json()) as GithubEmail[];
   const email = (emails.find((e) => e.primary && e.verified) ?? emails.find((e) => e.verified))?.email;
-  if (!email) throw new DomainError("github_email", "Votre compte GitHub n’a pas d’adresse e-mail vérifiée.", 400);
+  if (!email) throw new DomainError("github_email", "Ton compte GitHub n’a pas d’adresse e-mail vérifiée.", 400);
   return { githubId: user.id, login: user.login, name: user.name?.trim() || user.login, email: email.toLowerCase(), profile: `github.com/${user.login}` };
 }
 

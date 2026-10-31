@@ -27,7 +27,7 @@ export function translateError(message: string, locale: ApiLocale): string {
   if (found) return found;
   for (const p of patterns) {
     const m = message.match(p.re);
-    // A captured part can itself be a known message ("Trop d’essais. Réessayez dans 5 min.").
+    // A captured part can itself be a known message ("Trop d’essais. Réessaie dans 5 min.").
     if (m) return p.en.replace(/\$(\d)/g, (_, i: string) => exact.get(m[Number(i)]) ?? m[Number(i)] ?? "");
   }
   return message;

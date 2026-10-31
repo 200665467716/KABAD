@@ -109,7 +109,7 @@ export async function createTestApp(
 export async function joinTest(userId: string, testAppId: string, prisma: Db = db) {
   const a = await prisma.testApp.findUnique({ where: { id: testAppId }, include: { _count: { select: { participants: true } }, participants: { where: { userId }, select: { userId: true } } } });
   if (!a || !a.active) throw notFound("Application introuvable.");
-  if (a.ownerId === userId) throw forbidden("Vous ne pouvez pas tester votre propre application.");
+  if (a.ownerId === userId) throw forbidden("Tu ne peux pas tester ta propre application.");
   if (a.participants.length) return { conversationId: a.conversationId };
   if (a._count.participants >= a.slots) throw new DomainError("full", "Toutes les places de test sont prises.", 409);
   return prisma.$transaction(async (tx) => {
@@ -125,7 +125,7 @@ export async function joinTest(userId: string, testAppId: string, prisma: Db = d
 export async function leaveTest(userId: string, testAppId: string, prisma: Db = db) {
   const a = await prisma.testApp.findUnique({ where: { id: testAppId }, select: { conversationId: true, reports: { where: { testerId: userId }, select: { id: true } } } });
   if (!a) throw notFound("Application introuvable.");
-  if (a.reports.length) throw new DomainError("reported", "Vous avez déjà envoyé un rapport : votre place est comptée.", 409);
+  if (a.reports.length) throw new DomainError("reported", "Tu as déjà envoyé un rapport : ta place est comptée.", 409);
   return prisma.$transaction(async (tx) => {
     await tx.testParticipant.deleteMany({ where: { testAppId, userId } });
     if (a.conversationId) await leaveCommunityGroup(tx, a.conversationId, userId);
@@ -136,7 +136,7 @@ export async function leaveTest(userId: string, testAppId: string, prisma: Db = 
 /** Ticks or unticks a step of the scenario. */
 export async function setStep(userId: string, testAppId: string, index: number, done: boolean, prisma: Db = db) {
   const p = await prisma.testParticipant.findUnique({ where: { testAppId_userId: { testAppId, userId } }, include: { testApp: { select: { steps: true } } } });
-  if (!p) throw forbidden("Rejoignez d’abord le groupe de testeurs.");
+  if (!p) throw forbidden("Rejoins d’abord le groupe de testeurs.");
   if (!Number.isInteger(index) || index < 0 || index >= p.testApp.steps.length) throw new DomainError("step", "Étape inconnue.");
   const set = new Set(p.doneSteps);
   if (done) set.add(index);
@@ -151,14 +151,14 @@ export type ScreenshotInput = { mime: string; data: Uint8Array };
 export async function submitReport(testerId: string, testAppId: string, input: { device: string; answers: string[]; remarks: string }, screenshots: ScreenshotInput[], prisma: Db = db) {
   const a = await prisma.testApp.findUnique({ where: { id: testAppId }, include: { reports: { select: { testerId: true, status: true } }, participants: { where: { userId: testerId }, select: { userId: true } } } });
   if (!a || !a.active) throw notFound("Application introuvable.");
-  if (a.ownerId === testerId) throw forbidden("Vous ne pouvez pas tester votre propre application.");
-  if (!a.participants.length) throw forbidden("Rejoignez d’abord le groupe de testeurs.");
+  if (a.ownerId === testerId) throw forbidden("Tu ne peux pas tester ta propre application.");
+  if (!a.participants.length) throw forbidden("Rejoins d’abord le groupe de testeurs.");
   const mine = a.reports.find((r) => r.testerId === testerId);
-  if (mine && mine.status !== "REFUSED") throw new DomainError("already_sent", "Vous avez déjà envoyé un rapport pour cette application.", 409);
+  if (mine && mine.status !== "REFUSED") throw new DomainError("already_sent", "Tu as déjà envoyé un rapport pour cette application.", 409);
 
   const questions = a.questions as TestQuestion[];
-  if (input.answers.length !== questions.length) throw new DomainError("answers", "Répondez aux questions de contrôle.");
-  if (screenshots.length !== a.steps.length) throw new DomainError("screenshots", `Ajoutez ${a.steps.length} captures, une par étape du scénario.`);
+  if (input.answers.length !== questions.length) throw new DomainError("answers", "Réponds aux questions de contrôle.");
+  if (screenshots.length !== a.steps.length) throw new DomainError("screenshots", `Ajoute ${a.steps.length} captures, une par étape du scénario.`);
   for (const s of screenshots) {
     const check = IMAGE_TYPES[s.mime];
     if (!check || !check(s.data)) throw new DomainError("screenshots", "Les captures doivent être des images PNG, JPEG ou WebP.");
@@ -214,7 +214,7 @@ export async function listReports(ownerId: string, testAppId: string, prisma: Db
 export async function reviewReport(ownerId: string, reportId: string, decision: { validate: true } | { validate: false; reason: string }, prisma: Db = db) {
   const r = await prisma.testReport.findUnique({ where: { id: reportId }, include: { testApp: { select: { ownerId: true, name: true, id: true } }, tester: { select: { id: true } } } });
   if (!r || r.testApp.ownerId !== ownerId) throw notFound("Rapport introuvable.");
-  if (r.status !== "SUBMITTED") throw new DomainError("already_reviewed", "Vous avez déjà traité ce rapport.", 409);
+  if (r.status !== "SUBMITTED") throw new DomainError("already_reviewed", "Tu as déjà traité ce rapport.", 409);
   const owner = await prisma.user.findUniqueOrThrow({ where: { id: ownerId }, select: { name: true } });
   return prisma.$transaction(async (tx) => {
     await tx.testReport.update({

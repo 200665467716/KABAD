@@ -39,7 +39,7 @@ test("l’inscription enchaîne les cinq étapes ; sans e-mail confirmé, on ne 
   await page.getByRole("button", { name: /^Inviter / }).first().click();
   await page.getByRole("dialog").getByRole("textbox").fill("Bonjour, je découvre KABAD.");
   await page.getByRole("dialog").getByRole("button", { name: /Envoyer/ }).click();
-  await expect(page.getByText(/Confirme d’abord|Confirmez d’abord/)).toBeVisible();
+  await expect(page.getByText(/Confirme d’abord|Confirme d’abord/)).toBeVisible();
 });
 
 test("mot de passe oublié : même réponse que le compte existe ou non", async ({ page }) => {

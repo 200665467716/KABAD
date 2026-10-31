@@ -5,10 +5,10 @@ export type InvitationCheck = { ok: true; message: string } | { ok: false; error
 
 export function checkInvitationMessage(raw: string): InvitationCheck {
   const message = raw.trim();
-  if (message.length === 0) return { ok: false, error: "Écrivez un premier message pour vous présenter." };
+  if (message.length === 0) return { ok: false, error: "Écris un premier message pour te présenter." };
   const length = Array.from(message).length;
   if (length > INVITATION_MAX_LENGTH) {
-    return { ok: false, error: `Votre message fait ${length} caractères. Raccourcissez-le à ${INVITATION_MAX_LENGTH}.` };
+    return { ok: false, error: `Ton message fait ${length} caractères. Raccourcis-le à ${INVITATION_MAX_LENGTH}.` };
   }
   return { ok: true, message };
 }

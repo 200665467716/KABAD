@@ -6,6 +6,6 @@ import { testAppSchema } from "@/lib/schemas";
 
 export const POST = route(async (request) => {
   const user = await requireVerifiedUser();
-  await rateLimit(`test-app:${user.id}`, 5, 24 * 3600_000, "Vous avez publié beaucoup d’applications aujourd’hui.");
+  await rateLimit(`test-app:${user.id}`, 5, 24 * 3600_000, "Tu as publié beaucoup d’applications aujourd’hui.");
   return Response.json(await createTestApp(user.id, await readJson(request, testAppSchema)), { status: 201 });
 });

@@ -71,7 +71,7 @@ async function RoomsData() {
       <RoomsLive />
       <p className="text-sm text-muted">Des discussions en direct, à la voix : un hôte, quelques intervenants sur scène, et tout le monde peut écouter et lever la main.</p>
       <Section id="live" title="En direct" rooms={live} empty="Aucun salon en direct pour l’instant." />
-      <Section id="upcoming" title="À venir" rooms={upcoming} empty="Aucun salon programmé. Lancez le premier !" />
+      <Section id="upcoming" title="À venir" rooms={upcoming} empty="Aucun salon programmé. Lance le premier !" />
       <Section id="ended" title="Récemment terminés" rooms={ended} />
     </Page>
   );

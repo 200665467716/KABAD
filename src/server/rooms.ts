@@ -109,9 +109,9 @@ export async function getRoom(viewerId: string, roomId: string, prisma: Db = db)
 
 export async function createRoom(hostId: string, input: { title: string; description: string; startsAt?: string; now: boolean }, prisma: Db = db) {
   const live = await prisma.voiceRoom.count({ where: { hostId, status: { in: ["LIVE", "SCHEDULED"] } } });
-  if (live >= 5) throw new DomainError("too_many", "Vous avez déjà 5 salons prévus ou en cours.", 409);
+  if (live >= 5) throw new DomainError("too_many", "Tu as déjà 5 salons prévus ou en cours.", 409);
   const startsAt = input.now || !input.startsAt ? new Date() : new Date(input.startsAt);
-  if (!input.now && (Number.isNaN(startsAt.getTime()) || startsAt.getTime() < Date.now() - 60_000)) throw new DomainError("date", "Choisissez une date à venir.", 400, "startsAt");
+  if (!input.now && (Number.isNaN(startsAt.getTime()) || startsAt.getTime() < Date.now() - 60_000)) throw new DomainError("date", "Choisis une date à venir.", 400, "startsAt");
   if (startsAt.getTime() > Date.now() + 60 * 86_400_000) throw new DomainError("date", "Un salon se programme 60 jours à l’avance au plus.", 400, "startsAt");
   const room = await prisma.voiceRoom.create({
     data: { title: input.title, description: input.description, hostId, startsAt, status: input.now ? "LIVE" : "SCHEDULED", startedAt: input.now ? new Date() : null, participants: { create: { userId: hostId, role: "HOST", leftAt: new Date() } } },
@@ -175,9 +175,9 @@ export async function joinRoom(user: { id: string; name: string }, roomId: strin
   if (!r || r.hiddenAt) throw notFound("Salon introuvable.");
   if (r.status !== "LIVE") throw new DomainError("not_live", r.status === "SCHEDULED" ? "Le salon n’a pas encore commencé." : "Ce salon est terminé.", 409);
   const blocked = await prisma.block.count({ where: { OR: [{ blockerId: r.hostId, blockedId: user.id }, { blockerId: user.id, blockedId: r.hostId }] } });
-  if (blocked) throw forbidden("Vous ne pouvez pas rejoindre ce salon.");
+  if (blocked) throw forbidden("Tu ne peux pas rejoindre ce salon.");
   const me = await prisma.roomParticipant.findUnique({ where: { roomId_userId: { roomId, userId: user.id } } });
-  if (me?.removedAt) throw forbidden("L’hôte vous a retiré de ce salon.");
+  if (me?.removedAt) throw forbidden("L’hôte t’a retiré de ce salon.");
   const present = await prisma.roomParticipant.count({ where: { roomId, leftAt: null, removedAt: null } });
   const coming = !me || me.leftAt !== null;
   if (coming && present >= ROOM_MAX_LISTENERS) throw new DomainError("full", "Le salon est complet.", 409);
@@ -207,7 +207,7 @@ export async function leaveRoom(userId: string, roomId: string, prisma: Db = db)
 
 export async function raiseHand(userId: string, roomId: string, up: boolean, prisma: Db = db) {
   const me = await prisma.roomParticipant.findUnique({ where: { roomId_userId: { roomId, userId } } });
-  if (!me || me.leftAt || me.removedAt) throw new DomainError("not_in_room", "Rejoignez d’abord le salon.", 409);
+  if (!me || me.leftAt || me.removedAt) throw new DomainError("not_in_room", "Rejoins d’abord le salon.", 409);
   if (me.role !== "LISTENER") return { ok: true };
   await prisma.$transaction(async (tx) => {
     await tx.roomParticipant.update({ where: { roomId_userId: { roomId, userId } }, data: { handRaisedAt: up ? new Date() : null } });
@@ -220,7 +220,7 @@ export async function raiseHand(userId: string, roomId: string, up: boolean, pri
 export async function setSpeaker(hostId: string, roomId: string, userId: string, speak: boolean, prisma: Db = db) {
   const r = await hostRoom(prisma, hostId, roomId);
   if (r.status !== "LIVE") throw new DomainError("not_live", "Le salon n’est pas en direct.", 409);
-  if (userId === hostId) throw new DomainError("self", "Vous êtes l’hôte : vous restez sur scène.");
+  if (userId === hostId) throw new DomainError("self", "Tu es l’hôte : tu restes sur scène.");
   const p = await prisma.roomParticipant.findUnique({ where: { roomId_userId: { roomId, userId } } });
   if (!p || p.leftAt || p.removedAt) throw notFound("Ce membre n’est plus dans le salon.");
   if (speak && (await prisma.roomParticipant.count({ where: { roomId, role: "SPEAKER", leftAt: null } })) >= ROOM_MAX_SPEAKERS) throw new DomainError("stage_full", `${ROOM_MAX_SPEAKERS} intervenants au plus sur scène.`, 409);
@@ -237,7 +237,7 @@ export async function setSpeaker(hostId: string, roomId: string, userId: string,
 /** The host removes someone: they are cut from the audio and cannot come back into this room. */
 export async function removeFromRoom(hostId: string, roomId: string, userId: string, prisma: Db = db) {
   await hostRoom(prisma, hostId, roomId);
-  if (userId === hostId) throw new DomainError("self", "Vous ne pouvez pas vous retirer : terminez le salon.");
+  if (userId === hostId) throw new DomainError("self", "Tu ne peux pas te retirer : termine le salon.");
   const lk = livekitConfig();
   if (lk) await removeFromLivekit(lk, roomId, userId);
   await prisma.$transaction(async (tx) => {

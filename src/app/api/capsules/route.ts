@@ -6,6 +6,6 @@ import { capsuleSchema } from "@/lib/schemas";
 
 export const POST = route(async (request) => {
   const user = await requireVerifiedUser();
-  await rateLimit(`capsule:${user.id}`, 10, 24 * 3600_000, "Vous avez publié beaucoup de capsules aujourd’hui.");
+  await rateLimit(`capsule:${user.id}`, 10, 24 * 3600_000, "Tu as publié beaucoup de capsules aujourd’hui.");
   return Response.json(await publishCapsule(user.id, await readJson(request, capsuleSchema)), { status: 201 });
 });

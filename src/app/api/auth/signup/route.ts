@@ -1,6 +1,7 @@
 import { sendVerificationEmail } from "@/server/account";
 import { createSession, hashPassword, setSessionCookie } from "@/server/auth";
 import { db } from "@/server/db";
+import { requestLocale } from "@/server/error-language";
 import { DomainError } from "@/server/errors";
 import { clientIp, readJson, route } from "@/server/http";
 import { rateLimit } from "@/server/rate-limit";
@@ -11,9 +12,9 @@ export const POST = route(async (request) => {
   const { name, email, password } = await readJson(request, signupSchema);
   const normalized = email.trim().toLowerCase();
   if (await db.user.findUnique({ where: { email: normalized }, select: { id: true } })) {
-    throw new DomainError("email_taken", "Cette adresse a déjà un compte. Connectez-vous, ou utilisez « Mot de passe oublié ».", 409, "email");
+    throw new DomainError("email_taken", "Cette adresse a déjà un compte. Connecte-toi, ou utilise « Mot de passe oublié ».", 409, "email");
   }
-  const user = await db.user.create({ data: { name, email: normalized, passwordHash: await hashPassword(password) } });
+  const user = await db.user.create({ data: { name, email: normalized, passwordHash: await hashPassword(password), locale: requestLocale(request) } });
   // The account works right away; contacting members waits for the e-mail check.
   await sendVerificationEmail(user.id).catch((e) => console.error("E-mail de vérification non envoyé", e));
   const { token, expiresAt } = await createSession(user.id);

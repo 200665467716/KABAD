@@ -59,9 +59,9 @@ test("un salon vocal : l’hôte fait monter un auditeur sur scène, le son pass
 
   // Moussa removes him: Kossi is cut and cannot come back.
   await moussa.getByRole("button", { name: "Retirer Kossi Mensah du salon" }).click();
-  await expect(kossi.getByText("L’hôte vous a retiré de ce salon.")).toBeVisible({ timeout: 10_000 });
+  await expect(kossi.getByText("L’hôte t’a retiré de ce salon.")).toBeVisible({ timeout: 10_000 });
   await kossi.reload();
-  await expect(kossi.getByRole("button", { name: "Vous avez été retiré" })).toBeDisabled();
+  await expect(kossi.getByRole("button", { name: "Tu as été retiré" })).toBeDisabled();
 
   // Moussa ends the room.
   await moussa.getByRole("button", { name: "Terminer le salon" }).click();

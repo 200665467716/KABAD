@@ -6,10 +6,10 @@ import type { EmailTokenPurpose } from "@/generated/prisma/client";
 import { hashPassword, verifyPassword } from "./auth";
 import { db, type Db } from "./db";
 import { DomainError } from "./errors";
+import { mailLocale, passwordResetMail, verificationMail } from "./emails";
 import { sendMail } from "./mailer";
 
 const hash = (token: string) => createHash("sha256").update(token).digest("hex");
-const appUrl = () => (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
 async function issueToken(userId: string, purpose: EmailTokenPurpose, hours: number, prisma: Db, code?: string) {
   const token = randomBytes(32).toString("base64url");
@@ -25,24 +25,21 @@ export const CODE_ATTEMPTS = 5;
 async function consumeToken(token: string, purpose: EmailTokenPurpose, prisma: Db) {
   const row = await prisma.emailToken.findUnique({ where: { id: hash(token) } });
   if (!row || row.purpose !== purpose || row.usedAt || row.expiresAt <= new Date()) {
-    throw new DomainError("bad_token", "Ce lien n’est plus valable. Demandez-en un nouveau.", 400);
+    throw new DomainError("bad_token", "Ce lien n’est plus valable. Demandes-en un nouveau.", 400);
   }
   const { count } = await prisma.emailToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: new Date() } });
-  if (!count) throw new DomainError("bad_token", "Ce lien a déjà servi. Demandez-en un nouveau.", 400);
+  if (!count) throw new DomainError("bad_token", "Ce lien a déjà servi. Demandes-en un nouveau.", 400);
   return row.userId;
 }
 
 /** Sends a 6-digit code (typed in the sign-up screen) and the same check as a link (opened from the e-mail). */
 export async function sendVerificationEmail(userId: string, prisma: Db = db) {
-  const u = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true, name: true, emailVerifiedAt: true } });
+  const u = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true, name: true, locale: true, emailVerifiedAt: true } });
   if (u.emailVerifiedAt) return { alreadyVerified: true };
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   const token = await issueToken(userId, "VERIFY", 48, prisma, code);
-  await sendMail(
-    u.email,
-    `${code} : ton code de confirmation KABAD`,
-    `Bonjour ${u.name.split(" ")[0]},\n\nTon code de confirmation : ${code}\n\nTu peux aussi ouvrir ce lien :\n${appUrl()}/verifier-email?jeton=${token}\n\nCe code est valable 48 heures. Si tu n’as pas créé de compte, ignore ce message.\n\nL’équipe KABAD`,
-  );
+  const mail = verificationMail(mailLocale(u.locale), u.name, code, token);
+  await sendMail(u.email, mail.subject, mail.text);
   return { alreadyVerified: false };
 }
 
@@ -87,14 +84,11 @@ export async function setLocale(userId: string, locale: "fr" | "en", prisma: Db 
 
 /** Always answers the same way, so the form does not reveal which addresses have an account. */
 export async function requestPasswordReset(email: string, prisma: Db = db) {
-  const u = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() }, select: { id: true, name: true, email: true, suspendedAt: true } });
+  const u = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() }, select: { id: true, name: true, email: true, locale: true, suspendedAt: true } });
   if (!u || u.suspendedAt) return;
   const token = await issueToken(u.id, "RESET_PASSWORD", 1, prisma);
-  await sendMail(
-    u.email,
-    "Réinitialiser votre mot de passe KABAD",
-    `Bonjour ${u.name.split(" ")[0]},\n\nPour choisir un nouveau mot de passe, ouvrez ce lien :\n${appUrl()}/reinitialiser?jeton=${token}\n\nIl est valable une heure. Si vous n’avez rien demandé, ignorez ce message : votre mot de passe ne change pas.\n\nL’équipe KABAD`,
-  );
+  const mail = passwordResetMail(mailLocale(u.locale), u.name, token);
+  await sendMail(u.email, mail.subject, mail.text);
 }
 
 /** Sets the new password and closes every session: whoever knew the old one is signed out. */
@@ -148,7 +142,7 @@ export async function exportData(userId: string, prisma: Db = db) {
 export async function deleteAccount(userId: string, password: string | undefined, prisma: Db = db) {
   const u = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { passwordHash: true, isAdmin: true } });
   if (u.passwordHash && !(password && (await verifyPassword(password, u.passwordHash)))) throw new DomainError("bad_password", "Le mot de passe est incorrect.", 400, "password");
-  if (u.isAdmin && (await prisma.user.count({ where: { isAdmin: true } })) <= 1) throw new DomainError("last_admin", "Vous êtes le dernier administrateur : nommez-en un autre avant de partir.", 409);
+  if (u.isAdmin && (await prisma.user.count({ where: { isAdmin: true } })) <= 1) throw new DomainError("last_admin", "Tu es le dernier administrateur : nommes-en un autre avant de partir.", 409);
   await prisma.$transaction(async (tx) => {
     await tx.message.updateMany({ where: { authorId: userId }, data: { authorId: null } });
     // Groups the member created pass to the longest-standing member.

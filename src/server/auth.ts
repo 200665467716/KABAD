@@ -62,7 +62,7 @@ export async function requireUser() {
 /** For actions that reach other members: the e-mail address must be confirmed first. */
 export async function requireVerifiedUser() {
   const user = await requireUser();
-  if (!user.emailVerifiedAt) throw new DomainError("email_unverified", "Confirmez d’abord votre adresse e-mail : ouvrez le lien que nous vous avons envoyé.", 403);
+  if (!user.emailVerifiedAt) throw new DomainError("email_unverified", "Confirme d’abord ton adresse e-mail : ouvre le lien qu’on t’a envoyé.", 403);
   return user;
 }
 
@@ -81,6 +81,6 @@ export async function login(email: string, password: string) {
   dummyHash ??= hashPassword("kabad-timing-guard");
   const ok = await verifyPassword(password, user?.passwordHash ?? (await dummyHash));
   if (!user || !ok) throw new DomainError("bad_credentials", "E-mail ou mot de passe incorrect.", 401);
-  if (user.suspendedAt) throw new DomainError("suspended", "Ce compte est suspendu. Écrivez à l’équipe KABAD si vous pensez qu’il s’agit d’une erreur.", 403);
+  if (user.suspendedAt) throw new DomainError("suspended", "Ce compte est suspendu. Écris à l’équipe KABAD si tu penses qu’il s’agit d’une erreur.", 403);
   return user;
 }

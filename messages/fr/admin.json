@@ -112,7 +112,7 @@
         "INVITATION": "Invitation",
         "ROOM": "Salon vocal"
       },
-      "needNote": "Écrivez le motif : le membre le lira.",
+      "needNote": "Écris le motif : le membre le lira.",
       "meta": "{when} · par <link>{name}</link>",
       "targetMember": "Membre visé : <link>{name}</link>",
       "targetTotal": "{count} signalements au total",

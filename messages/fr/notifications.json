@@ -9,7 +9,7 @@
       "bookingLapsed": " n’a pas répondu à temps pour la séance du {at}. Réserve un autre créneau.",
       "bookingNudge": " attend ta réponse pour la séance du {at}.",
       "sessionSoonMentee": " : ta séance « {topic} » commence dans {minutes} min.",
-      "sessionSoonMentor": " : votre séance « {topic} » commence dans {minutes} min.",
+      "sessionSoonMentor": " : ta séance « {topic} » commence dans {minutes} min.",
       "badgeRequested": " demande le badge mentor.",
       "badgeGranted": " t’a accordé le badge mentor. Ouvre tes premiers créneaux.",
       "badgeRefused": " n’a pas validé ta demande de badge : « {reason} »",

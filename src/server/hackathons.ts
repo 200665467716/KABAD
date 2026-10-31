@@ -242,7 +242,7 @@ function checkDates(input: Pick<HackathonInput, "startsAt" | "endsAt" | "closesA
   if (close > start) throw new DomainError("dates", "Les inscriptions se closent au plus tard au début du hackathon.", 400, "closesAt");
   if (close <= Date.now()) throw new DomainError("dates", "La clôture des inscriptions doit être dans le futur.", 400, "closesAt");
   if (input.teamMin > input.teamMax) throw new DomainError("team", "La taille minimale dépasse la taille maximale.", 400, "teamMin");
-  if (input.format !== "ONLINE" && !input.city) throw new DomainError("city", "Indiquez la ville du hackathon.", 400, "city");
+  if (input.format !== "ONLINE" && !input.city) throw new DomainError("city", "Indique la ville du hackathon.", 400, "city");
 }
 
 /** An organizer proposes a hackathon. It stays hidden until the KABAD team publishes it. */
@@ -303,15 +303,15 @@ async function openForEntries(prisma: Tx, hackathonId: string, userId: string) {
   const h = await prisma.hackathon.findUnique({ where: { id: hackathonId }, include: { jurors: { select: { userId: true } } } });
   if (!h || !h.publishedAt) throw notFound("Hackathon introuvable.");
   if (h.status !== "OPEN" || h.closesAt.getTime() <= Date.now()) throw new DomainError("closed", "Les inscriptions à ce hackathon sont closes.", 409);
-  if (h.jurors.some((j) => j.userId === userId)) throw forbidden("Vous faites partie du jury de ce hackathon : vous ne pouvez pas y participer.");
+  if (h.jurors.some((j) => j.userId === userId)) throw forbidden("Tu fais partie du jury de ce hackathon : tu ne peux pas y participer.");
   if (h.mentoringMinutes > 0) {
     const e = await eligibility(userId, h.mentoringMinutes, prisma);
-    if (!e.eligible) throw forbidden(`Ce hackathon demande ${formatDuration(h.mentoringMinutes)} de mentorat. Il vous manque ${formatDuration(e.missing)}.`);
+    if (!e.eligible) throw forbidden(`Ce hackathon demande ${formatDuration(h.mentoringMinutes)} de mentorat. Il te manque ${formatDuration(e.missing)}.`);
   }
   return h;
 }
 
-const alreadyIn = () => new DomainError("already_in", "Vous êtes déjà inscrit à ce hackathon.", 409);
+const alreadyIn = () => new DomainError("already_in", "Tu es déjà inscrit à ce hackathon.", 409);
 
 export async function register(
   userId: string,
@@ -338,7 +338,7 @@ export async function register(
   if (input.mode === "solo" && h.teamMin > 1) throw new DomainError("team_only", `Ce hackathon se joue en équipe de ${h.teamMin} à ${h.teamMax}.`, 409);
   if (input.mode === "create" && h.teamMax === 1) throw new DomainError("solo_only", "Ce hackathon se joue seul.", 409);
   const name = input.mode === "solo" ? me.name.slice(0, 40) : (input.teamName ?? "").trim();
-  if (!name) throw new DomainError("team_name", "Donnez un nom à votre équipe.", 400, "teamName");
+  if (!name) throw new DomainError("team_name", "Donne un nom à ton équipe.", 400, "teamName");
   try {
     return await prisma.$transaction(async (tx) => {
       const team = await tx.team.create({ data: { hackathonId, name, captainId: userId, solo: input.mode === "solo", lookingFor: input.mode === "create" ? input.lookingFor || null : null } });
@@ -365,7 +365,7 @@ export async function answerJoinRequest(captainId: string, requestId: string, ac
   const h = r.team.hackathon;
   if (accept) {
     if (h.status !== "OPEN" || h.closesAt.getTime() <= Date.now()) throw new DomainError("closed", "Les inscriptions sont closes.", 409);
-    if (r.team._count.members >= h.teamMax) throw new DomainError("full", "Votre équipe est complète.", 409);
+    if (r.team._count.members >= h.teamMax) throw new DomainError("full", "Ton équipe est complète.", 409);
   }
   try {
     return await prisma.$transaction(async (tx) => {
@@ -445,9 +445,9 @@ export async function submitSolution(
   if (h.status !== "OPEN" || h.endsAt.getTime() <= Date.now()) throw new DomainError("closed", "Ce hackathon est terminé : les solutions ne sont plus acceptées.", 409);
   if (h.startsAt.getTime() > Date.now()) throw new DomainError("not_started", "Le hackathon n’a pas encore commencé.", 409);
   const team = await teamOf(prisma, hackathonId, userId);
-  if (!team) throw forbidden("Inscrivez-vous d’abord à ce hackathon.");
+  if (!team) throw forbidden("Inscris-toi d’abord à ce hackathon.");
   if (team.members.length < h.teamMin) throw new DomainError("team_small", `Il faut au moins ${h.teamMin} membres dans l’équipe pour soumettre.`, 409);
-  if (hasCash(h) && (!input.payoutOperator || !input.payoutPhone)) throw new DomainError("payout", "Indiquez le numéro Mobile Money qui recevra le gain de l’équipe.", 400, "payoutPhone");
+  if (hasCash(h) && (!input.payoutOperator || !input.payoutPhone)) throw new DomainError("payout", "Indique le numéro Mobile Money qui recevra le gain de l’équipe.", 400, "payoutPhone");
   const data = {
     projectName: input.projectName,
     repoUrl: input.repoUrl,
@@ -515,7 +515,7 @@ export async function scoreSubmission(jurorId: string, hackathonId: string, inpu
   if (!inJury(h)) throw new DomainError("not_jury", h.status === "OPEN" ? "Le hackathon n’est pas encore terminé." : "Les résultats sont déjà publiés.", 409);
   const sub = await prisma.submission.findUnique({ where: { id: input.submissionId }, include: juryInclude });
   if (!sub || sub.hackathonId !== hackathonId) throw notFound("Solution introuvable.");
-  if ((await recusals(prisma, [sub])).get(sub.id)!.has(jurorId)) throw forbidden("Vous accompagnez ou avez accompagné un membre de cette équipe : les autres jurés notent cette solution.");
+  if ((await recusals(prisma, [sub])).get(sub.id)!.has(jurorId)) throw forbidden("Tu accompagnes ou as accompagné un membre de cette équipe : les autres jurés notent cette solution.");
   const score = { works: input.works, code: input.code, tests: input.tests, explain: input.explain };
   const total = totalScore(score);
   await prisma.juryScore.upsert({
@@ -610,7 +610,7 @@ export async function markPayoutSent(adminId: string, payoutId: string, referenc
   if (!p) throw notFound("Versement introuvable.");
   if (p.status === "SENT") throw new DomainError("already_sent", "Ce versement est déjà marqué comme envoyé.", 409);
   const contestEnds = (p.hackathon.resultsAt?.getTime() ?? Infinity) + CONTEST_HOURS * 3600_000;
-  if (Date.now() < contestEnds) throw new DomainError("contest", `Attendez la fin des ${CONTEST_HOURS} h de contestation avant de verser.`, 409);
+  if (Date.now() < contestEnds) throw new DomainError("contest", `Attends la fin des ${CONTEST_HOURS} h de contestation avant de verser.`, 409);
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.payout.updateMany({ where: { id: payoutId, status: "PENDING" }, data: { status: "SENT", reference, sentAt: new Date() } });
     if (!count) throw new DomainError("already_sent", "Ce versement est déjà marqué comme envoyé.", 409);
@@ -669,7 +669,7 @@ async function requireOrganizer(prisma: Tx, userId: string, hackathonId: string)
 /** Offers the mission to badged mentors. Mentors already asked are skipped. */
 export async function proposeMissions(userId: string, hackathonId: string, mentorIds: string[], prisma: Db = db) {
   const h = await requireOrganizer(prisma, userId, hackathonId);
-  if (!h.instructorFee) throw new DomainError("fee", "Indiquez d’abord la rémunération par instructeur.", 400, "instructorFee");
+  if (!h.instructorFee) throw new DomainError("fee", "Indique d’abord la rémunération par instructeur.", 400, "instructorFee");
   if (h.status === "DONE") throw new DomainError("done", "Ce hackathon est terminé.", 409);
   const mentors = await prisma.user.findMany({ where: { id: { in: mentorIds }, seniorVerifiedAt: { not: null }, suspendedAt: null }, select: { id: true } });
   if (mentors.length !== new Set(mentorIds).size) throw new DomainError("not_mentor", "Seuls les mentors KABAD peuvent être instructeurs.", 400);
@@ -686,7 +686,7 @@ export async function answerMission(mentorId: string, missionId: string, accept:
   if (!m || m.mentorId !== mentorId) throw notFound("Mission introuvable.");
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.instructorMission.updateMany({ where: { id: missionId, status: "PROPOSED" }, data: { status: accept ? "ACCEPTED" : "DECLINED", answeredAt: new Date() } });
-    if (!count) throw new DomainError("answered", "Vous avez déjà répondu à cette mission.", 409);
+    if (!count) throw new DomainError("answered", "Tu as déjà répondu à cette mission.", 409);
     if (m.hackathon.createdById) {
       await pushNotifications(tx, [{ userId: m.hackathon.createdById, actor: m.mentor.name, key: accept ? "missionAccepted" : "missionDeclined", params: { title: m.hackathon.title }, href: `/hackathons/${m.hackathon.id}`, icon: "users", tone: accept ? "success" : "neutral" }]);
     }

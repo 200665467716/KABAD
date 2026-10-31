@@ -17,7 +17,7 @@ export async function rateLimit(key: string, max: number, windowMs: number, mess
     RETURNING count, "resetAt"`;
   if (row.count > max) {
     const minutes = Math.max(1, Math.ceil((row.resetAt.getTime() - Date.now()) / 60_000));
-    throw new DomainError("rate_limited", `${message} Réessayez dans ${minutes} min.`, 429);
+    throw new DomainError("rate_limited", `${message} Réessaie dans ${minutes} min.`, 429);
   }
 }
 

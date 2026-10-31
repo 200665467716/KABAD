@@ -15,7 +15,7 @@ export function mailConfigured() {
 export async function sendMail(to: string, subject: string, text: string) {
   const url = process.env.SMTP_URL;
   if (!url) {
-    if (process.env.NODE_ENV === "production") throw new DomainError("mail_unavailable", "L’envoi d’e-mails n’est pas encore configuré. Écrivez à l’équipe KABAD.", 503);
+    if (process.env.NODE_ENV === "production") throw new DomainError("mail_unavailable", "L’envoi d’e-mails n’est pas encore configuré. Écris à l’équipe KABAD.", 503);
     console.info(`\n[e-mail de développement] À : ${to}\nObjet : ${subject}\n\n${text}\n`);
     return;
   }

@@ -58,9 +58,9 @@ export async function myBadgeRequest(userId: string, prisma: Db = db): Promise<B
 }
 
 function check(input: BadgeInput) {
-  if (input.domains.length === 0 || input.domains.length > 3) throw new DomainError("domains", "Choisissez de 1 à 3 domaines d’expertise.", 400, "domains");
+  if (input.domains.length === 0 || input.domains.length > 3) throw new DomainError("domains", "Choisis de 1 à 3 domaines d’expertise.", 400, "domains");
   if (input.domains.some((d) => !(BADGE_DOMAINS as readonly string[]).includes(d))) throw new DomainError("domains", "Domaine inconnu.", 400, "domains");
-  if (!input.githubUrl && !input.linkedinUrl && !input.portfolioUrl) throw new DomainError("links", "Ajoutez au moins un lien : GitHub, LinkedIn ou portfolio.", 400, "githubUrl");
+  if (!input.githubUrl && !input.linkedinUrl && !input.portfolioUrl) throw new DomainError("links", "Ajoute au moins un lien : GitHub, LinkedIn ou portfolio.", 400, "githubUrl");
 }
 
 const data = (input: BadgeInput) => ({
@@ -85,7 +85,7 @@ async function notifyAdmins(tx: Prisma.TransactionClient, name: string, requestI
 export async function requestBadge(userId: string, input: BadgeInput, prisma: Db = db) {
   check(input);
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true, seniorVerifiedAt: true } });
-  if (user.seniorVerifiedAt) throw new DomainError("already", "Vous avez déjà le badge mentor.", 409);
+  if (user.seniorVerifiedAt) throw new DomainError("already", "Tu as déjà le badge mentor.", 409);
   return prisma.$transaction(async (tx) => {
     const pending = await tx.mentorBadgeRequest.findFirst({ where: { userId, status: "PENDING" }, select: { id: true } });
     if (pending) {
@@ -123,7 +123,7 @@ export async function getBadgeRequest(adminId: string, id: string, prisma: Db = 
 
 export async function reviewBadge(adminId: string, id: string, input: { approve: boolean; reason?: string }, prisma: Db = db) {
   await requireAdmin(prisma, adminId);
-  if (!input.approve && !input.reason?.trim()) throw new DomainError("reason", "Indiquez le motif du refus : il est envoyé au candidat.", 400, "reason");
+  if (!input.approve && !input.reason?.trim()) throw new DomainError("reason", "Indique le motif du refus : il est envoyé au candidat.", 400, "reason");
   const r = await prisma.mentorBadgeRequest.findUnique({ where: { id } });
   if (!r) throw notFound("Demande introuvable.");
   return prisma.$transaction(async (tx) => {

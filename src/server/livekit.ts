@@ -56,13 +56,13 @@ async function roomService(config: LivekitConfig, method: string, roomId: string
     });
   } catch (e) {
     console.error("LiveKit injoignable", e);
-    throw new DomainError("audio_unavailable", "Le serveur audio ne répond pas. Réessayez dans un instant.", 502);
+    throw new DomainError("audio_unavailable", "Le serveur audio ne répond pas. Réessaie dans un instant.", 502);
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     if (res.status === 404 || /not.?found|does not exist/i.test(text)) return null;
     console.error("LiveKit a refusé", method, res.status, text);
-    throw new DomainError("audio_unavailable", "Le serveur audio a refusé l’action. Réessayez.", 502);
+    throw new DomainError("audio_unavailable", "Le serveur audio a refusé l’action. Réessaie.", 502);
   }
   return res.json().catch(() => null);
 }

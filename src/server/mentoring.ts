@@ -106,7 +106,7 @@ export async function getMentor(mentorId: string, prisma: Db = db): Promise<Ment
 /* Booking */
 
 export async function bookSlot(menteeId: string, input: { mentorId: string; startsAt: string; topic: string; problem: string; link?: string }, prisma: Db = db) {
-  if (input.mentorId === menteeId) throw new DomainError("self", "Vous ne pouvez pas réserver vos propres créneaux.");
+  if (input.mentorId === menteeId) throw new DomainError("self", "Tu ne peux pas réserver tes propres créneaux.");
   const startsAt = new Date(input.startsAt);
   if (Number.isNaN(startsAt.getTime())) throw new DomainError("bad_slot", "Créneau invalide.", 400, "startsAt");
   const [mentor, mentee, blocked, pending] = await Promise.all([
@@ -116,8 +116,8 @@ export async function bookSlot(menteeId: string, input: { mentorId: string; star
     prisma.mentoringBooking.count({ where: { menteeId, status: "PENDING" } }),
   ]);
   if (!mentor) throw notFound("Mentor introuvable.");
-  if (blocked) throw forbidden("Vous ne pouvez pas réserver de séance avec ce mentor.");
-  if (pending >= MAX_PENDING_BOOKINGS) throw new DomainError("too_many", `Vous attendez déjà ${MAX_PENDING_BOOKINGS} réponses. Patientez qu’un mentor réponde avant d’en demander d’autres.`, 429);
+  if (blocked) throw forbidden("Tu ne peux pas réserver de séance avec ce mentor.");
+  if (pending >= MAX_PENDING_BOOKINGS) throw new DomainError("too_many", `Tu attends déjà ${MAX_PENDING_BOOKINGS} réponses. Attends qu’un mentor réponde avant d’en demander d’autres.`, 429);
   const offered = isOfferedSlot(startsAt, {
     ranges: mentor.availability,
     timeZone: mentor.timeZone,
@@ -136,7 +136,7 @@ export async function bookSlot(menteeId: string, input: { mentorId: string; star
     });
   } catch (e) {
     // The partial unique index: someone booked this slot a moment earlier.
-    if ((e as { code?: string }).code === "P2002") throw new DomainError("slot_taken", "Ce créneau vient d’être réservé. Choisissez-en un autre.", 409, "startsAt");
+    if ((e as { code?: string }).code === "P2002") throw new DomainError("slot_taken", "Ce créneau vient d’être réservé. Choisis-en un autre.", 409, "startsAt");
     throw e;
   }
 }
@@ -228,7 +228,7 @@ export async function cancelBooking(userId: string, bookingId: string, prisma: D
 
 async function requireMentor(prisma: Tx, userId: string) {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { seniorVerifiedAt: true } });
-  if (!u?.seniorVerifiedAt) throw forbidden("Ouvrez des créneaux une fois votre badge mentor accordé.");
+  if (!u?.seniorVerifiedAt) throw forbidden("Ouvre des créneaux une fois ton badge mentor accordé.");
 }
 
 export async function getAvailability(mentorId: string, prisma: Db = db): Promise<AvailabilityView> {

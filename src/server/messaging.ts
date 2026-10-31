@@ -163,7 +163,7 @@ export async function sendMessage(userId: string, conversationId: string, input:
   }
   if (m.conversation.kind === "DIRECT") {
     const other = m.conversation.members.find((x) => x.userId !== userId)?.userId;
-    if (other && (await isBlocked(prisma, userId, other))) throw forbidden("Vous ne pouvez plus écrire à ce membre.");
+    if (other && (await isBlocked(prisma, userId, other))) throw forbidden("Tu ne peux plus écrire à ce membre.");
   }
   const recipients = m.conversation.members.map((x) => x.userId);
   return prisma.$transaction(async (tx) => {
@@ -195,7 +195,7 @@ export async function sendAttachment(
   }
   if (m.conversation.kind === "DIRECT") {
     const other = m.conversation.members.find((x) => x.userId !== userId)?.userId;
-    if (other && (await isBlocked(prisma, userId, other))) throw forbidden("Vous ne pouvez plus écrire à ce membre.");
+    if (other && (await isBlocked(prisma, userId, other))) throw forbidden("Tu ne peux plus écrire à ce membre.");
   }
   const recipients = m.conversation.members.map((x) => x.userId);
   return prisma.$transaction(async (tx) => {
@@ -278,23 +278,23 @@ export async function getInvitation(userId: string, invitationId: string, prisma
 
 export async function sendInvitation(fromId: string, input: { toId: string; message: string }, prisma: Db = db) {
   const { toId, message } = input;
-  if (toId === fromId) throw new DomainError("self", "Vous ne pouvez pas vous inviter vous-même.");
+  if (toId === fromId) throw new DomainError("self", "Tu ne peux pas t’inviter toi-même.");
   const [to, from] = await Promise.all([
     prisma.user.findUnique({ where: { id: toId }, select: { id: true, name: true } }),
     prisma.user.findUniqueOrThrow({ where: { id: fromId }, select: { name: true } }),
   ]);
   if (!to) throw notFound("Membre introuvable.");
   const first = firstName(to.name);
-  if (await areContacts(fromId, toId, prisma)) throw new DomainError("already_contacts", `${first} fait déjà partie de vos contacts.`, 409);
-  if (await isBlocked(prisma, fromId, toId)) throw forbidden("Vous ne pouvez pas inviter ce membre.");
+  if (await areContacts(fromId, toId, prisma)) throw new DomainError("already_contacts", `${first} fait déjà partie de tes contacts.`, 409);
+  if (await isBlocked(prisma, fromId, toId)) throw forbidden("Tu ne peux pas inviter ce membre.");
   const [mine, theirs] = await Promise.all([
     prisma.invitation.findUnique({ where: { fromId_toId: { fromId, toId } } }),
     prisma.invitation.findUnique({ where: { fromId_toId: { fromId: toId, toId: fromId } } }),
   ]);
-  if (theirs?.status === "PENDING") throw new DomainError("invited_you", `${first} vous a déjà invité. Acceptez son invitation pour discuter.`, 409);
-  if (mine?.status === "PENDING") throw new DomainError("already_sent", `Vous avez déjà invité ${first}. Attendez sa réponse.`, 409);
+  if (theirs?.status === "PENDING") throw new DomainError("invited_you", `${first} t’a déjà invité. Accepte son invitation pour discuter.`, 409);
+  if (mine?.status === "PENDING") throw new DomainError("already_sent", `Tu as déjà invité ${first}. Attends sa réponse.`, 409);
   if (mine?.status === "DECLINED" && mine.answeredAt && Date.now() - mine.answeredAt.getTime() < REINVITE_AFTER_DAYS * 86_400_000) {
-    throw new DomainError("declined", `${first} n’a pas donné suite à votre invitation. Vous pourrez réessayer dans quelques semaines.`, 409);
+    throw new DomainError("declined", `${first} n’a pas donné suite à ton invitation. Tu pourras réessayer dans quelques semaines.`, 409);
   }
 
   return prisma.$transaction(async (tx) => {
@@ -319,8 +319,8 @@ export async function cancelInvitation(userId: string, invitationId: string, pri
 export async function answerInvitation(userId: string, invitationId: string, accept: boolean, prisma: Db = db) {
   const inv = await prisma.invitation.findUnique({ where: { id: invitationId }, include: { to: { select: { name: true } } } });
   if (!inv || inv.toId !== userId) throw notFound("Invitation introuvable.");
-  if (inv.status !== "PENDING") throw new DomainError("already_answered", "Vous avez déjà répondu à cette invitation.", 409);
-  if (accept && (await isBlocked(prisma, inv.fromId, inv.toId))) throw forbidden("Vous ne pouvez pas accepter cette invitation : l’un de vous a bloqué l’autre.");
+  if (inv.status !== "PENDING") throw new DomainError("already_answered", "Tu as déjà répondu à cette invitation.", 409);
+  if (accept && (await isBlocked(prisma, inv.fromId, inv.toId))) throw forbidden("Tu ne peux pas accepter cette invitation : l’un de vous deux a bloqué l’autre.");
 
   if (!accept) {
     // The sender is not told about a refusal.
@@ -332,7 +332,7 @@ export async function answerInvitation(userId: string, invitationId: string, acc
     const now = new Date();
     // Only one of two simultaneous answers goes through.
     const { count } = await tx.invitation.updateMany({ where: { id: inv.id, status: "PENDING" }, data: { status: "ACCEPTED", answeredAt: now } });
-    if (!count) throw new DomainError("already_answered", "Vous avez déjà répondu à cette invitation.", 409);
+    if (!count) throw new DomainError("already_answered", "Tu as déjà répondu à cette invitation.", 409);
     await tx.contact.createMany({ data: [{ userId: inv.fromId, contactId: inv.toId }, { userId: inv.toId, contactId: inv.fromId }], skipDuplicates: true });
     const key = directKey(inv.fromId, inv.toId);
     let conversation = await tx.conversation.findUnique({ where: { directKey: key } });
@@ -355,14 +355,14 @@ export async function answerInvitation(userId: string, invitationId: string, acc
 
 async function assertAllContacts(tx: Prisma.TransactionClient | Db, ownerId: string, ids: string[]) {
   const found = await tx.contact.findMany({ where: { userId: ownerId, contactId: { in: ids } }, select: { contactId: true } });
-  if (found.length !== ids.length) throw forbidden("Vous ne pouvez ajouter que vos contacts.");
+  if (found.length !== ids.length) throw forbidden("Tu ne peux ajouter que tes contacts.");
   const blocked = await tx.block.count({ where: { OR: [{ blockerId: ownerId, blockedId: { in: ids } }, { blockerId: { in: ids }, blockedId: ownerId }] } });
-  if (blocked) throw forbidden("Vous ne pouvez pas ajouter un membre avec qui un blocage est en place.");
+  if (blocked) throw forbidden("Tu ne peux pas ajouter un membre avec qui un blocage est en place.");
 }
 
 export async function createGroup(userId: string, input: { name: string; theme?: string; memberIds: string[] }, prisma: Db = db) {
   const ids = [...new Set(input.memberIds)].filter((id) => id !== userId);
-  if (ids.length === 0) throw new DomainError("no_members", "Choisissez au moins un participant.");
+  if (ids.length === 0) throw new DomainError("no_members", "Choisis au moins un participant.");
   if (ids.length + 1 > GROUP_MAX_MEMBERS) throw new DomainError("too_many", `Un groupe compte ${GROUP_MAX_MEMBERS} membres au plus.`);
   return prisma.$transaction(async (tx) => {
     await assertAllContacts(tx, userId, ids);
@@ -419,7 +419,7 @@ export async function removeGroupMember(userId: string, conversationId: string, 
   const m = await membership(prisma, userId, conversationId);
   if (m.conversation.kind !== "GROUP") throw new DomainError("not_group", "On ne retire des participants que d’un groupe.");
   if (m.conversation.createdById !== userId) throw forbidden("Seul le créateur du groupe peut retirer des participants.");
-  if (memberId === userId) throw new DomainError("self", "Pour partir, quittez le groupe.");
+  if (memberId === userId) throw new DomainError("self", "Pour partir, quitte le groupe.");
   const everyone = m.conversation.members.map((x) => x.userId);
   if (!everyone.includes(memberId)) throw notFound("Ce membre ne fait pas partie du groupe.");
 
