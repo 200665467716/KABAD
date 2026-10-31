@@ -212,3 +212,69 @@ export function Stat({ value, label }: { value: ReactNode; label: ReactNode }) {
 export function DaySeparator({ children }: { children: ReactNode }) {
   return <span className="justify-self-center rounded-full bg-brand-wash px-2.5 py-1 text-xs font-extrabold text-muted">{children}</span>;
 }
+
+/* Charte « Motif » : composants de la page Composants. */
+
+/** A neutral tag: a technology, a skill. */
+export function Tag({ children, tone = "neutral", className }: { children: ReactNode; tone?: "neutral" | "brand"; className?: string }) {
+  return <span className={cn("inline-flex h-6.5 items-center rounded-sm px-2.5 text-xs font-extrabold", tone === "brand" ? "bg-[var(--mist)] text-brand-text" : "bg-bg text-ink", className)}>{children}</span>;
+}
+
+export function TagList({ items, className }: { items: string[]; className?: string }) {
+  if (items.length === 0) return null;
+  return (
+    <div className={cn("flex flex-wrap gap-1.5", className)}>
+      {items.map((t) => (
+        <Tag key={t}>{t}</Tag>
+      ))}
+    </div>
+  );
+}
+
+/** Time and length of a mentoring session, always indigo: "15h · 30 min". */
+export function TimeBlock({ time, length, className }: { time: ReactNode; length: ReactNode; className?: string }) {
+  return (
+    <span className={cn("grid size-18 shrink-0 content-center justify-items-center rounded-action bg-header text-on-header", className)}>
+      <b className="font-display text-xl leading-6 font-extrabold">{time}</b>
+      <span className="text-xs font-extrabold text-on-header-muted">{length}</span>
+    </span>
+  );
+}
+
+/** A hackathon ticket: details on the left, a black stub with the countdown on the right. */
+export function Ticket({ children, before, value, after, className, href }: { children: ReactNode; before: ReactNode; value: ReactNode; after: ReactNode; className?: string; href?: string }) {
+  const body = (
+    <>
+      <div className="grid min-w-0 content-start gap-1.5 px-4 py-3.5">{children}</div>
+      <div className="grid content-center justify-items-center gap-0.5 border-l-2 border-dashed border-bg bg-ink text-accent">
+        <span className="text-[11px] font-extrabold tracking-[0.08em] text-[var(--grey-light)] uppercase">{before}</span>
+        <span className="font-display text-[28px] leading-[30px] font-extrabold tabular">{value}</span>
+        <span className="text-[11px] font-extrabold tracking-[0.08em] text-[var(--grey-light)] uppercase">{after}</span>
+      </div>
+    </>
+  );
+  const cls = cn("grid grid-cols-[minmax(0,1fr)_84px] overflow-hidden rounded-lg border-2 border-line-strong bg-raised text-ink no-underline", href && "transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-pop", className);
+  return href ? (
+    <Link href={href} className={cls}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cls}>{body}</div>
+  );
+}
+
+/** "Mentors vérifiés" / "Tout voir": section title in capitals, link on the right. */
+export function SectionLink({ id, title, href, label }: { id?: string; title: ReactNode; href?: string; label?: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <h2 id={id} className="font-display text-md font-extrabold uppercase">
+        {title}
+      </h2>
+      {href && (
+        <Link href={href} className="text-sm font-extrabold text-brand-text no-underline">
+          {label}
+        </Link>
+      )}
+    </div>
+  );
+}

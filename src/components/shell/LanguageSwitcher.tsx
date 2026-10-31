@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { routing, type Locale } from "@/i18n/routing";
+import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { Icon } from "../ui/Icon";
 
@@ -20,6 +21,8 @@ export function LanguageSwitcher({ className, compact }: { className?: string; c
     // Lu au clic plutôt qu'avec useSearchParams : le sélecteur reste dans la partie pré-rendue de la page.
     const query = window.location.search.slice(1);
     startTransition(() => router.replace(query ? `${pathname}?${query}` : pathname, { locale: next }));
+    // Remembered on the account when signed in, so the language follows the member across devices.
+    api("/api/me/locale", { method: "PUT", body: { locale: next } }).catch(() => {});
   }
 
   return (

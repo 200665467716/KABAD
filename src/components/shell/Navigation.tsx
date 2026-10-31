@@ -14,33 +14,35 @@ import { hardNavigate } from "@/lib/hard-navigate";
 import { salonsEnabled } from "@/lib/features";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
-type Label = "home" | "mentoring" | "challenges" | "tests" | "messages" | "members" | "voiceRooms" | "capsules";
+type Label = "home" | "mentoring" | "hackathons" | "riseUp" | "tests" | "messages" | "members" | "voiceRooms" | "capsules";
 type Item = { href: string; label: Label; icon: IconName; match: string[] };
 
+/* Bottom bar of the design: Accueil · Mentorat · Hackathons · Rise-Up · Messages. */
 const items: Item[] = [
   { href: "/accueil", label: "home", icon: "home", match: ["/accueil", "/notifications", "/profil"] },
-  { href: "/mentorat", label: "mentoring", icon: "users", match: ["/mentorat", "/capsules"] },
-  { href: "/defis", label: "challenges", icon: "trophy", match: ["/defis"] },
-  { href: "/tests", label: "tests", icon: "clipboard", match: ["/tests"] },
+  { href: "/mentorat", label: "mentoring", icon: "users", match: ["/mentorat"] },
+  { href: "/hackathons", label: "hackathons", icon: "trophy", match: ["/hackathons"] },
+  { href: "/rise-up", label: "riseUp", icon: "rise", match: ["/rise-up"] },
   { href: "/messages", label: "messages", icon: "message", match: ["/messages"] },
 ];
 
 /** The side bar on computers also lists the secondary spaces. */
 const sideItems: Item[] = [
   ...items,
+  { href: "/tests", label: "tests", icon: "clipboard", match: ["/tests"] },
   { href: "/membres", label: "members", icon: "userPlus", match: ["/membres"] },
-  ...(salonsEnabled ? [{ href: "/salons", label: "voiceRooms", icon: "radio", match: ["/salons"] } satisfies Item] : []),
   { href: "/capsules", label: "capsules", icon: "capsule", match: ["/capsules"] },
+  ...(salonsEnabled ? [{ href: "/salons", label: "voiceRooms", icon: "radio", match: ["/salons"] } satisfies Item] : []),
 ];
 
 /** Screens that focus on one task show their own action bar instead of the tab bar. */
 const focused = [
-  /^\/mentorat\/demande\//,
-  /^\/mentorat\/seances\//,
-  /^\/defis\/[^/]+(\/(soumettre|jury))?$/,
-  /^\/tests\/[^/]+(\/rapport|\/rapports)?$/,
+  /^\/mentorat\/(mentors\/[^/]+\/reserver|seances\/.+|badge|disponibilites)$/,
+  /^\/hackathons\/(organiser|missions\/.+|[^/]+\/(participer|soumettre|jury|instructeurs))$/,
+  /^\/rise-up\/(nouveau|[^/]+\/evenements\/.+)$/,
+  /^\/tests\/(nouveau|[^/]+\/(rapport|rapports))$/,
   /^\/messages\/(?!$).+/,
-  /^\/profil\//,
+  /^\/profil\/modifier$/,
 ];
 
 function isActive(path: string, it: Item) {
@@ -90,7 +92,7 @@ export function SideNav() {
       </Link>
       <nav aria-label={t("label")} className="grid gap-1">
         {sideItems.map((it) => {
-          const active = it.href === "/mentorat" ? path === "/mentorat" || (path.startsWith("/mentorat/") && !path.startsWith("/capsules")) : isActive(path, it);
+          const active = isActive(path, it);
           return (
             <Link
               key={it.href}

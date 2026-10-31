@@ -13,7 +13,9 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 export function AuthFrame({
   back,
   step,
+  steps = 5,
   skip,
+  heading,
   title,
   lead,
   children,
@@ -21,7 +23,11 @@ export function AuthFrame({
 }: {
   back: string;
   step?: number;
+  /** Sign-up has 5 steps in the design; the mentor badge request has 2. */
+  steps?: number;
   skip?: string;
+  /** The word in the indigo header: "Inscription", "Ton profil", "Connexion"… */
+  heading?: ReactNode;
   title: ReactNode;
   lead?: ReactNode;
   children: ReactNode;
@@ -36,7 +42,8 @@ export function AuthFrame({
             <Link href={back} aria-label={t("back")} className="inline-grid size-11 place-items-center rounded-full hover:bg-current/12">
               <Icon name="back" />
             </Link>
-            <span className="flex-1 pl-1 text-sm font-extrabold text-on-header-muted">{step ? t("step", { step, total: 3 }) : ""}</span>
+            <span className="min-w-0 flex-1 truncate pl-1 font-display text-lg font-extrabold uppercase">{heading}</span>
+            {step ? <span className="pr-2 text-[13px] font-extrabold text-on-header-muted">{t("stepShort", { step, total: steps })}</span> : null}
             {skip ? (
               <Link href={skip} className="px-3 py-3 text-sm font-extrabold text-on-header no-underline">
                 {t("skip")}
@@ -47,7 +54,7 @@ export function AuthFrame({
           </div>
           {step ? (
             <div className="flex gap-1 px-4 pb-3" aria-hidden="true">
-              {[1, 2, 3].map((n) => (
+              {Array.from({ length: steps }, (_, i) => i + 1).map((n) => (
                 <span key={n} className={n <= step ? "h-1.5 flex-1 rounded-full bg-on-header" : "h-1.5 flex-1 rounded-full bg-on-header/25"} />
               ))}
             </div>

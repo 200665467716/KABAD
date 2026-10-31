@@ -11,13 +11,15 @@
     "home": "Home",
     "backHome": "Back to home",
     "seeAll": "See all",
-    "step": "Step {step} of {total}"
+    "step": "Step {step} of {total}",
+    "stepShort": "{step} / {total}"
   },
   "nav": {
     "label": "Main navigation",
     "home": "Home",
     "mentoring": "Mentoring",
-    "challenges": "Challenges",
+    "hackathons": "Hackathons",
+    "riseUp": "Rise-Up",
     "tests": "Tests",
     "messages": "Messages",
     "members": "Members",

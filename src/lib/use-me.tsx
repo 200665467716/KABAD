@@ -4,7 +4,20 @@ import { useCallback, useEffect, useRef, useSyncExternalStore, type ReactNode } 
 import { api, ApiError } from "./api";
 import { useRealtime, useRealtimeReconnect } from "./realtime-client";
 
-export type Me = { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string; isAdmin: boolean; emailVerified: boolean; unreadMessages: number; unreadNotifications: number };
+export type Me = {
+  id: string;
+  name: string;
+  role: "JUNIOR" | "SENIOR";
+  level: "ASPIRANT" | "DEBUTANT" | "INTERMEDIAIRE" | "SENIOR";
+  city: string;
+  locale: "fr" | "en";
+  isAdmin: boolean;
+  /** Holds the mentor badge. */
+  isMentor: boolean;
+  emailVerified: boolean;
+  unreadMessages: number;
+  unreadNotifications: number;
+};
 
 /*
  * The signed-in member, kept outside React. Screens read it with useSyncExternalStore, whose server snapshot

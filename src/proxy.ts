@@ -8,8 +8,8 @@ const intl = createIntlMiddleware(routing);
 /** Screens of the signed-in app. Public: the welcome page, sign-up step 1, sign-in, sponsor pages. */
 const privatePaths = [
   /^\/(accueil|membres|compte|notifications)$/,
-  /^\/(salons|admin|profil|mentorat|capsules|defis|tests|messages)(\/.*)?$/,
-  /^\/inscription\/(profil|recommandations)$/,
+  /^\/(salons|admin|profil|mentorat|capsules|hackathons|rise-up|tests|messages)(\/.*)?$/,
+  /^\/inscription\/(profil|interets|recommandations)$/,
 ];
 
 /*

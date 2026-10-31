@@ -11,13 +11,15 @@
     "home": "Accueil",
     "backHome": "Retour à l’accueil",
     "seeAll": "Tout voir",
-    "step": "Étape {step} sur {total}"
+    "step": "Étape {step} sur {total}",
+    "stepShort": "{step} / {total}"
   },
   "nav": {
     "label": "Navigation principale",
     "home": "Accueil",
     "mentoring": "Mentorat",
-    "challenges": "Défis",
+    "hackathons": "Hackathons",
+    "riseUp": "Rise-Up",
     "tests": "Tests",
     "messages": "Messages",
     "members": "Membres",
