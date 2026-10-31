@@ -3,9 +3,24 @@
     "by": "par",
     "meta": "{hours} h · {size}",
     "instructorsShort": "instructeurs",
-    "format": { "ONLINE": "En ligne", "ONSITE": "Présentiel", "HYBRID": "Hybride" },
-    "ticket": { "before": "Dans", "dueIn": "Rendu", "days": "jours", "in": "En", "jury": "jury", "done": "Terminé" },
-    "actions": { "cancel": "Annuler", "confirm": "Confirmer", "failed": "L’action n’a pas abouti. Réessaie." },
+    "format": {
+      "ONLINE": "En ligne",
+      "ONSITE": "Présentiel",
+      "HYBRID": "Hybride"
+    },
+    "ticket": {
+      "before": "Dans",
+      "dueIn": "Rendu",
+      "days": "jours",
+      "in": "En",
+      "jury": "jury",
+      "done": "Terminé"
+    },
+    "actions": {
+      "cancel": "Annuler",
+      "confirm": "Confirmer",
+      "failed": "L’action n’a pas abouti. Réessaie."
+    },
     "list": {
       "title": "Hackathons",
       "loading": "Chargement des hackathons…",
@@ -67,9 +82,18 @@
       "loading": "Chargement…",
       "how": "Comment veux-tu participer ?",
       "pick": "Choisis une option",
-      "solo": { "title": "Seul", "desc": "Tu relèves le défi en solo." },
-      "create": { "title": "Créer une équipe", "desc": "Tu invites tes coéquipiers." },
-      "join": { "title": "Rejoindre une équipe", "desc": "Des équipes cherchent des profils comme le tien." },
+      "solo": {
+        "title": "Seul",
+        "desc": "Tu relèves le défi en solo."
+      },
+      "create": {
+        "title": "Créer une équipe",
+        "desc": "Tu invites tes coéquipiers."
+      },
+      "join": {
+        "title": "Rejoindre une équipe",
+        "desc": "Des équipes cherchent des profils comme le tien."
+      },
       "teamName": "Nom de l’équipe",
       "lookingFor": "Profil recherché",
       "lookingForHint": "Facultatif. Les équipes comptent de {min} à {max} membres.",
@@ -166,14 +190,29 @@
       "closes": "Clôture des inscriptions",
       "closesHint": "Au plus tard au début du hackathon.",
       "size": "Taille des équipes",
-      "sizes": { "solo": "Seul", "soloOrTeam": "Seul ou en équipe (jusqu’à 5)", "range25": "2 à 5 personnes", "range34": "3 à 4 personnes" },
+      "sizes": {
+        "solo": "Seul",
+        "soloOrTeam": "Seul ou en équipe (jusqu’à 5)",
+        "range25": "2 à 5 personnes",
+        "range34": "3 à 4 personnes"
+      },
       "level": "Niveau",
-      "levels": { "0": "Tous niveaux", "1": "Débutant", "2": "Intermédiaire", "3": "Avancé" },
+      "levels": {
+        "0": "Tous niveaux",
+        "1": "Débutant",
+        "2": "Intermédiaire",
+        "3": "Avancé"
+      },
       "stack": "Technologies",
       "stackPlaceholder": "Web ou mobile",
       "challenge": "Le défi proposé",
       "prizeKind": "Prix",
-      "prizeKinds": { "NONE": "Pas de prix pour ce hackathon", "LOT": "Des lots (matériel, incubation…)", "SPONSORISE": "Une dotation en argent d’un sponsor", "CAGNOTTE": "Une cagnotte ouverte aux contributions" },
+      "prizeKinds": {
+        "NONE": "Pas de prix pour ce hackathon",
+        "LOT": "Des lots (matériel, incubation…)",
+        "SPONSORISE": "Une dotation en argent d’un sponsor",
+        "CAGNOTTE": "Une cagnotte ouverte aux contributions"
+      },
       "prizes": "Prix annoncés",
       "prizeLabel": "Prix n° {rank}",
       "addPrize": "Ajouter un prix",
@@ -210,12 +249,17 @@
       "noMentors": "Aucun mentor disponible pour l’instant.",
       "choose": "Choisir",
       "chosen": "Choisi",
-      "status": { "PROPOSED": "Proposée", "ACCEPTED": "Acceptée", "DECLINED": "Refusée" },
+      "status": {
+        "PROPOSED": "Proposée",
+        "ACCEPTED": "Acceptée",
+        "DECLINED": "Refusée"
+      },
       "send": "{count, plural, one {Proposer la mission à # mentor} other {Proposer la mission à # mentors}}",
       "sending": "Envoi…",
       "sent": "{count, plural, one {Mission proposée à # mentor.} other {Mission proposée à # mentors.}}",
       "failed": "Les propositions n’ont pas été envoyées.",
-      "done": "Retour au hackathon"
+      "done": "Retour au hackathon",
+      "countOf": "{accepted} accepté{accepted, plural, one {} other {s}} sur {wanted} voulu{wanted, plural, one {} other {s}}"
     },
     "mission": {
       "title": "Mission proposée",
@@ -248,10 +292,22 @@
       "demo": "Voir la démo",
       "explanation": "Description de l’équipe",
       "criteria": {
-        "works": { "label": "Ça fonctionne", "hint": "le cas demandé" },
-        "code": { "label": "Qualité du code", "hint": "lisible, découpé" },
-        "tests": { "label": "Tests", "hint": "cas d’échec compris" },
-        "explain": { "label": "Explication", "hint": "choix justifiés" }
+        "works": {
+          "label": "Ça fonctionne",
+          "hint": "le cas demandé"
+        },
+        "code": {
+          "label": "Qualité du code",
+          "hint": "lisible, découpé"
+        },
+        "tests": {
+          "label": "Tests",
+          "hint": "cas d’échec compris"
+        },
+        "explain": {
+          "label": "Explication",
+          "hint": "choix justifiés"
+        }
       },
       "mark": "{criterion} : {n} sur 5",
       "comment": "Commentaire pour l’équipe (facultatif)",
@@ -292,7 +348,11 @@
       "help": "Relis les hackathons proposés avant de les publier, puis nomme trois mentors au jury.",
       "create": "Créer un hackathon",
       "toReview": "À relire",
-      "status": { "OPEN": "Ouvert", "JURY": "En jury", "DONE": "Terminé" },
+      "status": {
+        "OPEN": "Ouvert",
+        "JURY": "En jury",
+        "DONE": "Terminé"
+      },
       "row": "{organizer} · du {start} au {end} · {teams, plural, =0 {aucune équipe} one {# équipe} other {# équipes}} · jury : {jury} sur 3",
       "seeResults": "Voir les résultats",
       "publish": "Publier",
@@ -312,7 +372,11 @@
       "title": "Versements",
       "loading": "Chargement…",
       "help": "Envoie chaque somme par Mobile Money, puis indique la référence du transfert. Un versement n’est possible qu’après les {hours} h de contestation.",
-      "role": { "WINNER": "Gagnants", "MENTOR": "Mentor", "PLATFORM": "KABAD" },
+      "role": {
+        "WINNER": "Gagnants",
+        "MENTOR": "Mentor",
+        "PLATFORM": "KABAD"
+      },
       "reference": "Référence du transfert",
       "markSent": "Marquer comme versé",
       "payableFrom": "Versement possible à partir du {date}.",
@@ -360,6 +424,7 @@
       "total": "Montants en F CFA. Total collecté : {total}.",
       "discover": "Découvrir KABAD",
       "footer": "KABAD · par les devs, pour les devs"
-    }
+    },
+    "pending": "En attente de publication"
   }
 }

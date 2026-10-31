@@ -19,7 +19,7 @@ import { eligibility, mainMentor, mentoredBy } from "./mentoring";
 import { pushNotifications, type NotificationInput } from "./notifications";
 import { averageMark, totalScore } from "@/lib/jury";
 import { splitPrize } from "@/lib/prize";
-import { formatDuration, formatFCFA } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import type { ContributionView, HackathonDetail, HackathonResults, HackathonSummary, JuryItem, MissionView, PayoutView, RankingRow, TeamView } from "@/lib/domain-types";
 
 export const CONTEST_HOURS = 48;
@@ -78,6 +78,8 @@ const summarySelect = {
   prizes: true,
   sponsorName: true,
   mentoringMinutes: true,
+  instructorCount: true,
+  publishedAt: true,
   resultsAt: true,
 } as const;
 type SummaryRow = Prisma.HackathonGetPayload<{ select: typeof summarySelect }>;
@@ -89,10 +91,11 @@ async function summaries(rows: SummaryRow[], prisma: Tx): Promise<HackathonSumma
     const top = (await ranking(r.id, prisma))[0];
     if (top) winners.set(r.id, { team: top.team, captain: top.captain });
   }
-  return rows.map((r) => {
+  return rows.map(({ publishedAt, ...r }) => {
     const { instructors, ...rest } = t.get(r.id)!;
     return {
       ...r,
+      published: publishedAt !== null,
       startsAt: r.startsAt.toISOString(),
       endsAt: r.endsAt.toISOString(),
       closesAt: r.closesAt.toISOString(),
@@ -275,7 +278,7 @@ export async function createHackathon(userId: string, input: HackathonInput, pri
       },
     });
     const admins = await tx.user.findMany({ where: { isAdmin: true, suspendedAt: null }, select: { id: true } });
-    await pushNotifications(tx, admins.map((a) => ({ userId: a.id, actor: creator.name, text: ` propose le hackathon « ${input.title} ».`, href: `/hackathons/${h.id}`, icon: "trophy", tone: "brand" })));
+    await pushNotifications(tx, admins.map((a) => ({ userId: a.id, actor: creator.name, key: "hackathonProposed", params: { title: input.title }, href: `/hackathons/${h.id}`, icon: "trophy", tone: "brand" })));
     return { id: h.id };
   });
 }
@@ -289,7 +292,7 @@ export async function publishHackathon(adminId: string, id: string, prisma: Db =
     if (h.publishedAt) throw new DomainError("published", "Ce hackathon est déjà publié.", 409);
     await tx.hackathon.update({ where: { id }, data: { publishedAt: new Date() } });
     await tx.adminAction.create({ data: { adminId, action: "hackathon:publish", targetId: id } });
-    if (h.createdById) await pushNotifications(tx, [{ userId: h.createdById, actor: "KABAD", text: ` a publié ton hackathon « ${h.title} ».`, href: `/hackathons/${id}`, icon: "trophy", tone: "success" }]);
+    if (h.createdById) await pushNotifications(tx, [{ userId: h.createdById, actor: "KABAD", key: "hackathonPublished", params: { title: h.title }, href: `/hackathons/${id}`, icon: "trophy", tone: "success" }]);
     return { ok: true };
   });
 }
@@ -327,7 +330,7 @@ export async function register(
     if (team._count.members >= h.teamMax) throw new DomainError("full", "Cette équipe est complète.", 409);
     return prisma.$transaction(async (tx) => {
       const r = await tx.teamJoinRequest.upsert({ where: { teamId_userId: { teamId: team.id, userId } }, create: { teamId: team.id, userId }, update: { status: "PENDING", answeredAt: null } });
-      await pushNotifications(tx, [{ userId: team.captainId, actor: me.name, text: ` demande à rejoindre l’équipe ${team.name} (${h.title}).`, href: `/hackathons/${hackathonId}/equipe`, icon: "users", tone: "brand" }]);
+      await pushNotifications(tx, [{ userId: team.captainId, actor: me.name, key: "teamJoinRequested", params: { team: team.name, title: h.title }, href: `/hackathons/${hackathonId}/equipe`, icon: "users", tone: "brand" }]);
       return { requestId: r.id };
     });
   }
@@ -373,7 +376,7 @@ export async function answerJoinRequest(captainId: string, requestId: string, ac
         await tx.teamJoinRequest.updateMany({ where: { userId: r.userId, status: "PENDING", team: { hackathonId: h.id } }, data: { status: "DECLINED", answeredAt: new Date() } });
       }
       await pushNotifications(tx, [
-        { userId: r.userId, actor: `Équipe ${r.team.name}`, text: accept ? ` t’a acceptée dans l’équipe (${h.title}).` : ` n’a pas retenu ta demande (${h.title}).`, href: `/hackathons/${h.id}`, icon: "users", tone: accept ? "success" : "neutral" },
+        { userId: r.userId, actor: r.team.name, key: accept ? "teamJoinAccepted" : "teamJoinDeclined", params: { title: h.title }, href: `/hackathons/${h.id}`, icon: "users", tone: accept ? "success" : "neutral" },
       ]);
       return { ok: true };
     });
@@ -458,7 +461,7 @@ export async function submitSolution(
     const me = team.members.find((m) => m.userId === userId)!.user.name;
     await pushNotifications(
       tx,
-      team.members.filter((m) => m.userId !== userId).map((m) => ({ userId: m.userId, actor: me, text: ` a envoyé la solution de l’équipe ${team.name}.`, href: `/hackathons/${hackathonId}/equipe`, icon: "trophy", tone: "brand" })),
+      team.members.filter((m) => m.userId !== userId).map((m) => ({ userId: m.userId, actor: me, key: "solutionSent", params: { team: team.name }, href: `/hackathons/${hackathonId}/equipe`, icon: "trophy", tone: "brand" })),
     );
     return { id: s.id };
   });
@@ -566,14 +569,14 @@ export async function publishResults(adminId: string, hackathonId: string, prism
   const [{ pot }] = [...(await totals([hackathonId], prisma)).values()];
   const everyone = h.submissions.flatMap((s) => s.team.members.map((m) => ({ userId: m.userId, won: s.id === winner.id })));
   const href = `/hackathons/${hackathonId}/resultats`;
-  const actor = `Hackathon « ${h.title} »`;
+  const actor = h.title;
 
   return prisma.$transaction(async (tx) => {
     const now = new Date();
     // Two clicks, or two admins at once: only one publication creates the transfers.
     const { count } = await tx.hackathon.updateMany({ where: { id: hackathonId, status: { in: ["OPEN", "JURY"] } }, data: { status: "DONE", resultsAt: now } });
     if (!count) throw new DomainError("already_published", "Les résultats sont déjà publiés.", 409);
-    const notes: NotificationInput[] = everyone.filter((e) => !e.won).map((e) => ({ userId: e.userId, actor, text: " : les résultats sont publiés.", href, icon: "trophy", tone: "accent" }));
+    const notes: NotificationInput[] = everyone.filter((e) => !e.won).map((e) => ({ userId: e.userId, actor, key: "resultsPublished", href, icon: "trophy", tone: "accent" }));
     const winners = everyone.filter((e) => e.won);
     if (hasCash(h) && pot > 0) {
       const withMentor = h.mentoringMinutes > 0;
@@ -589,10 +592,10 @@ export async function publishResults(adminId: string, hackathonId: string, prism
           { hackathonId, role: "PLATFORM", amount: split.platform },
         ],
       });
-      for (const w of winners) notes.push({ userId: w.userId, actor, text: ` : votre équipe a gagné ${formatFCFA(winnerAmount)}. Versement après ${CONTEST_HOURS} h de contestation.`, href, icon: "trophy", tone: "accent" });
-      if (mentorId) notes.push({ userId: mentorId, actor, text: ` : l’équipe que tu as accompagnée a gagné. Ta part : ${formatFCFA(split.mentor)}.`, href, icon: "trophy", tone: "accent" });
+      for (const w of winners) notes.push({ userId: w.userId, actor, key: "teamWonMoney", params: { amount: winnerAmount, hours: CONTEST_HOURS }, href, icon: "trophy", tone: "accent" });
+      if (mentorId) notes.push({ userId: mentorId, actor, key: "mentorShare", params: { amount: split.mentor }, href, icon: "trophy", tone: "accent" });
     } else {
-      for (const w of winners) notes.push({ userId: w.userId, actor, text: " : votre équipe a gagné ! L’organisateur vous contacte pour le prix.", href, icon: "trophy", tone: "accent" });
+      for (const w of winners) notes.push({ userId: w.userId, actor, key: "teamWonPrize", href, icon: "trophy", tone: "accent" });
     }
     await pushNotifications(tx, notes);
     await tx.adminAction.create({ data: { adminId, action: "hackathon:publish_results", targetId: hackathonId } });
@@ -613,7 +616,7 @@ export async function markPayoutSent(adminId: string, payoutId: string, referenc
     if (!count) throw new DomainError("already_sent", "Ce versement est déjà marqué comme envoyé.", 409);
     await tx.adminAction.create({ data: { adminId, action: "payout:sent", targetId: payoutId, details: `${p.amount} F CFA · réf. ${reference}` } });
     if (p.beneficiaryId) {
-      await pushNotifications(tx, [{ userId: p.beneficiaryId, actor: "KABAD", text: ` a versé ${formatFCFA(p.amount)} sur votre Mobile Money pour le hackathon « ${p.hackathon.title} ».`, href: `/hackathons/${p.hackathon.id}/resultats`, icon: "wallet", tone: "accent" }]);
+      await pushNotifications(tx, [{ userId: p.beneficiaryId, actor: "KABAD", key: "payoutSent", params: { amount: p.amount, title: p.hackathon.title }, href: `/hackathons/${p.hackathon.id}/resultats`, icon: "wallet", tone: "accent" }]);
     }
     return { ok: true };
   });
@@ -673,7 +676,7 @@ export async function proposeMissions(userId: string, hackathonId: string, mento
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.instructorMission.createMany({ data: mentors.map((m) => ({ hackathonId, mentorId: m.id, fee: h.instructorFee! })), skipDuplicates: true });
     const created = await tx.instructorMission.findMany({ where: { hackathonId, mentorId: { in: mentors.map((m) => m.id) }, status: "PROPOSED" }, select: { id: true, mentorId: true } });
-    await pushNotifications(tx, created.map((m) => ({ userId: m.mentorId, actor: h.organizerName, text: " te propose une mission d’instructeur rémunérée.", href: `/hackathons/missions/${m.id}`, icon: "wallet", tone: "accent" })));
+    await pushNotifications(tx, created.map((m) => ({ userId: m.mentorId, actor: h.organizerName, key: "missionProposed", href: `/hackathons/missions/${m.id}`, icon: "wallet", tone: "accent" })));
     return { proposed: count };
   });
 }
@@ -685,7 +688,7 @@ export async function answerMission(mentorId: string, missionId: string, accept:
     const { count } = await tx.instructorMission.updateMany({ where: { id: missionId, status: "PROPOSED" }, data: { status: accept ? "ACCEPTED" : "DECLINED", answeredAt: new Date() } });
     if (!count) throw new DomainError("answered", "Vous avez déjà répondu à cette mission.", 409);
     if (m.hackathon.createdById) {
-      await pushNotifications(tx, [{ userId: m.hackathon.createdById, actor: m.mentor.name, text: accept ? ` accepte d’être instructeur pour « ${m.hackathon.title} ».` : ` décline la mission d’instructeur pour « ${m.hackathon.title} ».`, href: `/hackathons/${m.hackathon.id}`, icon: "users", tone: accept ? "success" : "neutral" }]);
+      await pushNotifications(tx, [{ userId: m.hackathon.createdById, actor: m.mentor.name, key: accept ? "missionAccepted" : "missionDeclined", params: { title: m.hackathon.title }, href: `/hackathons/${m.hackathon.id}`, icon: "users", tone: accept ? "success" : "neutral" }]);
     }
     return { ok: true };
   });
@@ -722,12 +725,12 @@ export async function missionsFor(userId: string, hackathonId: string, prisma: D
 /** For the admin page: hackathons with their state, proposals to review and transfers still to send. */
 export async function adminOverview(adminId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
-  const rows = await prisma.hackathon.findMany({ select: { ...summarySelect, publishedAt: true }, orderBy: { startsAt: "asc" } });
+  const rows = await prisma.hackathon.findMany({ select: summarySelect, orderBy: { startsAt: "asc" } });
   const hackathons = await summaries(rows, prisma);
   const payouts = await prisma.payout.findMany({ where: { status: "PENDING" }, include: { beneficiary: { select: { name: true } }, hackathon: { select: { title: true, resultsAt: true } } }, orderBy: { createdAt: "asc" } });
   const [pendingBadges, openReports] = await Promise.all([prisma.mentorBadgeRequest.count({ where: { status: "PENDING" } }), prisma.report.count({ where: { status: "OPEN" } })]);
   return {
-    hackathons: hackathons.map((h, i) => ({ ...h, published: rows[i].publishedAt !== null })),
+    hackathons,
     payouts: payouts.map((p) => ({
       id: p.id,
       role: p.role,

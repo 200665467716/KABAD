@@ -137,6 +137,10 @@ export type HackathonSummary = {
   sponsorName: string | null;
   mentoringMinutes: number;
   instructors: number;
+  /** Instructors the organizer wants to recruit. */
+  instructorCount: number;
+  /** False while the KABAD team has not published it: only its author and the team see it. */
+  published: boolean;
   pot: number;
   teams: number;
   participants: number;

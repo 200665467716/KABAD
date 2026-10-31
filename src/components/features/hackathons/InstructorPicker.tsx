@@ -13,7 +13,7 @@ import type { MentorCard } from "@/lib/domain-types";
 type Status = "PROPOSED" | "ACCEPTED" | "DECLINED";
 
 /** H8: the organizer offers the paid mission to badged mentors. */
-export function InstructorPicker({ hackathonId, missionText, fee, mentors, asked }: { hackathonId: string; missionText: string | null; fee: number | null; mentors: MentorCard[]; asked: Record<string, Status> }) {
+export function InstructorPicker({ hackathonId, missionText, fee, wanted, mentors, asked }: { hackathonId: string; missionText: string | null; fee: number | null; wanted: number; mentors: MentorCard[]; asked: Record<string, Status> }) {
   const t = useTranslations("hackathons.instructors");
   const router = useRouter();
   const [picked, setPicked] = useState<string[]>([]);
@@ -55,7 +55,7 @@ export function InstructorPicker({ hackathonId, missionText, fee, mentors, asked
                 {t("fee")} <b className="tabular">{formatFCFA(fee)}</b>
               </span>
               <span>
-                {t("count")} <b className="tabular">{t("countValue", { accepted })}</b>
+                {t("count")} <b className="tabular">{wanted > 0 ? t("countOf", { accepted, wanted }) : t("countValue", { accepted })}</b>
               </span>
             </div>
           </Card>

@@ -28,6 +28,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
         hackathonId={id}
         missionText={h.missionText}
         fee={h.instructorFee}
+        wanted={h.instructorCount}
         mentors={mentors.filter((m) => !juryIds.has(m.id))}
         asked={Object.fromEntries(missions.map((m) => [m.mentorId, m.status]))}
       />

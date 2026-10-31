@@ -3,9 +3,24 @@
     "by": "by",
     "meta": "{hours} h · {size}",
     "instructorsShort": "instructors",
-    "format": { "ONLINE": "Online", "ONSITE": "On site", "HYBRID": "Hybrid" },
-    "ticket": { "before": "In", "dueIn": "Due in", "days": "days", "in": "With", "jury": "jury", "done": "Over" },
-    "actions": { "cancel": "Cancel", "confirm": "Confirm", "failed": "That didn’t work. Try again." },
+    "format": {
+      "ONLINE": "Online",
+      "ONSITE": "On site",
+      "HYBRID": "Hybrid"
+    },
+    "ticket": {
+      "before": "In",
+      "dueIn": "Due in",
+      "days": "days",
+      "in": "With",
+      "jury": "jury",
+      "done": "Over"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "failed": "That didn’t work. Try again."
+    },
     "list": {
       "title": "Hackathons",
       "loading": "Loading hackathons…",
@@ -67,9 +82,18 @@
       "loading": "Loading…",
       "how": "How do you want to take part?",
       "pick": "Pick an option",
-      "solo": { "title": "Alone", "desc": "You take on the challenge solo." },
-      "create": { "title": "Create a team", "desc": "You invite your teammates." },
-      "join": { "title": "Join a team", "desc": "Some teams are looking for a profile like yours." },
+      "solo": {
+        "title": "Alone",
+        "desc": "You take on the challenge solo."
+      },
+      "create": {
+        "title": "Create a team",
+        "desc": "You invite your teammates."
+      },
+      "join": {
+        "title": "Join a team",
+        "desc": "Some teams are looking for a profile like yours."
+      },
       "teamName": "Team name",
       "lookingFor": "Profile wanted",
       "lookingForHint": "Optional. Teams have {min} to {max} members.",
@@ -166,14 +190,29 @@
       "closes": "Registrations close",
       "closesHint": "At the latest when the hackathon starts.",
       "size": "Team size",
-      "sizes": { "solo": "Alone", "soloOrTeam": "Alone or as a team (up to 5)", "range25": "2 to 5 people", "range34": "3 to 4 people" },
+      "sizes": {
+        "solo": "Alone",
+        "soloOrTeam": "Alone or as a team (up to 5)",
+        "range25": "2 to 5 people",
+        "range34": "3 to 4 people"
+      },
       "level": "Level",
-      "levels": { "0": "All levels", "1": "Beginner", "2": "Intermediate", "3": "Advanced" },
+      "levels": {
+        "0": "All levels",
+        "1": "Beginner",
+        "2": "Intermediate",
+        "3": "Advanced"
+      },
       "stack": "Technologies",
       "stackPlaceholder": "Web or mobile",
       "challenge": "The challenge",
       "prizeKind": "Prizes",
-      "prizeKinds": { "NONE": "No prize for this hackathon", "LOT": "Prizes in kind (hardware, incubation…)", "SPONSORISE": "Money from a sponsor", "CAGNOTTE": "A prize pot open to contributions" },
+      "prizeKinds": {
+        "NONE": "No prize for this hackathon",
+        "LOT": "Prizes in kind (hardware, incubation…)",
+        "SPONSORISE": "Money from a sponsor",
+        "CAGNOTTE": "A prize pot open to contributions"
+      },
       "prizes": "Prizes announced",
       "prizeLabel": "Prize no. {rank}",
       "addPrize": "Add a prize",
@@ -210,12 +249,17 @@
       "noMentors": "No mentor available yet.",
       "choose": "Pick",
       "chosen": "Picked",
-      "status": { "PROPOSED": "Offered", "ACCEPTED": "Accepted", "DECLINED": "Declined" },
+      "status": {
+        "PROPOSED": "Offered",
+        "ACCEPTED": "Accepted",
+        "DECLINED": "Declined"
+      },
       "send": "{count, plural, one {Offer the mission to # mentor} other {Offer the mission to # mentors}}",
       "sending": "Sending…",
       "sent": "{count, plural, one {Mission offered to # mentor.} other {Mission offered to # mentors.}}",
       "failed": "The offers weren’t sent.",
-      "done": "Back to the hackathon"
+      "done": "Back to the hackathon",
+      "countOf": "{accepted} of {wanted} accepted"
     },
     "mission": {
       "title": "Mission offered",
@@ -248,10 +292,22 @@
       "demo": "See the demo",
       "explanation": "The team’s description",
       "criteria": {
-        "works": { "label": "It works", "hint": "the requested case" },
-        "code": { "label": "Code quality", "hint": "readable, well split" },
-        "tests": { "label": "Tests", "hint": "failure cases included" },
-        "explain": { "label": "Explanation", "hint": "choices justified" }
+        "works": {
+          "label": "It works",
+          "hint": "the requested case"
+        },
+        "code": {
+          "label": "Code quality",
+          "hint": "readable, well split"
+        },
+        "tests": {
+          "label": "Tests",
+          "hint": "failure cases included"
+        },
+        "explain": {
+          "label": "Explanation",
+          "hint": "choices justified"
+        }
       },
       "mark": "{criterion}: {n} out of 5",
       "comment": "Comment for the team (optional)",
@@ -292,7 +348,11 @@
       "help": "Review proposed hackathons before publishing them, then name three mentors to the jury.",
       "create": "Create a hackathon",
       "toReview": "To review",
-      "status": { "OPEN": "Open", "JURY": "With the jury", "DONE": "Finished" },
+      "status": {
+        "OPEN": "Open",
+        "JURY": "With the jury",
+        "DONE": "Finished"
+      },
       "row": "{organizer} · {start} to {end} · {teams, plural, =0 {no team} one {# team} other {# teams}} · jury: {jury} of 3",
       "seeResults": "See the results",
       "publish": "Publish",
@@ -312,7 +372,11 @@
       "title": "Payouts",
       "loading": "Loading…",
       "help": "Send each amount by Mobile Money, then enter the transfer reference. A payout is only possible after the {hours}-hour contest period.",
-      "role": { "WINNER": "Winners", "MENTOR": "Mentor", "PLATFORM": "KABAD" },
+      "role": {
+        "WINNER": "Winners",
+        "MENTOR": "Mentor",
+        "PLATFORM": "KABAD"
+      },
       "reference": "Transfer reference",
       "markSent": "Mark as paid",
       "payableFrom": "Payable from {date}.",
@@ -360,6 +424,7 @@
       "total": "Amounts in F CFA. Total collected: {total}.",
       "discover": "Discover KABAD",
       "footer": "KABAD · by devs, for devs"
-    }
+    },
+    "pending": "Awaiting publication"
   }
 }

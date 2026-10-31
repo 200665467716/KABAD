@@ -38,6 +38,7 @@ export function HackathonTicket({ h, now, href }: { h: HackathonSummary; now: nu
   const hours = Math.round((new Date(h.endsAt).getTime() - new Date(h.startsAt).getTime()) / 3_600_000);
   return (
     <Ticket href={href ?? `/hackathons/${h.id}`} before={c.before} value={c.value} after={c.after}>
+      {!h.published && <span className="justify-self-start rounded-sm bg-brand-wash px-2 py-0.5 text-xs font-extrabold text-brand-text">{t("pending")}</span>}
       <span className="text-xs font-extrabold tracking-[0.08em] text-brand-text uppercase">{where(h)}</span>
       <span className="font-display text-base leading-[21px] font-bold">{h.title}</span>
       <span className="text-[13px] text-muted">
