@@ -19,8 +19,8 @@ KABAD est une plateforme d'échange catalyseur de croissance, de montée en comp
 | # | Fonctionnalité | Contenu | Tâches |
 | --- | --- | --- | --- |
 | F0 | Authentification | Création de compte, profils, administrateur qui valide les Seniors vérifiés | R7, R10 |
-| F1 | Mentorat | Transfert de compétences de Senior à Junior | R12 à R14, R41, R42 |
-| F2 | Défis de code | Avec ou sans récompense, en 3 niveaux (D6) | R11, R15 à R17, R40 |
+| F1 | Mentorat | Séances de 30 min réservées sur les créneaux des mentors badgés (D9) | R12 à R14, R41, R42 |
+| F2 | Hackathons | Seul ou en équipe, avec ou sans récompense, en 3 niveaux (D6, D8) | R11, R15 à R17, R40 |
 | F3 | Tests communautaires | Faire tester ses applications par d'autres développeurs | R18 à R20 |
 | F4 | Messagerie | Invitations, message de connexion, groupes de conversation | R21 à R23, R43 |
 | F5 | Africa'Raise-up | Projets communautaires, avec un canal de discussion et des salons de réflexion par projet | R24 à R26 |
@@ -64,10 +64,21 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
   - Niveau 3 : récompense par cagnotte communautaire ou sponsor, avec mentor. 60 % au gagnant, 30 % à son mentor, 10 % à KABAD.
   - Aux niveaux 2 et 3, la moitié de la part de KABAD (5 % du total) est mise en réserve pour abonder de futures cagnottes.
 
-- [ ] D7. Salons de réflexion d'Africa'Raise-up (R26), à trancher.
-  - Option 1 : réactiver le code des salons vocaux LiveKit, rattaché à un projet.
-  - Option 2 : un lien visio externe (Jitsi) planifié dans le projet.
-  - LiveKit pèse sur le serveur de 1 vCPU et ouvre des ports UDP : c'est la raison de D3.
+- [x] D7. Salons de réflexion d'Africa'Raise-up : lien visio externe (31 octobre).
+  - Un événement de projet porte un lien Meet ou Jitsi ; sans lien saisi, KABAD crée une salle Jitsi.
+  - LiveKit reste coupé (D3) : il pèse sur le serveur de 1 vCPU et ouvre des ports UDP.
+
+- [x] D8. Les défis deviennent des hackathons (31 octobre), selon le design de la refonte.
+  - Un organisateur propose un hackathon (format, lieu, dates, taille des équipes) ; l'équipe KABAD le publie.
+  - On participe seul ou en équipe ; une équipe soumet une solution. Jury, cagnotte et D6 sont gardés.
+  - Les organisateurs recrutent des mentors comme instructeurs rémunérés ; KABAD l'enregistre, l'organisateur paie.
+
+- [x] D9. Mentorat par créneaux de 30 minutes (31 octobre), selon le design de la refonte.
+  - Le mentor ouvre des plages chaque semaine ; le membre réserve un créneau avec son sujet et son problème ;
+    le mentor accepte ou refuse ; la séance acceptée donne un lien visio.
+  - Le binôme et le journal de séances disparaissent. Le temps de mentorat exigé par un hackathon
+    (niveau 3 de D6) se compte en séances tenues.
+  - Le statut de mentor vient d'un badge demandé par le membre et validé par l'équipe KABAD.
 
 ## P0 — Recevable, en ligne, stable (objectif : 2 novembre)
 
@@ -120,6 +131,13 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
 - [ ] R8. Démo en ligne.
   - Déployer sur kabad.app avec des données de démonstration propres.
   - Vérifier le parcours de chaque fonctionnalité sur un vrai téléphone Android en 4G.
+
+## Refonte « Motif » (31 octobre)
+
+- [x] Design system de la charte « Motif » (tokens, polices, composants) et coque (en-tête indigo, bandeau, barre du bas Accueil · Mentorat · Hackathons · Rise-Up · Messages).
+- [x] Écrans du canvas « KABAD — Refonte » : inscription en 5 étapes, accueil, mentorat par créneaux, badge mentor, hackathons, Africa Rise-Up, tests d'apps, messagerie, profil et notifications, administration.
+- [x] Tests : unitaires, intégration (10 nouveaux), e2e réécrits (99 passent, téléphone et ordinateur).
+- [ ] À brancher plus tard : rappel 1 h avant un événement Rise-Up et expiration des demandes de séance (worker R5), pièces jointes et notes vocales (R43).
 
 ## P1 — Les « Must » manquants et Africa'Raise-up (objectif : 11 novembre)
 
@@ -218,10 +236,8 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
 ### Langue
 
 - [ ] R30. Interface EN partielle (D1).
-  - Socle livré le 31 octobre (branche `dev/design-motif`) : next-intl, routes sous `src/app/[locale]` (FR sans préfixe, EN sous `/en`), dictionnaires `messages/fr.json` et `messages/en.json`, sélecteur de langue (barre latérale, compte, accueil public, inscription et connexion). Coque traduite : navigation, en-têtes, pages d'erreur.
-  - Reste : traduire le texte des écrans (périmètre ci-dessous), les titres de page (`metadata`), les dates (`src/lib/time.ts` reste en `fr-FR`), et mémoriser la langue sur le profil.
-  - Périmètre minimal : pages publiques, inscription et connexion, accueil, parcours de démo.
-  - Messages d'erreur serveur traduits par clé.
+  - Livré le 31 octobre avec la refonte (branche `dev/design-motif`) : next-intl, routes sous `src/app/[locale]` (FR sans préfixe, EN sous `/en`), un dictionnaire par module dans `messages/fr/` et `messages/en/` (`npm run messages` vérifie que les clés concordent), sélecteur de langue, langue mémorisée sur le compte et reprise à la connexion. Tous les écrans de la refonte sont traduits.
+  - Reste : les textes écrits par le serveur (notifications, messages d'erreur), les formulaires de rapport de test, capsules, signalements et journal de l'équipe.
 
 ## P2 — Les « Should » (si le temps le permet)
 

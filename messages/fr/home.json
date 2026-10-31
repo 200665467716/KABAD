@@ -1,1 +1,83 @@
-{ "home": {} }
+{
+  "home": {
+    "title": "Accueil",
+    "loading": "Chargement…",
+    "hello": "Salut {name}",
+    "search": "Chercher des devs",
+    "notifications": "Notifications",
+    "notificationsNew": "{count, plural, one {Notifications, # nouvelle} other {Notifications, # nouvelles}}",
+    "myProfile": "Mon profil",
+    "todoInvitations": "{count, plural, one {# invitation reçue} other {# invitations reçues}}",
+    "todoInvitationsText": "{names} veulent échanger",
+    "todoInvitationsTextOne": "{name} veut échanger",
+    "todoRequests": "{count, plural, one {# demande de séance à traiter} other {# demandes de séance à traiter}}",
+    "todoRequestsText": "Réponds avant l’heure de la séance.",
+    "todoMission": "{count, plural, one {# mission d’instructeur proposée} other {# missions d’instructeur proposées}}",
+    "todoMissionText": "Mission rémunérée sur un hackathon.",
+    "session": {
+      "kicker": "Ta séance de mentorat",
+      "kickerMentor": "Ta prochaine séance comme mentor",
+      "confirmed": "Confirmée",
+      "length": "{minutes} min",
+      "join": "Rejoindre la visio",
+      "joinIn": "Rejoindre la visio · {when}",
+      "details": "Voir la séance",
+      "with": "avec {name}"
+    },
+    "noSession": {
+      "title": "Trouve un mentor",
+      "text": "Des séances gratuites de 30 minutes avec des mentors vérifiés.",
+      "cta": "Voir les mentors"
+    },
+    "rise": {
+      "title": "Africa Rise-Up",
+      "seeAll": "Tout voir",
+      "live": "En direct",
+      "next": "Événement {when}",
+      "stats": "{count, plural, one {# dev} other {# devs}}",
+      "joinRoom": "Rejoindre le salon",
+      "open": "Voir le projet",
+      "empty": "Aucun projet pour l’instant. Lance le premier.",
+      "create": "Lancer un projet",
+      "countries": "{count, plural, one {# pays} other {# pays}}"
+    },
+    "hackathons": {
+      "title": "Hackathons",
+      "seeAll": "Tout voir",
+      "by": "par <b>{name}</b>",
+      "in": "Dans",
+      "days": "{count, plural, one {jour} other {jours}}",
+      "now": "En cours",
+      "myTeam": "Ton équipe · {team}",
+      "myTeamSolo": "Ton inscription",
+      "dueIn": "{title} · rendu {when}",
+      "empty": "Aucun hackathon ouvert pour l’instant."
+    },
+    "formats": {
+      "ONLINE": "En ligne",
+      "ONSITE": "Présentiel",
+      "HYBRID": "Hybride"
+    },
+    "hackathonLine": {
+      "hours": "{hours} h",
+      "solo": "seul",
+      "soloOrTeam": "seul ou en équipe",
+      "teams": "équipes de {min} à {max}",
+      "instructors": "instructeurs"
+    },
+    "tests": {
+      "title": "Ils cherchent des testeurs",
+      "seeAll": "Tout voir",
+      "by": "par {name}",
+      "places": "{count, plural, one {# place} other {# places}} · {minutes} min",
+      "test": "Tester",
+      "testAria": "Tester {name}"
+    },
+    "devs": {
+      "title": "Devs à rencontrer",
+      "seeAll": "Tout voir",
+      "see": "Voir le profil",
+      "mentor": "Mentor"
+    }
+  }
+}

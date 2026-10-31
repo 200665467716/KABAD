@@ -1,30 +1,35 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { adminUser } from "@/server/admin-page";
-import { adminOverview } from "@/server/challenges";
+import { adminOverview, CONTEST_HOURS } from "@/server/hackathons";
 import { AdminNav } from "../AdminNav";
 import { PayoutList } from "./PayoutList";
 
-export const metadata: Metadata = { title: "Versements · Équipe", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("hackathons.payouts");
+  return { title: t("title"), robots: { index: false } };
+}
 
 async function Data() {
   const user = await adminUser("/admin/versements");
-  const { payouts } = await adminOverview(user.id);
+  const [t, { payouts }] = await Promise.all([getTranslations("hackathons.payouts"), adminOverview(user.id)]);
   return (
     <Page narrow>
       <AdminNav current="/admin/versements" />
-      <p className="text-sm text-muted">Envoyez chaque somme par Mobile Money, puis indiquez la référence du transfert. Un versement n’est possible qu’après les 48 h de contestation.</p>
+      <p className="text-sm text-muted">{t("help", { hours: CONTEST_HOURS })}</p>
       <PayoutList payouts={payouts} />
     </Page>
   );
 }
 
-export default function PayoutsPage() {
+export default async function PayoutsPage() {
+  const t = await getTranslations("hackathons.payouts");
   return (
     <>
-      <TopBar back="/admin" title="Versements" />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement…</p>}>
+      <TopBar back="/admin" title={t("title")} />
+      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
         <Data />
       </Suspense>
     </>

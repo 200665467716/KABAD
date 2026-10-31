@@ -1,1 +1,83 @@
-{ "home": {} }
+{
+  "home": {
+    "title": "Home",
+    "loading": "Loading…",
+    "hello": "Hi {name}",
+    "search": "Find devs",
+    "notifications": "Notifications",
+    "notificationsNew": "{count, plural, one {Notifications, # new} other {Notifications, # new}}",
+    "myProfile": "My profile",
+    "todoInvitations": "{count, plural, one {# invitation received} other {# invitations received}}",
+    "todoInvitationsText": "{names} want to connect",
+    "todoInvitationsTextOne": "{name} wants to connect",
+    "todoRequests": "{count, plural, one {# session request to answer} other {# session requests to answer}}",
+    "todoRequestsText": "Answer before the session starts.",
+    "todoMission": "{count, plural, one {# instructor mission offered} other {# instructor missions offered}}",
+    "todoMissionText": "A paid mission on a hackathon.",
+    "session": {
+      "kicker": "Your mentoring session",
+      "kickerMentor": "Your next session as a mentor",
+      "confirmed": "Confirmed",
+      "length": "{minutes} min",
+      "join": "Join the call",
+      "joinIn": "Join the call · {when}",
+      "details": "See the session",
+      "with": "with {name}"
+    },
+    "noSession": {
+      "title": "Find a mentor",
+      "text": "Free 30-minute sessions with verified mentors.",
+      "cta": "See the mentors"
+    },
+    "rise": {
+      "title": "Africa Rise-Up",
+      "seeAll": "See all",
+      "live": "Live",
+      "next": "Event {when}",
+      "stats": "{count, plural, one {# dev} other {# devs}}",
+      "countries": "{count, plural, one {# country} other {# countries}}",
+      "joinRoom": "Join the room",
+      "open": "See the project",
+      "empty": "No project yet. Launch the first one.",
+      "create": "Launch a project"
+    },
+    "hackathons": {
+      "title": "Hackathons",
+      "seeAll": "See all",
+      "by": "by <b>{name}</b>",
+      "in": "In",
+      "days": "{count, plural, one {day} other {days}}",
+      "now": "Ongoing",
+      "myTeam": "Your team · {team}",
+      "myTeamSolo": "Your entry",
+      "dueIn": "{title} · due {when}",
+      "empty": "No open hackathon right now."
+    },
+    "formats": {
+      "ONLINE": "Online",
+      "ONSITE": "On site",
+      "HYBRID": "Hybrid"
+    },
+    "hackathonLine": {
+      "hours": "{hours} h",
+      "solo": "solo",
+      "soloOrTeam": "solo or in a team",
+      "teams": "teams of {min} to {max}",
+      "instructors": "instructors"
+    },
+    "tests": {
+      "title": "Looking for testers",
+      "seeAll": "See all",
+      "by": "by {name}",
+      "places": "{count, plural, one {# spot} other {# spots}} · {minutes} min",
+      "test": "Test",
+      "testAria": "Test {name}"
+    },
+    "devs": {
+      "title": "Devs to meet",
+      "seeAll": "See all",
+      "see": "See profile",
+      "mentor": "Mentor"
+    }
+  }
+}

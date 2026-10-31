@@ -1,10 +1,11 @@
 "use client";
 
-import { Link } from "@/i18n/navigation";
-import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { useState, type FormEvent, type ReactNode } from "react";
+import { LanguageSwitcher } from "@/components/shell/LanguageSwitcher";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Page } from "@/components/shell/TopBar";
-import { Button, ButtonLink } from "@/components/ui/Button";
+import { Button, ButtonLink, buttonClass } from "@/components/ui/Button";
 import { Alert, Avatar, Card, Overline } from "@/components/ui/Display";
 import { TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
@@ -24,6 +25,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 type Blocked = { id: string; name: string; city: string; since: string };
 
 export function AccountSettings({ email, hasPassword, github, verified, profileId, blocked }: { email: string; hasPassword: boolean; github: string | null; verified: boolean; profileId: string; blocked: Blocked[] }) {
+  const t = useTranslations("profile.account");
   const router = useRouter();
   const [msg, setMsg] = useState<{ key: string; tone: "success" | "danger"; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export function AccountSettings({ email, hasPassword, github, verified, profileI
       setMsg({ key, tone: "success", text: ok });
       after?.();
     } catch (e) {
-      setMsg({ key, tone: "danger", text: e instanceof ApiError ? e.message : "L’action n’a pas abouti. Réessayez." });
+      setMsg({ key, tone: "danger", text: e instanceof ApiError ? e.message : t("failed") });
     } finally {
       setBusy(null);
     }
@@ -52,13 +54,13 @@ export function AccountSettings({ email, hasPassword, github, verified, profileI
     e.preventDefault();
     const form = e.currentTarget;
     const data = new FormData(form);
-    run("password", () => api("/api/me/password", { body: { current: String(data.get("current") ?? ""), next: String(data.get("next") ?? "") } }), "Mot de passe changé. Vos autres appareils sont déconnectés.", () => form.reset());
+    run("password", () => api("/api/me/password", { body: { current: String(data.get("current") ?? ""), next: String(data.get("next") ?? "") } }), t("passwordChanged"), () => form.reset());
   }
 
   function deleteAccount(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
-    run("delete", () => api("/api/me", { method: "DELETE", body: { password: String(data.get("password") ?? "") || undefined, confirm: String(data.get("confirm") ?? "") } }), "Compte supprimé.", () => {
+    run("delete", () => api("/api/me", { method: "DELETE", body: { password: String(data.get("password") ?? "") || undefined, confirm: String(data.get("confirm") ?? "") } }), t("deleted"), () => {
       disconnectRealtime();
       hardNavigate("/");
     });
@@ -66,54 +68,62 @@ export function AccountSettings({ email, hasPassword, github, verified, profileI
 
   return (
     <Page narrow>
-      <Section title="Adresse e-mail">
-        <p className="text-sm">
-          <b>{email}</b> · {verified ? "confirmée" : "pas encore confirmée"}
-        </p>
-        {!verified && (
-          <>
-            <Button variant="secondary" size="sm" className="justify-self-start" disabled={busy !== null} onClick={() => run("verify", () => api("/api/auth/verify/resend", { method: "POST" }), "E-mail envoyé. Ouvrez le lien qu’il contient.")}>
-              Renvoyer l’e-mail de confirmation
-            </Button>
-            {note("verify")}
-          </>
-        )}
-        {github && <p className="text-sm text-muted">Compte GitHub lié : {github}</p>}
+      <Section title={t("language")}>
+        <p className="text-sm text-muted">{t("languageText")}</p>
+        <LanguageSwitcher />
       </Section>
 
-      <Section title={hasPassword ? "Changer de mot de passe" : "Choisir un mot de passe"}>
+      <Section title={t("email")}>
+        <p className="text-sm">
+          <b>{email}</b> · {verified ? t("verified") : t("unverified")}
+        </p>
+        {!verified && (
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/verifier-email" size="sm" className="justify-self-start">
+              {t("verifyNow")}
+            </ButtonLink>
+            <Button variant="secondary" size="sm" disabled={busy !== null} onClick={() => run("verify", () => api("/api/auth/verify/resend", { method: "POST" }), t("resent"))}>
+              {t("resend")}
+            </Button>
+          </div>
+        )}
+        {note("verify")}
+        {github && <p className="text-sm text-muted">{t("github", { login: github })}</p>}
+      </Section>
+
+      <Section title={hasPassword ? t("changePassword") : t("choosePassword")}>
         <form onSubmit={changePassword} className="grid gap-3" noValidate>
-          {hasPassword && <TextField id="current" name="current" type="password" label="Mot de passe actuel" autoComplete="current-password" />}
-          <TextField id="next" name="next" type="password" label="Nouveau mot de passe" autoComplete="new-password" hint="12 caractères au moins." />
+          {hasPassword && <TextField id="current" name="current" type="password" label={t("current")} autoComplete="current-password" />}
+          <TextField id="next" name="next" type="password" label={t("next")} autoComplete="new-password" hint={t("nextHint")} />
           <Button type="submit" size="sm" className="justify-self-start" disabled={busy !== null}>
-            Enregistrer
+            {t("save")}
           </Button>
           {note("password")}
         </form>
       </Section>
 
-      <Section title="Sessions">
-        <p className="text-sm text-muted">Un téléphone perdu ou un ordinateur partagé ? Déconnectez tous vos appareils, y compris celui-ci.</p>
+      <Section title={t("sessions")}>
+        <p className="text-sm text-muted">{t("sessionsText")}</p>
         <Button
           variant="secondary"
           size="sm"
           className="justify-self-start"
           disabled={busy !== null}
           onClick={() =>
-            run("sessions", () => api("/api/auth/logout-all", { method: "POST" }), "Tous vos appareils sont déconnectés.", () => {
+            run("sessions", () => api("/api/auth/logout-all", { method: "POST" }), t("signedOutAll"), () => {
               disconnectRealtime();
               hardNavigate("/connexion");
             })
           }
         >
-          Déconnecter tous mes appareils
+          {t("signOutAll")}
         </Button>
         {note("sessions")}
       </Section>
 
-      <Section title="Membres bloqués">
+      <Section title={t("blocked")}>
         {blocked.length === 0 ? (
-          <p className="text-sm text-muted">Vous n’avez bloqué personne.</p>
+          <p className="text-sm text-muted">{t("blockedNone")}</p>
         ) : (
           <ul className="m-0 grid list-none gap-2 p-0">
             {blocked.map((b) => (
@@ -122,8 +132,8 @@ export function AccountSettings({ email, hasPassword, github, verified, profileI
                 <Link href={`/profil/${b.id}`} className="text-sm font-bold text-ink no-underline">
                   {b.name}
                 </Link>
-                <Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => run("blocks", () => api(`/api/blocks/${b.id}`, { method: "DELETE" }), `${b.name} est débloqué.`, () => router.refresh())}>
-                  Débloquer
+                <Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => run("blocks", () => api(`/api/blocks/${b.id}`, { method: "DELETE" }), t("unblocked", { name: b.name }), () => router.refresh())}>
+                  {t("unblock")}
                 </Button>
               </li>
             ))}
@@ -132,23 +142,24 @@ export function AccountSettings({ email, hasPassword, github, verified, profileI
         {note("blocks")}
       </Section>
 
-      <Section title="Mes données">
-        <p className="text-sm text-muted">Téléchargez tout ce que vous avez écrit ou déclaré sur KABAD, dans un fichier JSON.</p>
-        <ButtonLink href="/api/me/export" variant="secondary" size="sm" className="justify-self-start" download>
-          Télécharger mes données
-        </ButtonLink>
+      <Section title={t("data")}>
+        <p className="text-sm text-muted">{t("dataText")}</p>
+        {/* A plain link: the API is not under the /en prefix. */}
+        <a href="/api/me/export" download className={buttonClass({ variant: "secondary", size: "sm", className: "justify-self-start no-underline" })}>
+          {t("download")}
+        </a>
         <ButtonLink href={`/profil/${profileId}`} variant="ghost" size="sm" className="justify-self-start">
-          Voir mon profil public
+          {t("public")}
         </ButtonLink>
       </Section>
 
-      <Section title="Supprimer mon compte">
+      <Section title={t("delete")}>
         <form onSubmit={deleteAccount} className="grid gap-3" noValidate>
-          <p className="text-sm text-muted">Définitif. Vos messages restent chez vos correspondants, sans votre nom. Votre profil, vos binômes, vos solutions et vos rapports sont effacés.</p>
-          {hasPassword && <TextField id="del-password" name="password" type="password" label="Votre mot de passe" autoComplete="current-password" />}
-          <TextField id="confirm" name="confirm" label="Écrivez SUPPRIMER pour confirmer" autoComplete="off" />
+          <p className="text-sm text-muted">{t("deleteText")}</p>
+          {hasPassword && <TextField id="del-password" name="password" type="password" label={t("deletePassword")} autoComplete="current-password" />}
+          <TextField id="confirm" name="confirm" label={t("deleteConfirm")} autoComplete="off" />
           <Button type="submit" variant="danger" size="sm" className="justify-self-start" disabled={busy !== null}>
-            Supprimer définitivement
+            {t("deleteButton")}
           </Button>
           {note("delete")}
         </form>

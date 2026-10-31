@@ -1,74 +1,102 @@
-import { ButtonLink } from "@/components/ui/Button";
-import { Avatar, Badge } from "@/components/ui/Display";
+import { getTranslations } from "next-intl/server";
 import { LanguageSwitcher } from "@/components/shell/LanguageSwitcher";
+import { Band } from "@/components/ui/Band";
+import { Icon } from "@/components/ui/Icon";
 import { LogoMark } from "@/components/ui/Logo";
-import { formatFCFA } from "@/lib/format";
+import { Link } from "@/i18n/navigation";
 
-export default function Welcome() {
+const card = "relative rounded-2xl border-2 border-line-strong text-[var(--ink)] shadow-[4px_4px_0_var(--ink)]";
+
+/** Screen A1: the public welcome page. The three cards illustrate the three spaces of KABAD. */
+export default async function Welcome() {
+  const t = await getTranslations("auth.welcome");
   return (
-    <div className="flex min-h-dvh flex-col bg-brand text-on-brand">
-      <div className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-6 pt-[max(24px,env(safe-area-inset-top,0px))] lg:px-10">
-        <div className="flex items-center gap-2.5 py-2">
-          <LogoMark size={40} inverse />
-          <span className="flex-1 font-display text-xl font-extrabold tracking-[0.04em]">KABAD</span>
-          <LanguageSwitcher compact />
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-header text-on-header">
+      <svg viewBox="0 0 64 64" aria-hidden="true" className="pointer-events-none absolute top-10 -right-18 size-[330px] opacity-55 lg:right-[8%] lg:size-[520px]">
+        <g fill="var(--band)">
+          <rect x="16" y="13" width="8" height="6" rx="1.5" />
+          <rect x="38" y="13" width="10" height="6" rx="1.5" />
+          <rect x="16" y="21" width="8" height="6" rx="1.5" />
+          <rect x="32" y="21" width="10" height="6" rx="1.5" />
+          <rect x="16" y="29" width="20" height="6" rx="1.5" />
+          <rect x="16" y="37" width="8" height="6" rx="1.5" />
+          <rect x="32" y="37" width="10" height="6" rx="1.5" />
+          <rect x="16" y="45" width="8" height="6" rx="1.5" />
+          <rect x="38" y="45" width="10" height="6" rx="1.5" />
+        </g>
+      </svg>
+
+      <header className="relative mx-auto flex w-full max-w-[1100px] items-center gap-2.5 px-5 pt-[max(18px,env(safe-area-inset-top,0px))] lg:px-10">
+        <LogoMark size={34} inverse />
+        <span className="flex-1 font-display text-lg font-extrabold tracking-[0.02em]">KABAD</span>
+        <LanguageSwitcher compact />
+        <Link href="/connexion" className="inline-flex min-h-11 items-center px-2 text-sm font-extrabold text-on-header no-underline">
+          {t("signIn")}
+        </Link>
+      </header>
+
+      <main className="relative mx-auto grid w-full max-w-[1100px] flex-1 content-center gap-6 px-5 py-6 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-16 lg:px-10">
+        <div aria-hidden="true" className="grid content-center gap-6 py-2 lg:order-2">
+          <div className={`${card} flex w-[246px] -rotate-3 items-center gap-2.5 justify-self-start bg-white p-2.5`}>
+            <span className="grid size-13 shrink-0 content-center justify-items-center rounded-md bg-[var(--indigo)] text-white">
+              <b className="font-display text-[15px] leading-[18px]">15h</b>
+              <span className="text-[10px] font-extrabold text-[var(--mist)]">{t("cardLength")}</span>
+            </span>
+            <span className="grid min-w-0 flex-1 gap-0.5">
+              <span className="text-[10px] font-extrabold tracking-[0.1em] text-[var(--indigo)] uppercase">{t("cardMentoring")}</span>
+              <b className="text-sm leading-[18px]">{t("cardMentoringTitle")}</b>
+              <span className="text-xs text-[var(--slate)]">{t("cardMentoringWith")}</span>
+            </span>
+          </div>
+          <div className={`${card} grid w-[236px] rotate-3 grid-cols-[minmax(0,1fr)_62px] justify-self-end overflow-hidden bg-white`}>
+            <span className="grid gap-0.5 px-3 py-2.5">
+              <span className="text-[10px] font-extrabold tracking-[0.1em] text-[var(--indigo)] uppercase">{t("cardHackathon")}</span>
+              <b className="font-display text-[13px] leading-[17px] font-bold">{t("cardHackathonTitle")}</b>
+              <span className="text-[11px] text-[var(--slate)]">{t("cardHackathonBy")}</span>
+            </span>
+            <span className="grid content-center justify-items-center border-l-2 border-dashed border-white bg-[var(--ink)] text-[var(--maize)]">
+              <span className="text-[9px] font-extrabold tracking-[0.08em] text-[var(--grey-light)] uppercase">{t("cardIn")}</span>
+              <b className="font-display text-xl leading-[22px]">12</b>
+              <span className="text-[9px] font-extrabold tracking-[0.08em] text-[var(--grey-light)] uppercase">{t("cardDays")}</span>
+            </span>
+          </div>
+          <div className={`${card} ml-3.5 flex w-[250px] -rotate-2 items-center gap-2.5 justify-self-start bg-[var(--maize)] px-3 py-2.5`}>
+            <Icon name="rise" className="size-10 shrink-0" />
+            <span className="grid min-w-0 flex-1 gap-0.5">
+              <span className="text-[10px] font-extrabold tracking-[0.1em] uppercase">{t("cardRise")}</span>
+              <b className="text-sm leading-[18px]">{t("cardRiseTitle")}</b>
+            </span>
+            <span className="absolute -top-3 right-2.5 inline-flex h-5.5 items-center gap-1.5 rounded-[7px] bg-[var(--ink)] px-2 text-[10px] font-extrabold text-white">
+              <span className="size-1.5 rounded-full bg-[var(--clay-light)]" />
+              {t("cardLive")}
+            </span>
+          </div>
         </div>
 
-        <div className="grid flex-1 items-center gap-8 py-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-16">
-          <div className="order-2 grid gap-3 lg:order-1 lg:gap-6">
-            <h1 className="font-display text-[30px] leading-[36px] font-extrabold uppercase lg:text-[56px] lg:leading-[62px]">Les seniors transmettent. Les juniors progressent.</h1>
-            <p className="max-w-[56ch] text-[17px] leading-7 opacity-90 lg:text-lg">
-              La communauté des développeurs d’Afrique et de la diaspora, pour apprendre en pratiquant et créer des projets à impact.
-            </p>
-            <div className="mt-4 hidden max-w-sm gap-3 lg:grid">
-              <ButtonLink href="/inscription" variant="accent" size="lg" block>
-                Créer mon compte
-              </ButtonLink>
-              <ButtonLink href="/connexion" variant="onBrand" size="lg" block>
-                J’ai déjà un compte
-              </ButtonLink>
-            </div>
-          </div>
-
-          <div className="relative order-1 grid min-h-[260px] content-center gap-3 lg:order-2 lg:min-h-[420px]" aria-hidden="true">
-            <div className="grid gap-2.5 opacity-90">
-              <i className="block h-2.5 w-[46%] rounded-xs bg-on-brand/20" />
-              <i className="ml-[12%] block h-2.5 w-[70%] rounded-xs bg-on-brand/20" />
-              <i className="ml-[12%] block h-2.5 w-[58%] rounded-xs bg-accent" />
-              <i className="ml-[24%] block h-2.5 w-[64%] rounded-xs bg-on-brand/20" />
-              <i className="ml-[12%] block h-2.5 w-[38%] rounded-xs bg-on-brand/20" />
-            </div>
-            <div className="absolute top-[12%] right-0 grid w-[210px] gap-2 rounded-lg bg-raised p-3 text-ink shadow-lg">
-              <div className="flex items-center gap-2.5">
-                <Avatar initials="AD" size="sm" />
-                <span className="grid">
-                  <span className="text-sm font-bold">Awa Diop</span>
-                  <span className="text-xs text-muted">Senior · Dakar</span>
-                </span>
-              </div>
-              <Badge tone="success">Séance confirmée</Badge>
-            </div>
-            <div className="absolute bottom-[6%] left-0 grid w-[220px] gap-1.5 rounded-lg bg-raised p-3 text-ink shadow-lg">
-              <span className="text-xs font-bold tracking-[0.08em] text-accent-text uppercase">Défi gagné</span>
-              <span className="font-display text-xl font-bold tabular">{formatFCFA(150000)}</span>
-              <span className="flex h-2 gap-0.5 overflow-hidden rounded-xs">
-                <span className="bg-brand" style={{ flex: 60 }} />
-                <span className="bg-accent" style={{ flex: 30 }} />
-                <span className="bg-subtle" style={{ flex: 10 }} />
-              </span>
-            </div>
-          </div>
+        <div className="grid gap-2.5 lg:order-1 lg:gap-5">
+          <p className="text-[11px] font-extrabold tracking-[0.1em] text-on-header-muted uppercase lg:text-xs">{t("kicker")}</p>
+          <h1 className="font-display text-[27px] leading-[33px] font-extrabold uppercase lg:text-5xl lg:leading-[56px]">
+            {t("titleStart")}
+            <span className="shadow-[inset_0_-9px_0_var(--maize)]">{t("titleHighlight")}</span>
+          </h1>
+          <p className="text-[17px] leading-[25px] font-bold lg:text-xl">{t("subtitle")}</p>
         </div>
-      </div>
+      </main>
 
-      <div className="grid gap-2.5 px-6 pt-5 pb-[max(28px,env(safe-area-inset-bottom,0px))] lg:hidden">
-        <ButtonLink href="/inscription" variant="accent" size="lg" block>
-          Créer mon compte
-        </ButtonLink>
-        <ButtonLink href="/connexion" variant="onBrand" size="lg" block>
-          J’ai déjà un compte
-        </ButtonLink>
-        <p className="text-center text-xs opacity-80">Gratuit. Application web, installable sur votre téléphone.</p>
+      <div className="relative bg-band pb-[max(24px,env(safe-area-inset-bottom,0px))]">
+        <Band className="absolute top-0 left-0 h-3.5" />
+        <div className="mx-auto grid w-full max-w-[1100px] gap-2.5 px-5 pt-7 lg:max-w-[480px]">
+          <Link
+            href="/inscription"
+            className="flex h-13.5 items-center justify-center gap-2 rounded-action border-2 border-[var(--ink)] bg-white font-extrabold text-[var(--indigo)] no-underline shadow-[4px_4px_0_var(--ink)]"
+          >
+            {t("create")}
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </Link>
+          <p className="mt-1 text-center text-[13px] font-bold text-on-header-muted">{t("motto")}</p>
+        </div>
       </div>
     </div>
   );

@@ -1,20 +1,22 @@
 "use client";
 
-import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { InviteSheet } from "@/components/features/InviteSheet";
 import { ReportSheet } from "@/components/features/ReportSheet";
 import { ShareButton } from "@/components/features/ShareButton";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
-import { Alert, Avatar, Badge, Card, Overline, Stat } from "@/components/ui/Display";
+import { Alert, Avatar, Badge, Card, Overline, Stat, TagList } from "@/components/ui/Display";
+import { useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
-import { disconnectRealtime } from "@/lib/realtime-client";
-import { initials } from "@/lib/format";
 import type { Profile } from "@/lib/domain-types";
-import { hardNavigate } from "@/lib/hard-navigate";
+import { initials } from "@/lib/format";
 
-export function ProfileView({ profile: m, isMe, isAdmin }: { profile: Profile; isMe: boolean; isAdmin: boolean }) {
+/** A member's public profile. */
+export function ProfileView({ profile: m, isMe }: { profile: Profile; isMe: boolean }) {
+  const t = useTranslations("profile.public");
+  const tl = useTranslations("profile.levels");
   const router = useRouter();
   const [invite, setInvite] = useState(false);
   const [invited, setInvited] = useState(m.invited);
@@ -27,102 +29,79 @@ export function ProfileView({ profile: m, isMe, isAdmin }: { profile: Profile; i
       await api(`/api/blocks/${m.id}`, { method: "DELETE" });
       router.refresh();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Le déblocage n’a pas abouti.");
+      setError(e instanceof ApiError ? e.message : t("unblockFailed"));
     }
   }
 
+  const place = m.city && m.country ? `${m.city}, ${m.country}` : m.city || m.country;
   return (
     <>
       <TopBar
-        back="/accueil"
-        plain
+        back={isMe ? "/profil" : "/membres"}
+        title={m.name}
         actions={
           <>
-            <ShareButton path={`/profil/${m.id}`} label="Partager le profil" title={m.name} />
-            {!isMe && <IconButton icon="flag" label="Signaler ou bloquer ce membre" onClick={() => setReport(true)} />}
+            <ShareButton path={`/profil/${m.id}`} label={t("share")} title={m.name} />
+            {!isMe && <IconButton icon="flag" label={t("report")} onClick={() => setReport(true)} />}
           </>
         }
       />
-      <Page narrow className="pt-1">
-        <div className="grid gap-3.5">
-          <Avatar initials={initials(m.name)} size="xl" tone={isMe ? "accent" : "brand"} />
-          <div className="grid gap-1">
-            <h1 className="font-display text-[30px] leading-[36px] font-bold tracking-[-0.03em]">{m.name}</h1>
-            <div className="flex flex-wrap items-center gap-2">
-              {m.role === "SENIOR" ? (
-                m.verified ? (
-                  <Badge tone="brand" icon="check">
-                    Statut Senior vérifié
-                  </Badge>
-                ) : (
-                  <Badge>Senior · vérification en cours</Badge>
-                )
-              ) : (
-                <Badge>Junior</Badge>
-              )}
-              <span className="text-sm text-muted">
-                {[m.city && m.country ? `${m.city}, ${m.country}` : m.city || m.country, m.diaspora ? "Diaspora" : "", m.headline, m.years ? `${m.years} an${m.years > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ")}
-              </span>
+      <Page narrow>
+        <Card className="gap-3.5">
+          <div className="flex items-center gap-3.5">
+            <Avatar initials={initials(m.name)} size="xl" tone={m.verified ? "brand" : "neutral"} />
+            <div className="grid min-w-0 gap-1">
+              <h1 className="font-display text-xl font-extrabold">{m.name}</h1>
+              <p className="text-sm text-muted">{[m.headline, place, m.diaspora ? t("diaspora") : ""].filter(Boolean).join(" · ")}</p>
             </div>
           </div>
-          {m.bio && <p>{m.bio}</p>}
-        </div>
+          <div className="flex flex-wrap gap-1.5">
+            {m.verified ? (
+              <Badge tone="success" icon="check">
+                {t("mentor")}
+              </Badge>
+            ) : (
+              <Badge tone="brand">{tl(m.level)}</Badge>
+            )}
+            {m.years > 0 && <Badge>{t("years", { count: m.years })}</Badge>}
+          </div>
+          {m.bio && <p className="text-[15px] leading-[22px]">{m.bio}</p>}
+        </Card>
 
         {m.stats ? (
           <Card className="grid-cols-3 gap-3 px-4 py-3.5">
-            <Stat value={m.stats.pairs} label="binômes accompagnés" />
-            <Stat value={`${m.stats.hours} h`} label="de mentorat confirmé" />
-            <Stat value={m.stats.judged} label="défis jugés" />
+            <Stat value={m.stats.sessions} label={t("sessions")} />
+            <Stat value={t("hours", { count: m.stats.hours })} label={t("hoursLabel")} />
+            <Stat value={m.stats.judged} label={t("judged")} />
           </Card>
         ) : m.testsValidated > 0 ? (
-          <Card className="grid-cols-3 gap-3 px-4 py-3.5">
-            <Stat value={m.testsValidated} label={`test${m.testsValidated > 1 ? "s" : ""} validé${m.testsValidated > 1 ? "s" : ""}`} />
+          <Card className="px-4 py-3.5">
+            <Stat value={m.testsValidated} label={t("tests", { count: m.testsValidated })} />
           </Card>
         ) : null}
 
         {m.stack.length > 0 && (
           <section className="grid gap-2" aria-labelledby="stack">
             <Overline as="h2" id="stack">
-              Stack
+              {t("stack")}
             </Overline>
-            <div className="flex flex-wrap gap-1.5">
-              {m.stack.map((s) => (
-                <Badge key={s}>{s}</Badge>
-              ))}
-            </div>
+            <TagList items={m.stack} />
           </section>
         )}
 
         {isMe && (
-          <div className="grid gap-2">
-            <ButtonLink href="/inscription/profil" variant="secondary">
-              Modifier mon profil
+          <Alert tone="info">
+            {t("myProfile")}{" "}
+            <ButtonLink href="/profil/modifier" variant="ghost" size="sm">
+              {t("editMine")}
             </ButtonLink>
-            <ButtonLink href="/compte" variant="secondary">
-              Mon compte : mot de passe, membres bloqués, données
-            </ButtonLink>
-            <Button
-              variant="ghost"
-              onClick={async () => {
-                await api("/api/auth/logout", { method: "POST" }).catch(() => {});
-                disconnectRealtime();
-                hardNavigate("/connexion");
-              }}
-            >
-              Se déconnecter
-            </Button>
-            {isAdmin && (
-              <ButtonLink href="/admin" variant="ghost" icon="lock">
-                Tableau de bord de l’équipe
-              </ButtonLink>
-            )}
-          </div>
+          </Alert>
         )}
         {m.blockedByMe && (
-          <Alert tone="info" title={`Vous avez bloqué ${first}.`}>
-            {first} ne peut plus vous écrire ni vous inviter.{" "}
-            <button type="button" onClick={unblock} className="font-bold text-brand-text underline">
-              Débloquer
+          <Alert tone="info" title={t("blocked", { name: first })}>
+            {t("blockedText", { name: first })}{" "}
+            <button type="button" onClick={unblock} className="font-extrabold text-brand-text underline">
+              {t("unblock")}
             </button>
           </Alert>
         )}
@@ -136,18 +115,14 @@ export function ProfileView({ profile: m, isMe, isAdmin }: { profile: Profile; i
         <ActionBar className="grid-cols-[auto_minmax(0,1fr)]">
           {m.conversationId ? (
             <ButtonLink href={`/messages/${m.conversationId}`} variant="secondary" icon="message">
-              Écrire
+              {t("write")}
             </ButtonLink>
           ) : (
             <Button variant="secondary" onClick={() => setInvite(true)} disabled={invited || m.isContact} icon={invited ? "check" : undefined}>
-              {invited ? "Invitation envoyée" : "Inviter"}
+              {invited ? t("invited") : t("invite")}
             </Button>
           )}
-          {m.role === "SENIOR" && m.verified ? (
-            <ButtonLink href={`/mentorat/demande/${m.id}`}>Demander un mentorat</ButtonLink>
-          ) : (
-            <ButtonLink href="/membres">Voir d’autres membres</ButtonLink>
-          )}
+          {m.verified ? <ButtonLink href={`/mentorat/mentors/${m.id}`}>{t("book")}</ButtonLink> : <ButtonLink href="/membres">{t("others")}</ButtonLink>}
         </ActionBar>
       )}
       <InviteSheet
@@ -159,7 +134,7 @@ export function ProfileView({ profile: m, isMe, isAdmin }: { profile: Profile; i
           setInvite(false);
         }}
       />
-      <ReportSheet open={report} onClose={() => setReport(false)} subject="ce profil" target={{ type: "USER", id: m.id }} onBlocked={() => router.refresh()} />
+      <ReportSheet open={report} onClose={() => setReport(false)} subject={t("reportSubject")} target={{ type: "USER", id: m.id }} onBlocked={() => router.refresh()} />
     </>
   );
 }

@@ -15,5 +15,5 @@ export const POST = route(async (request) => {
   await resetRateLimit(key);
   const { token, expiresAt } = await createSession(user.id);
   await setSessionCookie(token, expiresAt);
-  return Response.json({ id: user.id, name: user.name });
+  return Response.json({ id: user.id, name: user.name, locale: user.locale });
 });

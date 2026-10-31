@@ -1,18 +1,21 @@
 "use client";
 
-import { Link } from "@/i18n/navigation";
-import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
+import { PasswordField } from "@/components/features/auth/PasswordField";
 import { AuthFrame } from "@/components/shell/AuthFrame";
-import { Alert } from "@/components/ui/Display";
 import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Display";
 import { Checkbox, TextField } from "@/components/ui/Field";
+import { Link, useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
 import { signupSchema } from "@/lib/schemas";
 
 type Errors = Partial<Record<"name" | "email" | "password" | "terms" | "form", string>>;
 
+/** Screen A2, step 1 of 5. */
 export function SignUpForm() {
+  const t = useTranslations("auth.signUp");
   const router = useRouter();
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
@@ -24,15 +27,16 @@ export function SignUpForm() {
     const next: Errors = {};
     const parsed = signupSchema.safeParse(input);
     if (!parsed.success) for (const issue of parsed.error.issues) next[issue.path[0] as keyof Errors] ??= issue.message;
-    if (!data.get("terms")) next.terms = "Acceptez les conditions pour continuer.";
+    if (!data.get("terms")) next.terms = t("termsRequired");
     setErrors(next);
     if (Object.keys(next).length > 0) return;
     setBusy(true);
     try {
       await api("/api/auth/signup", { body: input });
-      router.push("/inscription/profil");
+      router.push("/verifier-email");
     } catch (err) {
-      setErrors({ form: err instanceof ApiError ? err.message : "Le compte n’a pas été créé. Réessayez." });
+      if (err instanceof ApiError && err.field) setErrors({ [err.field]: err.message });
+      else setErrors({ form: err instanceof ApiError ? err.message : t("failed") });
       setBusy(false);
     }
   }
@@ -41,36 +45,37 @@ export function SignUpForm() {
     <form onSubmit={submit} noValidate>
       <AuthFrame
         back="/"
+        heading={t("heading")}
         step={1}
-        title="Créez votre compte"
-        lead="Quelques informations pour commencer. Vous compléterez votre profil juste après."
+        title={t("title")}
+        lead={t("lead")}
         footer={
           <>
             <Button type="submit" size="lg" block disabled={busy}>
-              {busy ? "Création du compte…" : "Continuer"}
+              {busy ? t("busy") : t("submit")}
             </Button>
-            <p className="text-center text-sm text-muted">
-              Déjà membre ?{" "}
-              <Link href="/connexion" className="font-bold text-brand-text">
-                Se connecter
+            <p className="text-center text-sm">
+              {t("already")}{" "}
+              <Link href="/connexion" className="font-extrabold text-brand-text no-underline">
+                {t("signIn")}
               </Link>
             </p>
           </>
         }
       >
-        <div className="grid gap-4">
-          <TextField id="name" name="name" label="Nom complet" autoComplete="name" error={errors.name} />
-          <TextField id="email" name="email" type="email" label="Adresse e-mail" autoComplete="email" error={errors.email} />
-          <TextField id="password" name="password" type="password" label="Mot de passe" autoComplete="new-password" hint="12 caractères minimum." error={errors.password} />
+        <div className="grid gap-4.5">
+          <TextField id="name" name="name" label={t("name")} autoComplete="name" error={errors.name} />
+          <TextField id="email" name="email" type="email" label={t("email")} autoComplete="email" error={errors.email} />
+          <PasswordField id="password" name="password" label={t("password")} autoComplete="new-password" hint={t("passwordHint")} error={errors.password} />
           <div className="grid gap-1">
             <Checkbox name="terms">
-              J’accepte les{" "}
-              <Link href="/conditions" target="_blank" className="text-brand-text">
-                conditions d’utilisation et la charte de la communauté
+              {t("termsBefore")}
+              <Link href="/conditions" target="_blank" className="font-extrabold text-brand-text">
+                {t("termsLink")}
               </Link>
-              .
+              {t("termsAfter")}
             </Checkbox>
-            {errors.terms && <span className="text-sm font-bold text-danger">{errors.terms}</span>}
+            {errors.terms && <span className="text-sm font-extrabold text-danger">{errors.terms}</span>}
           </div>
           {errors.form && (
             <Alert tone="danger" role="alert">

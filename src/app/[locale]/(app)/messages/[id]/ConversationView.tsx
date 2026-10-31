@@ -2,6 +2,7 @@
 
 import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { MessageBubble, SystemLine } from "@/components/features/Thread";
 import { ReportSheet } from "@/components/features/ReportSheet";
@@ -14,7 +15,7 @@ import { initials } from "@/lib/format";
 import type { ChatMessage, Contact, ConversationDetail } from "@/lib/messaging-types";
 import { useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
 import { MESSAGE_MAX_LENGTH } from "@/lib/schemas";
-import { clockTime, dayLabel } from "@/lib/time";
+import { useChatTime } from "../useChatTime";
 
 type Shown = ChatMessage & { status?: "sending" | "failed" };
 
@@ -31,6 +32,8 @@ function merge(current: Shown[], incoming: ChatMessage[]): Shown[] {
 }
 
 export function ConversationView({ me, initial }: { me: { id: string; name: string }; initial: ConversationDetail }) {
+  const t = useTranslations("messaging.conversation");
+  const time = useChatTime();
   const [detail, setDetail] = useState(initial);
   const [messages, setMessages] = useState<Shown[]>(initial.messages);
   const [hasMore, setHasMore] = useState(initial.hasMore);
@@ -117,7 +120,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
     e?.preventDefault();
     const body = draft.trim();
     if (!body) return;
-    if (Array.from(body).length > MESSAGE_MAX_LENGTH) return setError(`Un message fait ${MESSAGE_MAX_LENGTH} caractères au plus.`);
+    if (Array.from(body).length > MESSAGE_MAX_LENGTH) return setError(t("tooLong", { max: MESSAGE_MAX_LENGTH }));
     setError(null);
     const clientId = crypto.randomUUID();
     stickToBottom.current = true;
@@ -140,7 +143,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
       setMessages((cur) => merge(cur, page.messages));
       setHasMore(page.hasMore);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Impossible de charger les messages précédents.");
+      setError(e instanceof ApiError ? e.message : t("olderError"));
     }
   }
 
@@ -153,7 +156,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   const others = detail.members.filter((m) => m.id !== me.id);
   // Blocking only stops a direct conversation; in a group, the report goes to the team.
   const blocked = !group && (blockedNow || detail.blocked !== null);
-  const memberNames = ["Vous", ...others.map((m) => m.name.split(" ")[0])].join(", ");
+  const memberNames = [t("you"), ...others.map((m) => m.name.split(" ")[0])].join(", ");
   const tone = (authorId: string | null) => ACCENTS[Math.max(0, others.findIndex((o) => o.id === authorId)) % 2];
   const length = Array.from(draft).length;
 
@@ -165,18 +168,18 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
           group ? (
             <Avatar initials={initials(detail.title)} size="sm" square tone="neutral" />
           ) : detail.other ? (
-            <Link href={`/profil/${detail.other.id}`} aria-label={`Profil de ${detail.other.name}`}>
+            <Link href={`/profil/${detail.other.id}`} aria-label={t("profileOf", { name: detail.other.name })}>
               <Avatar initials={initials(detail.other.name)} size="sm" />
             </Link>
           ) : null
         }
-        title={<span className="text-lg lg:text-2xl">{detail.title}</span>}
-        subtitle={group ? memberNames : detail.other ? `${detail.other.role === "SENIOR" ? "Senior · " : ""}${detail.other.city}` : undefined}
+        title={detail.title}
+        subtitle={group ? `${t("memberCount", { count: detail.members.length })} · ${memberNames}` : detail.other ? `${detail.other.role === "SENIOR" ? `${t("mentor")} · ` : ""}${detail.other.city}` : undefined}
         actions={
           <>
-            {group && detail.isOwner && <IconButton icon="userPlus" label="Ajouter des participants" onClick={() => setAdding(true)} />}
-            {group && <IconButton icon="users" label="Participants" onClick={() => setPeople(true)} />}
-            <IconButton icon="more" label="Signaler la conversation" onClick={() => setReport(true)} />
+            {group && detail.isOwner && <IconButton icon="userPlus" label={t("addMembers")} onClick={() => setAdding(true)} />}
+            {group && <IconButton icon="users" label={t("members")} onClick={() => setPeople(true)} />}
+            <IconButton icon="more" label={t("report")} onClick={() => setReport(true)} />
           </>
         }
       />
@@ -190,29 +193,29 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
         // Scrolling up to the first message must not trigger the phone's pull-to-refresh.
         className="flex-1 overflow-y-auto overscroll-contain"
       >
-        <main className="mx-auto grid min-h-full w-full max-w-[760px] content-end gap-2.5 px-4 py-3 lg:px-10" aria-live="polite" aria-label="Messages">
+        <main className="mx-auto grid min-h-full w-full max-w-[760px] content-end gap-2.5 px-4 py-3 lg:px-10" aria-live="polite" aria-label={t("messages")}>
           {hasMore && (
             <Button variant="ghost" size="sm" onClick={loadOlder} className="justify-self-center">
-              Charger les messages précédents
+              {t("loadOlder")}
             </Button>
           )}
-          {messages.length === 0 && <p className="justify-self-center text-sm text-muted">Écrivez le premier message.</p>}
+          {messages.length === 0 && <p className="justify-self-center text-sm text-muted">{t("first")}</p>}
           {messages.map((m, i) => {
             const prev = messages[i - 1];
-            const newDay = !prev || dayLabel(prev.createdAt) !== dayLabel(m.createdAt);
+            const newDay = !prev || time.day(prev.createdAt) !== time.day(m.createdAt);
             const mine = m.authorId === me.id;
             return (
               <Fragment key={m.clientId ?? m.id}>
-                {newDay && <DaySeparator>{dayLabel(m.createdAt)}</DaySeparator>}
+                {newDay && <DaySeparator>{time.day(m.createdAt)}</DaySeparator>}
                 {m.system ? (
                   <SystemLine>{m.body}</SystemLine>
                 ) : group && !mine ? (
                   <div className="grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2">
                     <Avatar initials={initials(m.authorName ?? "?")} size="sm" />
-                    <MessageBubble text={m.body} hidden={m.hidden} time={clockTime(m.createdAt)} author={m.authorName ?? "Membre"} authorTone={tone(m.authorId)} onReport={() => setReportMessage(m.id)} />
+                    <MessageBubble text={m.body} hidden={m.hidden} time={time.clock(m.createdAt)} author={m.authorName ?? t("member")} authorTone={tone(m.authorId)} onReport={() => setReportMessage(m.id)} />
                   </div>
                 ) : (
-                  <MessageBubble text={m.body} hidden={m.hidden} time={clockTime(m.createdAt)} mine={mine} status={m.status} onRetry={() => retry(m)} onReport={mine ? undefined : () => setReportMessage(m.id)} />
+                  <MessageBubble text={m.body} hidden={m.hidden} time={time.clock(m.createdAt)} mine={mine} status={m.status} onRetry={() => retry(m)} onReport={mine ? undefined : () => setReportMessage(m.id)} />
                 )}
               </Fragment>
             );
@@ -220,11 +223,11 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
         </main>
       </div>
 
-      <form onSubmit={send} className="sticky bottom-0 border-t border-line bg-raised">
+      <form onSubmit={send} className="sticky bottom-0 border-t-2 border-line-strong bg-raised">
         <div className="mx-auto grid max-w-[760px] gap-2 px-3 pt-2 pb-[max(12px,env(safe-area-inset-bottom,0px))] lg:px-10">
           {(error || blocked) && (
             <Alert tone={blocked ? "info" : "danger"} role="alert">
-              {blocked ? (detail.blocked === "by_them" ? "Vous ne pouvez plus écrire à ce membre." : "Vous avez bloqué ce membre. Débloquez-le depuis « Mon compte » pour reprendre la discussion.") : error}
+              {blocked ? (detail.blocked === "by_them" ? t("blockedByThem") : t("blockedByMe")) : error}
             </Alert>
           )}
           <div className="flex items-end gap-2">
@@ -235,11 +238,11 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
               onKeyDown={onKey}
               maxLength={MESSAGE_MAX_LENGTH}
               disabled={blocked && !group}
-              aria-label={group ? "Message au groupe" : "Votre message"}
-              placeholder={group ? "Message au groupe" : "Votre message"}
-              className="min-h-11 min-w-0 flex-1 resize-none rounded-[22px] border border-line-strong bg-bg px-4 py-2.5 text-base leading-6"
+              aria-label={group ? t("placeholderGroup") : t("placeholder")}
+              placeholder={group ? t("placeholderGroup") : t("placeholder")}
+              className="min-h-11 min-w-0 flex-1 resize-none rounded-[22px] border-2 border-line-strong bg-bg px-4 py-2 text-base leading-[22px]"
             />
-            <Button type="submit" iconOnly icon="send" aria-label="Envoyer" className="rounded-full" disabled={!draft.trim() || (blocked && !group)} />
+            <Button type="submit" iconOnly icon="send" aria-label={t("send")} className="rounded-full" disabled={!draft.trim() || (blocked && !group)} />
           </div>
           {length > MESSAGE_MAX_LENGTH - 500 && (
             <span className="justify-self-end text-xs text-subtle tabular">
@@ -249,8 +252,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
         </div>
       </form>
 
-      <ReportSheet open={report} onClose={() => setReport(false)} subject="cette conversation" target={{ type: "CONVERSATION", id: detail.id }} onBlocked={() => !group && setBlocked(true)} />
-      <ReportSheet open={reportMessage !== null} onClose={() => setReportMessage(null)} subject="ce message" target={{ type: "MESSAGE", id: reportMessage ?? "" }} onBlocked={() => !group && setBlocked(true)} />
+      <ReportSheet open={report} onClose={() => setReport(false)} subject={t("subjectConversation")} target={{ type: "CONVERSATION", id: detail.id }} onBlocked={() => !group && setBlocked(true)} />
+      <ReportSheet open={reportMessage !== null} onClose={() => setReportMessage(null)} subject={t("subjectMessage")} target={{ type: "MESSAGE", id: reportMessage ?? "" }} onBlocked={() => !group && setBlocked(true)} />
       {group && <MembersSheet open={people} onClose={() => setPeople(false)} detail={detail} meId={me.id} onChanged={reload} onLeft={() => router.replace("/messages")} />}
       {group && detail.isOwner && <AddMembersSheet open={adding} onClose={() => setAdding(false)} conversationId={detail.id} memberIds={detail.members.map((m) => m.id)} onAdded={reload} />}
     </div>
@@ -258,6 +261,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
 }
 
 function AddMembersSheet({ open, onClose, conversationId, memberIds, onAdded }: { open: boolean; onClose: () => void; conversationId: string; memberIds: string[]; onAdded: () => void }) {
+  const t = useTranslations("messaging.add");
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [chosen, setChosen] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -268,11 +272,11 @@ function AddMembersSheet({ open, onClose, conversationId, memberIds, onAdded }: 
     let alive = true;
     api<{ contacts: Contact[] }>("/api/contacts")
       .then((d) => alive && setContacts(d.contacts))
-      .catch(() => alive && setError("Impossible de charger vos contacts."));
+      .catch(() => alive && setError(t("loadError")));
     return () => {
       alive = false;
     };
-  }, [open]);
+  }, [open, t]);
 
   const available = (contacts ?? []).filter((c) => !memberIds.includes(c.id));
 
@@ -285,7 +289,7 @@ function AddMembersSheet({ open, onClose, conversationId, memberIds, onAdded }: 
       onAdded();
       onClose();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Les participants n’ont pas été ajoutés.");
+      setError(e instanceof ApiError ? e.message : t("failed"));
     } finally {
       setBusy(false);
     }
@@ -295,16 +299,16 @@ function AddMembersSheet({ open, onClose, conversationId, memberIds, onAdded }: 
     <Sheet
       open={open}
       onClose={onClose}
-      title="Ajouter des participants"
+      title={t("title")}
       footer={
         <Button size="lg" block onClick={add} disabled={chosen.length === 0 || busy}>
-          {busy ? "Ajout…" : chosen.length > 1 ? `Ajouter ${chosen.length} participants` : "Ajouter au groupe"}
+          {busy ? t("adding") : chosen.length > 1 ? t("addMany", { count: chosen.length }) : t("addOne")}
         </Button>
       }
     >
-      <p className="text-sm text-muted">Groupe privé : vous seul ajoutez des participants, choisis parmi vos contacts.</p>
-      {contacts === null && !error && <p className="text-sm text-muted">Chargement de vos contacts…</p>}
-      {contacts !== null && available.length === 0 && <p className="text-sm text-muted">Tous vos contacts sont déjà dans ce groupe.</p>}
+      <p className="text-sm text-muted">{t("help")}</p>
+      {contacts === null && !error && <p className="text-sm text-muted">{t("loading")}</p>}
+      {contacts !== null && available.length === 0 && <p className="text-sm text-muted">{t("allIn")}</p>}
       {available.length > 0 && (
         <ul className="m-0 list-none divide-y divide-line rounded-lg border border-line p-0">
           {available.map((c) => {
@@ -317,7 +321,7 @@ function AddMembersSheet({ open, onClose, conversationId, memberIds, onAdded }: 
                     <span className="text-sm font-bold">{c.name}</span>
                     <span className="text-xs text-muted">{c.city}</span>
                   </span>
-                  <input type="checkbox" checked={on} onChange={() => setChosen((x) => (on ? x.filter((y) => y !== c.id) : [...x, c.id]))} className="size-5.5 accent-[var(--brand)]" aria-label={`Ajouter ${c.name}`} />
+                  <input type="checkbox" checked={on} onChange={() => setChosen((x) => (on ? x.filter((y) => y !== c.id) : [...x, c.id]))} className="size-5.5 accent-[var(--brand)]" aria-label={t("addLabel", { name: c.name })} />
                 </label>
               </li>
             );
@@ -334,6 +338,8 @@ function AddMembersSheet({ open, onClose, conversationId, memberIds, onAdded }: 
 }
 
 function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open: boolean; onClose: () => void; detail: ConversationDetail; meId: string; onChanged: () => void; onLeft: () => void }) {
+  const t = useTranslations("messaging.people");
+  const tc = useTranslations("messaging.conversation");
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -345,7 +351,7 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
       await call();
       after();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "L’action n’a pas abouti. Réessayez.");
+      setError(e instanceof ApiError ? e.message : t("failed"));
     } finally {
       setBusy(null);
     }
@@ -355,27 +361,28 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
     <Sheet
       open={open}
       onClose={onClose}
-      title={`Participants (${detail.members.length})`}
+      title={t("title", { count: detail.members.length })}
       footer={
         confirmLeave ? (
           <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
             <Button variant="secondary" onClick={() => setConfirmLeave(false)}>
-              Annuler
+              {t("cancel")}
             </Button>
             <Button variant="danger" disabled={busy !== null} onClick={() => run("leave", () => api(`/api/groups/${detail.id}/leave`, { method: "POST" }), onLeft)}>
-              {busy === "leave" ? "Départ…" : "Oui, quitter le groupe"}
+              {busy === "leave" ? t("leaving") : t("confirm")}
             </Button>
           </div>
         ) : (
           <Button variant="secondary" size="lg" block onClick={() => setConfirmLeave(true)}>
-            Quitter le groupe
+            {t("leave")}
           </Button>
         )
       }
     >
       {confirmLeave && (
         <Alert tone="info">
-          Vous ne verrez plus les messages du groupe.{detail.isOwner ? " Le membre le plus ancien deviendra responsable du groupe." : ""}
+          {t("leaveInfo")}
+          {detail.isOwner ? ` ${t("leaveOwner")}` : ""}
         </Alert>
       )}
       <ul className="m-0 list-none divide-y divide-line rounded-lg border border-line p-0">
@@ -384,19 +391,19 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
             <Avatar initials={initials(m.name)} size="sm" />
             <span className="grid">
               <Link href={`/profil/${m.id}`} className="text-sm font-bold text-ink no-underline">
-                {m.id === meId ? "Vous" : m.name}
+                {m.id === meId ? tc("you") : m.name}
               </Link>
-              {m.owner && <span className="text-xs text-muted">Responsable du groupe</span>}
+              {m.owner && <span className="text-xs text-muted">{t("owner")}</span>}
             </span>
             {detail.isOwner && m.id !== meId ? (
               <Button
                 variant="ghost"
                 size="sm"
                 disabled={busy !== null}
-                aria-label={`Retirer ${m.name} du groupe`}
+                aria-label={t("removeLabel", { name: m.name })}
                 onClick={() => run(m.id, () => api(`/api/groups/${detail.id}/members/${m.id}`, { method: "DELETE" }), onChanged)}
               >
-                {busy === m.id ? "…" : "Retirer"}
+                {busy === m.id ? "…" : t("remove")}
               </Button>
             ) : (
               <span />

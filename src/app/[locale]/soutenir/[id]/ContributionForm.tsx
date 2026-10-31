@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Alert } from "@/components/ui/Display";
 import { formatFCFA } from "@/lib/format";
 
@@ -6,23 +7,23 @@ import { formatFCFA } from "@/lib/format";
  * is still to be chosen, so sponsors are told contributions open soon.
  */
 export function ContributionForm({ open, collected, contributors, companies }: { open: boolean; collected: number; contributors: number; companies: number }) {
+  const t = useTranslations("hackathons.sponsor");
   return (
-    <div className="grid gap-4.5 rounded-lg border-2 border-line-strong bg-raised p-5 shadow-lg">
+    <div className="grid gap-4.5 rounded-xl border-2 border-line-strong bg-raised p-5 shadow-pop">
       <div className="grid gap-1">
-        <p className="text-xs font-bold tracking-[0.08em] text-muted uppercase">Déjà collecté</p>
+        <p className="text-xs font-extrabold tracking-[0.1em] text-brand-text uppercase">{t("collected")}</p>
         <p className="font-display text-[34px] leading-10 font-bold tracking-[-0.03em] tabular">{formatFCFA(collected)}</p>
         <p className="text-sm text-muted tabular">
-          {contributors} contributeur{contributors > 1 ? "s" : ""}
-          {companies ? `, dont ${companies} entreprise${companies > 1 ? "s" : ""}` : ""}
+          {companies ? t("contributorsWithCompanies", { count: contributors, companies }) : t("contributorsCount", { count: contributors })}
         </p>
       </div>
       {open ? (
-        <Alert tone="info" title="Les contributions en ligne ouvrent bientôt.">
-          Le paiement par Mobile Money ou carte sera disponible ici. Aucun compte KABAD ne sera demandé.
+        <Alert tone="info" title={t("soonTitle")}>
+          {t("soonText")}
         </Alert>
       ) : (
-        <Alert tone="info" title="Ce défi est clôturé.">
-          La cagnotte n’accepte plus de contributions. Merci à tous les contributeurs !
+        <Alert tone="info" title={t("closedTitle")}>
+          {t("closedText")}
         </Alert>
       )}
     </div>

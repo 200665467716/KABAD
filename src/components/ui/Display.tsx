@@ -235,7 +235,8 @@ export function TagList({ items, className }: { items: string[]; className?: str
 export function TimeBlock({ time, length, className }: { time: ReactNode; length: ReactNode; className?: string }) {
   return (
     <span className={cn("grid size-18 shrink-0 content-center justify-items-center rounded-action bg-header text-on-header", className)}>
-      <b className="font-display text-xl leading-6 font-extrabold">{time}</b>
+      {/* "15 h" fits at 20px; "15:30" or "3:30 PM" drop to a smaller size instead of overflowing. */}
+      <b className={cn("font-display leading-6 font-extrabold whitespace-nowrap", typeof time === "string" && time.length > 4 ? (time.length > 5 ? "text-[13px]" : "text-base") : "text-xl")}>{time}</b>
       <span className="text-xs font-extrabold text-on-header-muted">{length}</span>
     </span>
   );

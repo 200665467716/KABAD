@@ -1,214 +1,268 @@
 import type { Metadata } from "next";
-import { Link } from "@/i18n/navigation";
-import { Suspense } from "react";
-import { prizeOf } from "@/components/features/ChallengeCard";
-import { MentoringProgress } from "@/components/features/MentoringProgress";
+import { getFormatter, getTranslations } from "next-intl/server";
+import { Suspense, type ReactNode } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink, IconButton } from "@/components/ui/Button";
-import { Avatar, AvatarGroup, Badge, CardLink, PrizeSplit, SectionHead } from "@/components/ui/Display";
-import { Icon } from "@/components/ui/Icon";
-import { formatDuration, initials } from "@/lib/format";
-import { sessionWhen, shortTime, timeLeft } from "@/lib/time";
-import { listChallenges } from "@/server/challenges";
+import { Avatar, AvatarGroup, Badge, Card, SectionLink, Ticket, TimeBlock } from "@/components/ui/Display";
+import { Icon, type IconName } from "@/components/ui/Icon";
+import { Link } from "@/i18n/navigation";
+import type { HackathonSummary } from "@/lib/domain-types";
+import { initials } from "@/lib/format";
 import { listTestApps } from "@/server/community-tests";
-import { db } from "@/server/db";
-import { eligibility, listRequests, myPairs } from "@/server/mentoring";
-import { listConversations, listInvitations } from "@/server/messaging";
+import { listHackathons, myEntries, myMissions } from "@/server/hackathons";
+import { recommendations } from "@/server/members";
+import { myBookings } from "@/server/mentoring";
+import { listInvitations } from "@/server/messaging";
 import { unreadNotifications } from "@/server/notifications";
 import { pageUser } from "@/server/page";
-import { listRooms } from "@/server/rooms";
-import { salonsEnabled } from "@/lib/features";
+import { listProjects } from "@/server/rise";
 
-export const metadata: Metadata = { title: "Accueil" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations("home"))("title") };
+}
 
-const names = (list: string[]) => (list.length <= 1 ? list.join("") : `${list.slice(0, -1).join(", ")} et ${list[list.length - 1]}`);
+const DAY = 86_400_000;
 
-function TodoRow({ href, avatar, title, text, trailing, className }: { href: string; avatar: React.ReactNode; title: string; text: string; trailing?: React.ReactNode; className?: string }) {
+function TodoRow({ href, icon, title, text }: { href: string; icon: IconName; title: string; text: string }) {
   return (
-    <Link href={href} className={`flex min-h-14 items-center gap-3 px-4 py-3 text-ink no-underline ${className ?? ""}`}>
-      {avatar}
+    <Link href={href} className="flex min-h-14 items-center gap-3 px-3.5 py-3 text-ink no-underline">
+      <Avatar initials={<Icon name={icon} size={18} />} size="md" tone="brand" />
       <span className="grid min-w-0 flex-1">
-        <span className="font-bold">{title}</span>
-        <span className="truncate text-sm text-muted">{text}</span>
+        <span className="font-extrabold">{title}</span>
+        <span className="truncate text-[13px] text-muted">{text}</span>
       </span>
-      {trailing ?? <Icon name="chevron" size={18} className="text-subtle" />}
+      <Icon name="chevron" size={18} className="text-subtle" />
     </Link>
   );
 }
 
+/** "48 h · équipes de 2 à 5 · instructeurs". */
+async function hackathonLine(h: HackathonSummary) {
+  const t = await getTranslations("home.hackathonLine");
+  const hours = Math.round((new Date(h.endsAt).getTime() - new Date(h.startsAt).getTime()) / 3600_000);
+  const team = h.teamMax === 1 ? t("solo") : h.teamMin === 1 ? t("soloOrTeam") : t("teams", { min: h.teamMin, max: h.teamMax });
+  return [t("hours", { hours }), team, h.instructors > 0 ? t("instructors") : null].filter(Boolean).join(" · ");
+}
+
 async function HomeData() {
   const user = await pageUser("/accueil");
-  const [pairs, e, challenges, invitations, requests, tests, conversations, bell, mySubmissions, rooms] = await Promise.all([
-    myPairs(user.id),
-    eligibility(user.id),
-    listChallenges(),
-    listInvitations(user.id),
-    listRequests(user.id),
+  const [t, format] = await Promise.all([getTranslations("home"), getFormatter()]);
+  const [bookings, hackathons, entries, projects, tests, people, invitations, bell, missions] = await Promise.all([
+    myBookings(user.id),
+    listHackathons(user.id),
+    myEntries(user.id),
+    listProjects(user.id),
     listTestApps(user.id),
-    listConversations(user.id),
+    recommendations(user.id),
+    listInvitations(user.id),
     unreadNotifications(user.id),
-    db.submission.findMany({ where: { userId: user.id }, select: { challengeId: true } }),
-    salonsEnabled ? listRooms(user.id) : null,
+    user.seniorVerifiedAt ? myMissions(user.id) : Promise.resolve([]),
   ]);
-  const first = user.name.split(" ")[0];
-  const pair = pairs.find((p) => p.iAm === "MENTEE") ?? pairs[0] ?? null;
-  const other = pair ? (pair.iAm === "MENTOR" ? pair.mentee : pair.mentor) : null;
-  const open = challenges.filter((c) => c.status === "OPEN");
-  const mine = new Set(mySubmissions.map((s) => s.challengeId));
-  const current = open.find((c) => mine.has(c.id)) ?? open[0] ?? null;
+  const now = new Date();
+  const next = bookings.upcoming[0] ?? null;
+  const other = next ? (next.iAm === "MENTEE" ? next.mentor : next.mentee) : null;
+  const project = projects[0] ?? null;
+  const open = hackathons.filter((h) => h.status === "OPEN" && new Date(h.endsAt) > now).slice(0, 2);
+  const entry = entries.find((e) => e.status === "OPEN") ?? null;
+  const toTest = tests.toTest.filter((a) => a.slotsLeft > 0).slice(0, 2);
+  const proposed = missions.filter((m) => m.status === "PROPOSED");
+  const first = user.name.split(/\s+/)[0];
   const received = invitations.received;
-  const toTest = tests.toTest.find((t) => !t.myReport && t.slotsLeft > 0) ?? null;
-  const unreadConversations = conversations.filter((c) => c.unread > 0).slice(0, 2);
+
+  const todos: ReactNode[] = [];
+  if (received.length > 0) {
+    const names = received.slice(0, 2).map((i) => i.from.name.split(" ")[0]);
+    todos.push(
+      <TodoRow key="inv" href="/messages/invitations" icon="userPlus" title={t("todoInvitations", { count: received.length })} text={names.length > 1 ? t("todoInvitationsText", { names: format.list(names) }) : t("todoInvitationsTextOne", { name: names[0] })} />,
+    );
+  }
+  if (bookings.toAnswer.length > 0) todos.push(<TodoRow key="req" href="/mentorat/demandes" icon="clock" title={t("todoRequests", { count: bookings.toAnswer.length })} text={t("todoRequestsText")} />);
+  if (proposed.length > 0) todos.push(<TodoRow key="mis" href={`/hackathons/missions/${proposed[0].id}`} icon="trophy" title={t("todoMission", { count: proposed.length })} text={t("todoMissionText")} />);
 
   return (
     <>
       <TopBar
         leading={
-          <span className="lg:hidden">
+          <Link href="/profil" aria-label={t("myProfile")} className="grid size-11 shrink-0 place-items-center no-underline lg:hidden">
             <Avatar initials={initials(user.name)} size="sm" tone="accent" />
-          </span>
+          </Link>
         }
-        title={`Bonjour ${first}`}
-        subtitle={pair?.nextSessionAt && other ? <span className="hidden lg:inline">Prochaine séance avec {other.name.split(" ")[0]} : {sessionWhen(pair.nextSessionAt)}.</span> : undefined}
+        title={t("hello", { name: first })}
+        subtitle={format.dateTime(now, { weekday: "short", day: "numeric", month: "short" })}
         actions={
           <>
-            <IconButton icon="bell" label={bell ? `Notifications, ${bell} nouvelle${bell > 1 ? "s" : ""}` : "Notifications"} dot={bell > 0} href="/notifications" className="lg:hidden" />
-            <Link href={`/profil/${user.id}`} aria-label="Mon profil" className="lg:hidden">
-              <Icon name="user" />
-            </Link>
+            <IconButton icon="search" label={t("search")} href="/membres" />
+            <IconButton icon="bell" label={bell ? t("notificationsNew", { count: bell }) : t("notifications")} dot={bell > 0} href="/notifications" className="lg:hidden" />
           </>
         }
       />
       <Page className="lg:grid-cols-2 lg:gap-6">
-        {pair && other ? (
-          <section aria-labelledby="next" className="grid gap-3.5 rounded-lg bg-brand p-4 text-on-brand shadow-sm lg:col-span-2 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-5 lg:p-5">
-            <div className="grid gap-3.5 lg:flex lg:items-center lg:gap-4">
-              <p id="next" className="text-xs font-bold tracking-[0.08em] uppercase opacity-80 lg:hidden">
-                {pair.nextSessionAt ? "Prochaine séance de mentorat" : "Votre binôme"}
-              </p>
-              <div className="flex items-center gap-3 lg:gap-4">
-                <Avatar initials={initials(other.name)} tone="solidAccent" className="lg:size-14 lg:text-lg" />
-                <div className="grid">
-                  <span className="font-bold lg:font-display lg:text-xl">{other.name}</span>
-                  <span className="text-sm opacity-85">
-                    {pair.nextSessionAt ? `${sessionWhen(pair.nextSessionAt)} · ` : "Prochaine séance à planifier · "}
-                    {pair.project}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-[1fr_auto] gap-2 lg:flex">
-              <ButtonLink href={pair.visioUrl} variant="accent" icon="video" target="_blank" rel="noreferrer">
-                Rejoindre la visio
-              </ButtonLink>
-              <ButtonLink href="/mentorat" variant="onBrand">
-                Espace
-              </ButtonLink>
-            </div>
-          </section>
-        ) : (
-          <section className="grid gap-3 rounded-lg bg-brand p-4 text-on-brand lg:col-span-2 lg:p-5">
-            <p className="font-display text-lg font-bold">{user.role === "SENIOR" ? "Accompagnez un junior sur son vrai projet" : "Trouvez un mentor pour votre projet"}</p>
-            <p className="text-sm opacity-85">
-              {user.role === "SENIOR" ? "Les juniors vous trouvent dans « Trouver un mentor ». Leurs demandes arrivent dans votre espace mentorat." : "Un senior vous accompagne en visio. 6 h confirmées ouvrent les défis à cagnotte."}
-            </p>
-            <ButtonLink href={user.role === "SENIOR" ? "/mentorat" : "/mentorat/mentors"} variant="accent" className="justify-self-start">
-              {user.role === "SENIOR" ? "Mon espace mentorat" : "Trouver un mentor"}
-            </ButtonLink>
-          </section>
-        )}
+        {todos.length > 0 && <div className="divide-y-2 divide-line overflow-hidden rounded-lg border-2 border-line-strong bg-raised lg:col-span-2">{todos}</div>}
 
-        {current && (
-          <section aria-labelledby="defi" className="grid content-start gap-3">
-            <SectionHead id="defi" title={mine.has(current.id) ? "Votre défi en cours" : "Défi ouvert"} action={<Link href="/defis" className="text-sm font-bold text-brand-text no-underline">Tous les défis</Link>} />
-            <CardLink href={`/defis/${current.id}`}>
-              <div className="flex items-center justify-between gap-2">
-                <Badge tone="accent">{current.kind === "LOT" ? "Lot" : current.kind === "SPONSORISE" ? "Sponsorisé" : "Cagnotte"}</Badge>
-                <span className="text-sm text-muted tabular">Clôture dans {timeLeft(current.closesAt)}</span>
-              </div>
-              <h3 className="font-display text-lg font-bold">{current.title}</h3>
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-display text-xl font-bold tracking-[-0.02em] tabular">{prizeOf(current)}</span>
-                <span className="text-sm text-muted tabular">
-                  {current.participants} participant{current.participants > 1 ? "s" : ""}
+        {next && other ? (
+          <Card featured className="gap-3.5 lg:col-span-2" aria-labelledby="home-next">
+            <div className="flex items-center justify-between gap-3">
+              <p id="home-next" className="text-xs font-extrabold tracking-[0.1em] text-brand-text uppercase">
+                {next.iAm === "MENTEE" ? t("session.kicker") : t("session.kickerMentor")}
+              </p>
+              <Badge tone="success">{t("session.confirmed")}</Badge>
+            </div>
+            <div className="flex items-center gap-3.5">
+              <TimeBlock time={format.dateTime(new Date(next.startsAt), { hour: "numeric", minute: "2-digit" })} length={t("session.length", { minutes: next.minutes })} />
+              <div className="grid min-w-0 gap-1.5">
+                <Link href={`/mentorat/seances/${next.id}`} className="text-md font-extrabold text-ink no-underline">
+                  {next.topic}
+                </Link>
+                <span className="flex items-center gap-2 text-sm text-muted">
+                  <Avatar initials={initials(other.name)} size="sm" tone="neutral" />
+                  <span>
+                    <b className="text-ink">{other.name}</b>
+                    {other.city ? ` · ${other.city}` : ""}
+                  </span>
                 </span>
               </div>
-              {current.kind !== "LOT" && <PrizeSplit total={current.pot} labels={["Gagnant", "Mentor", "KABAD"]} className="hidden lg:grid" />}
-              {current.requiresMentoring && user.role === "JUNIOR" && <MentoringProgress eligibility={e} />}
-            </CardLink>
+            </div>
+            {next.meetingUrl ? (
+              <a href={next.meetingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-13 items-center justify-center gap-2 rounded-action bg-brand px-6 font-extrabold text-on-brand no-underline hover:bg-brand-hover">
+                <Icon name="video" size={18} />
+                {t("session.joinIn", { when: format.relativeTime(new Date(next.startsAt), now) })}
+              </a>
+            ) : (
+              <ButtonLink href={`/mentorat/seances/${next.id}`} size="lg">
+                {t("session.details")}
+              </ButtonLink>
+            )}
+          </Card>
+        ) : (
+          <Card className="gap-3 lg:col-span-2">
+            <p className="text-xs font-extrabold tracking-[0.1em] text-brand-text uppercase">{t("session.kicker")}</p>
+            <p className="font-display text-md font-extrabold uppercase">{t("noSession.title")}</p>
+            <p className="text-sm text-muted">{t("noSession.text")}</p>
+            <ButtonLink href="/mentorat" size="lg">
+              {t("noSession.cta")}
+            </ButtonLink>
+          </Card>
+        )}
+
+        <section aria-labelledby="home-rise" className="grid content-start gap-3">
+          <SectionLink id="home-rise" title={t("rise.title")} href="/rise-up" label={t("rise.seeAll")} />
+          {project ? (
+            <div className="grid gap-2.5 rounded-lg border-2 border-line-strong bg-accent p-4 text-[var(--ink)]">
+              <div className="flex items-center justify-between gap-3">
+                {project.event?.live ? (
+                  <Badge tone="live">{t("rise.live")}</Badge>
+                ) : project.event ? (
+                  <Badge tone="live">{t("rise.next", { when: format.dateTime(new Date(project.event.startsAt), { weekday: "short", hour: "numeric", minute: "2-digit" }) })}</Badge>
+                ) : (
+                  <span />
+                )}
+                <Icon name="rise" className="size-10" />
+              </div>
+              <Link href={`/rise-up/${project.id}`} className="text-md font-extrabold text-[var(--ink)] no-underline">
+                {project.name}
+              </Link>
+              <p className="text-sm font-semibold text-[var(--maize-deep)]">{project.summary}</p>
+              <div className="flex items-center gap-2.5">
+                <AvatarGroup className="[&>*]:shadow-[0_0_0_2px_var(--maize)]">
+                  {project.avatars.map((a) => (
+                    <Avatar key={a.id} initials={initials(a.name)} size="sm" tone="brand" />
+                  ))}
+                </AvatarGroup>
+                <span className="text-[13px] font-extrabold">
+                  {t("rise.stats", { count: project.members })}
+                  {project.countries > 0 ? ` · ${t("rise.countries", { count: project.countries })}` : ""}
+                </span>
+              </div>
+              <ButtonLink href={project.event?.live ? `/rise-up/${project.id}/evenements/${project.event.id}` : `/rise-up/${project.id}`} variant="ink">
+                {project.event?.live ? t("rise.joinRoom") : t("rise.open")}
+              </ButtonLink>
+            </div>
+          ) : (
+            <Card className="gap-3">
+              <p className="text-sm text-muted">{t("rise.empty")}</p>
+              <ButtonLink href="/rise-up/nouveau" variant="secondary">
+                {t("rise.create")}
+              </ButtonLink>
+            </Card>
+          )}
+        </section>
+
+        <section aria-labelledby="home-hack" className="grid content-start gap-3">
+          <SectionLink id="home-hack" title={t("hackathons.title")} href="/hackathons" label={t("hackathons.seeAll")} />
+          {entry && (
+            <Link href={`/hackathons/${entry.hackathonId}/equipe`} className="flex items-center gap-3 rounded-lg bg-header px-3.5 py-3 text-on-header no-underline">
+              <Avatar initials={initials(entry.team)} size="md" tone="accent" square />
+              <span className="grid min-w-0 flex-1">
+                <span className="font-extrabold">{entry.solo ? t("hackathons.myTeamSolo") : t("hackathons.myTeam", { team: entry.team })}</span>
+                <span className="truncate text-[13px] text-on-header-muted">{t("hackathons.dueIn", { title: entry.title, when: format.relativeTime(new Date(entry.endsAt), now) })}</span>
+              </span>
+              <Icon name="chevron" size={18} />
+            </Link>
+          )}
+          {open.length === 0 && <p className="text-sm text-muted">{t("hackathons.empty")}</p>}
+          {await Promise.all(
+            open.map(async (h) => {
+              const days = Math.max(0, Math.ceil((new Date(h.startsAt).getTime() - now.getTime()) / DAY));
+              const started = new Date(h.startsAt) <= now;
+              return (
+                <Ticket key={h.id} href={`/hackathons/${h.id}`} before={started ? "" : t("hackathons.in")} value={started ? "●" : days} after={started ? t("hackathons.now") : t("hackathons.days", { count: days })}>
+                  <span className="text-xs font-extrabold tracking-[0.08em] text-brand-text uppercase">{[t(`formats.${h.format}`), h.city].filter(Boolean).join(" · ")}</span>
+                  <span className="font-display text-base leading-[21px] font-bold">{h.title}</span>
+                  <span className="text-[13px] text-muted">{t.rich("hackathons.by", { name: h.organizerName, b: (c) => <b className="text-ink">{c}</b> })}</span>
+                  <span className="text-[13px] text-muted">{await hackathonLine(h)}</span>
+                </Ticket>
+              );
+            }),
+          )}
+        </section>
+
+        {toTest.length > 0 && (
+          <section aria-labelledby="home-tests" className="grid content-start gap-3">
+            <SectionLink id="home-tests" title={t("tests.title")} href="/tests" label={t("tests.seeAll")} />
+            <div className="divide-y-2 divide-line overflow-hidden rounded-lg border-2 border-line-strong bg-raised">
+              {toTest.map((a) => (
+                <div key={a.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5">
+                  <div className="grid min-w-0 gap-0.5">
+                    <span className="font-extrabold">{a.name}</span>
+                    <span className="truncate text-[13px] text-muted">{t("tests.by", { name: a.owner.name })}</span>
+                    <span className="text-xs font-extrabold text-brand-text">{t("tests.places", { count: a.slotsLeft, minutes: a.minutes })}</span>
+                  </div>
+                  <ButtonLink href={`/tests/${a.id}`} variant="secondary" size="sm" aria-label={t("tests.testAria", { name: a.name })}>
+                    {t("tests.test")}
+                  </ButtonLink>
+                </div>
+              ))}
+            </div>
           </section>
         )}
 
-        <section aria-labelledby="todo" className="grid content-start gap-3">
-          <SectionHead id="todo" title="À faire" />
-          <div className="divide-y divide-line rounded-lg border-2 border-line-strong bg-raised">
-            {received.length > 0 && (
-              <TodoRow
-                href="/messages?onglet=invitations"
-                avatar={
-                  <AvatarGroup>
-                    {received.slice(0, 3).map((i) => (
-                      <Avatar key={i.id} initials={initials(i.from.name)} size="sm" />
-                    ))}
-                  </AvatarGroup>
-                }
-                title={`${received.length} invitation${received.length > 1 ? "s" : ""} reçue${received.length > 1 ? "s" : ""}`}
-                text={`${names(received.slice(0, 3).map((i) => i.from.name.split(" ")[0]))} veu${received.length > 1 ? "lent" : "t"} échanger`}
-              />
-            )}
-            {requests.received.length > 0 && (
-              <TodoRow
-                href="/mentorat#demandes"
-                avatar={<Avatar initials={<Icon name="user" size={16} />} size="sm" tone="accent" />}
-                title={`${requests.received.length} demande${requests.received.length > 1 ? "s" : ""} de mentorat`}
-                text={names(requests.received.map((r) => r.mentee.name.split(" ")[0]))}
-              />
-            )}
-            {pair?.sessions.some((s) => (pair.iAm === "MENTOR" ? !s.confirmedByMentor : !s.confirmedByMentee)) && (
-              <TodoRow
-                href={`/mentorat/seances/${pair.sessions.find((s) => (pair.iAm === "MENTOR" ? !s.confirmedByMentor : !s.confirmedByMentee))!.id}`}
-                avatar={<Avatar initials={<Icon name="clock" size={16} />} size="sm" tone="brand" />}
-                title="Une séance à confirmer"
-                text={`Elle compte quand vous l’avez confirmée tous les deux · ${user.role === "JUNIOR" ? `${formatDuration(e.confirmed)} confirmées` : pair.project}`}
-              />
-            )}
-            {toTest && (
-              <TodoRow href={`/tests/${toTest.id}`} avatar={<Avatar initials={<Icon name="check" size={16} />} size="sm" tone="success" />} title={`Tester « ${toTest.name} »`} text={`Application de ${toTest.owner.name.split(" ")[0]} · ${toTest.minutes} min`} />
-            )}
-            {unreadConversations.map((c) => (
-              <TodoRow
-                key={c.id}
-                href={`/messages/${c.id}`}
-                avatar={<Avatar initials={c.kind === "GROUP" ? <Icon name="users" size={16} /> : initials(c.title)} size="sm" tone={c.kind === "GROUP" ? "neutral" : "brand"} square={c.kind === "GROUP"} />}
-                title={c.kind === "GROUP" ? `Groupe ${c.title}` : c.title}
-                text={c.last ? `${c.last.authorName && c.kind === "GROUP" ? `${c.last.authorName.split(" ")[0]} : ` : ""}${c.last.body}` : ""}
-                trailing={
-                  <span className="grid justify-items-end gap-1">
-                    <span className="text-xs text-subtle tabular">{shortTime(c.lastMessageAt)}</span>
-                    <span className="h-5 min-w-5 rounded-full bg-brand px-1.5 text-center text-xs leading-5 text-on-brand tabular" aria-label={`${c.unread} non lus`}>
-                      {c.unread}
-                    </span>
+        {people.length > 0 && (
+          <section aria-labelledby="home-devs" className="grid content-start gap-3">
+            <SectionLink id="home-devs" title={t("devs.title")} href="/membres" label={t("devs.seeAll")} />
+            <div className="no-scrollbar -mr-4 flex gap-3 overflow-x-auto pr-4 lg:mr-0 lg:pr-0">
+              {people.slice(0, 4).map((p) => (
+                <Link key={p.id} href={`/profil/${p.id}`} className="grid w-40 shrink-0 content-start justify-items-start gap-2.5 rounded-lg border-2 border-line-strong bg-raised p-3.5 text-ink no-underline">
+                  <Avatar initials={initials(p.name)} size="lg" tone={p.verified ? "brand" : "neutral"} />
+                  <span className="grid gap-0.5">
+                    <span className="font-extrabold">{p.name}</span>
+                    <span className="text-[13px] text-muted">{[p.headline, p.city].filter(Boolean).join(" · ")}</span>
                   </span>
-                }
-              />
-            ))}
-            {rooms?.live.slice(0, 2).map((r) => (
-              <TodoRow key={r.id} href={`/salons/${r.id}`} avatar={<Avatar initials={<Icon name="radio" size={16} />} size="sm" tone="accent" />} title={`En direct : ${r.title}`} text={`Salon vocal de ${r.host.name} · ${r.listeners} présent${r.listeners > 1 ? "s" : ""}`} />
-            ))}
-            {rooms && rooms.live.length === 0 && rooms.upcoming[0] && (
-              <TodoRow href={`/salons/${rooms.upcoming[0].id}`} avatar={<Avatar initials={<Icon name="radio" size={16} />} size="sm" tone="neutral" />} title={`Salon vocal : ${rooms.upcoming[0].title}`} text={`${sessionWhen(rooms.upcoming[0].startsAt)} · avec ${rooms.upcoming[0].host.name}`} />
-            )}
-            <TodoRow href="/membres" avatar={<Avatar initials={<Icon name="userPlus" size={16} />} size="sm" tone="neutral" />} title="Rencontrer des développeurs" text="Cherchez par technologie, ville ou pays, et invitez" />
-          </div>
-        </section>
+                  {p.verified && <Badge tone="brand">{t("devs.mentor")}</Badge>}
+                  <span className="text-xs font-extrabold text-brand-text">{p.why}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </Page>
     </>
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const t = await getTranslations("home");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement…</p>}>
+    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
       <HomeData />
     </Suspense>
   );

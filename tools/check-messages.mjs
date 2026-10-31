@@ -7,8 +7,9 @@ let problems = 0;
 for (const f of files) {
   const fr = new Set(keys(JSON.parse(readFileSync(`messages/${f}`, "utf8"))));
   const en = new Set(keys(JSON.parse(readFileSync(`messages/${f.replace(/^fr/, "en")}`, "utf8"))));
-  for (const k of fr) if (!en.has(k)) (problems++, console.error(`Manque en anglais : ${f} → ${k}`));
-  for (const k of en) if (!fr.has(k)) (problems++, console.error(`Manque en français : ${f} → ${k}`));
+  const missing = [...[...fr].filter((k) => !en.has(k)).map((k) => `Manque en anglais : ${f} → ${k}`), ...[...en].filter((k) => !fr.has(k)).map((k) => `Manque en français : ${f} → ${k}`)];
+  missing.forEach((m) => console.error(m));
+  problems += missing.length;
 }
 if (problems) process.exit(1);
 console.log("Dictionnaires FR et EN alignés.");

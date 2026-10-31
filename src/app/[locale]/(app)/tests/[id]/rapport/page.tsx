@@ -15,8 +15,8 @@ async function ReportData({ params }: { params: Promise<{ id: string }> }) {
   const user = await pageUser(`/tests/${id}/rapport`);
   const t = await orNotFound(getTestApp(user.id, id));
   if (!t) notFound();
-  // The owner reads reports; a tester with a pending or validated report has nothing left to send.
-  if (t.owner.id === user.id || t.myReport === "SUBMITTED" || t.myReport === "VALIDATED" || (t.slotsLeft === 0 && !t.myReport)) redirect({ href: `/tests/${id}`, locale: await getLocale() });
+  // The owner reads reports; only a tester who joined the group reports, once (again after a refusal).
+  if (t.owner.id === user.id || !t.joined || t.myReport === "SUBMITTED" || t.myReport === "VALIDATED") redirect({ href: `/tests/${id}`, locale: await getLocale() });
   return <ReportForm app={t} />;
 }
 

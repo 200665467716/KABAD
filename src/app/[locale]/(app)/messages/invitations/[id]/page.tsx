@@ -1,13 +1,25 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/server/auth";
 import { getInvitation, orNotFound } from "@/server/messaging";
 import { InvitationView } from "./InvitationView";
 
-export const metadata: Metadata = { title: "Invitation" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("messaging.invitation");
+  return { title: t("metaTitle") };
+}
+
+async function Loading() {
+  const t = await getTranslations("messaging.invitation");
+  return (
+    <p className="p-6 text-muted" role="status">
+      {t("loading")}
+    </p>
+  );
+}
 
 async function InvitationData({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,7 +33,7 @@ async function InvitationData({ params }: { params: Promise<{ id: string }> }) {
 
 export default function InvitationPage({ params }: PageProps<"/[locale]/messages/invitations/[id]">) {
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement de l’invitation…</p>}>
+    <Suspense fallback={<Loading />}>
       <InvitationData params={params} />
     </Suspense>
   );

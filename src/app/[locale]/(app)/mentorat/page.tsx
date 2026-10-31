@@ -1,164 +1,148 @@
 import type { Metadata } from "next";
-import { Link } from "@/i18n/navigation";
+import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
-import { MentoringProgress } from "@/components/features/MentoringProgress";
-import { SessionJournal } from "@/components/features/SessionJournal";
+import { Link } from "@/i18n/navigation";
 import { Page, TopBar } from "@/components/shell/TopBar";
-import { ButtonLink, IconButton } from "@/components/ui/Button";
-import { Avatar, AvatarGroup, Card, Overline, SectionHead } from "@/components/ui/Display";
+import { Card } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
-import { formatDuration, initials } from "@/lib/format";
-import { longDate } from "@/lib/time";
-import type { Eligibility, MentorRequestView, PairView } from "@/lib/domain-types";
-import { eligibility, listRequests, myPairs } from "@/server/mentoring";
+import { BookingSummary } from "@/components/features/mentoring/BookingSummary";
+import { MentorCard } from "@/components/features/mentoring/MentorCard";
+import { cn } from "@/lib/cn";
+import { BADGE_DOMAINS, myBadgeRequest } from "@/server/badges";
+import { listMentors, myBookings } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
-import { EndPairButton, NextSessionPlanner, ReceivedRequests, SentRequestList } from "./MentoringActions";
 
-export const metadata: Metadata = { title: "Mentorat" };
+/** A session still to come or running. */
+const notOver = (iso: string, minutes: number) => new Date(iso).getTime() + minutes * 60_000 > Date.now();
 
-function CapsulesLink() {
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("mentoring");
+  return { title: t("title") };
+}
+
+type Search = { domaine?: string; q?: string };
+
+const norm = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase();
+
+function Row({ href, title, text, icon }: { href: string; title: string; text: string; icon: "users" | "calendar" | "clock" }) {
   return (
-    <Link href="/capsules" className="mt-2 flex items-center gap-3 rounded-lg border-2 border-line-strong bg-raised px-4 py-3 text-ink no-underline">
-      <Icon name="capsule" className="text-brand-text" />
-      <span className="grid flex-1">
-        <span className="font-bold">Capsules des seniors</span>
-        <span className="text-sm text-muted">Ce qu’ils ont appris, en moins de 5 minutes</span>
+    <Link href={href} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-3.5 text-ink no-underline hover:bg-bg [&+&]:border-t-2 [&+&]:border-line">
+      <span className="grid size-11 place-items-center rounded-action bg-brand-wash text-brand-text">
+        <Icon name={icon === "calendar" ? "clock" : icon} size={20} />
       </span>
-      <Icon name="chevron" size={18} className="text-subtle" />
+      <span className="grid min-w-0">
+        <b className="text-[15px]">{title}</b>
+        <span className="truncate text-[13px] text-muted">{text}</span>
+      </span>
+      <Icon name="chevron" size={18} />
     </Link>
   );
 }
 
-function PairPanel({ pair, eligibility: e }: { pair: PairView; eligibility: Eligibility | null }) {
-  const other = pair.iAm === "MENTOR" ? pair.mentee : pair.mentor;
-  return (
-    <>
-      <Card className="content-start gap-3">
-        <div className="flex items-center justify-between">
-          <Overline>{pair.iAm === "MENTOR" ? `Projet de ${other.name}` : "Projet"}</Overline>
-          {pair.repo && (
-            <a href={`https://${pair.repo}`} className="inline-flex items-center gap-1 text-sm font-bold text-brand-text no-underline" target="_blank" rel="noreferrer">
-              <Icon name="code" size={16} />
-              Dépôt
-            </a>
-          )}
-        </div>
-        <h2 className="font-display text-lg font-bold">{pair.project}</h2>
-        {e && pair.iAm === "MENTEE" ? (
-          <MentoringProgress eligibility={e} variant="pair" />
-        ) : (
-          <p className="text-sm text-muted">
-            Temps confirmé par vous deux : <b className="text-ink tabular">{formatDuration(pair.confirmedMinutes)}</b>
-          </p>
-        )}
-        <NextSessionPlanner pairId={pair.id} at={pair.nextSessionAt} />
-        <ButtonLink href={pair.visioUrl} icon="video" block target="_blank" rel="noreferrer">
-          Démarrer une séance en visio
-        </ButtonLink>
-        <p className="text-xs text-muted">Écran partagé sur Jitsi Meet. Pas de durée imposée : vous fixez le rythme à deux.</p>
-      </Card>
-
-      <section className="grid content-start gap-2" aria-labelledby={`journal-${pair.id}`}>
-        <SectionHead
-          id={`journal-${pair.id}`}
-          title="Journal des séances"
-          action={
-            <Link href={`/mentorat/seances/nouvelle?binome=${pair.id}`} className="text-sm font-bold text-brand-text no-underline">
-              Noter une séance
-            </Link>
-          }
-        />
-        <SessionJournal sessions={pair.sessions} />
-        <EndPairButton pairId={pair.id} other={other.name} />
-        <CapsulesLink />
-      </section>
-    </>
-  );
-}
-
-function SentRequests({ sent }: { sent: MentorRequestView[] }) {
-  if (sent.length === 0) return null;
-  return <SentRequestList sent={sent} />;
-}
-
-async function MentoringData() {
+async function MentoringData({ searchParams }: { searchParams: Promise<Search> }) {
   const user = await pageUser("/mentorat");
-  const [pairs, requests, e] = await Promise.all([myPairs(user.id), listRequests(user.id), eligibility(user.id)]);
-  const asMentee = pairs.filter((p) => p.iAm === "MENTEE");
-  const asMentor = pairs.filter((p) => p.iAm === "MENTOR");
-  const single = pairs.length === 1 ? pairs[0] : null;
-  const other = single ? (single.iAm === "MENTOR" ? single.mentee : single.mentor) : null;
+  const { domaine, q } = await searchParams;
+  const [t, mentors, bookings, badge] = await Promise.all([getTranslations("mentoring"), listMentors({ domain: domaine, excludeId: user.id }), myBookings(user.id), myBadgeRequest(user.id)]);
+  const tz = user.timeZone;
+  const query = q?.trim() ? norm(q.trim()) : null;
+  const shown = query ? mentors.filter((m) => norm([m.name, m.city, m.headline, ...m.domains, ...m.technologies].join(" ")).includes(query)) : mentors;
+  const isMentor = user.seniorVerifiedAt !== null;
+  const mine = bookings.asMentee.filter((b) => (b.status === "PENDING" || b.status === "ACCEPTED") && notOver(b.startsAt, b.minutes));
+  const upcomingAsMentor = bookings.upcoming.filter((b) => b.iAm === "MENTOR").length;
+  const chip = (href: string, label: string, on: boolean) => (
+    <Link key={href} href={href} aria-current={on ? "true" : undefined} className={cn("inline-flex h-11 shrink-0 items-center rounded-full border-2 border-line-strong px-4 text-sm font-extrabold whitespace-nowrap no-underline", on ? "bg-ink text-raised" : "bg-raised text-ink")}>
+      {label}
+    </Link>
+  );
 
   return (
-    <>
-      <TopBar
-        leading={
-          single && other ? (
-            <AvatarGroup className="mr-1">
-              <Avatar initials={initials(single.mentor.name)} size="sm" />
-              <Avatar initials={initials(single.mentee.name)} size="sm" tone="accent" />
-            </AvatarGroup>
-          ) : undefined
-        }
-        title={single && other ? `Binôme avec ${other.name.split(" ")[0]}` : "Mentorat"}
-        subtitle={single ? `Depuis le ${longDate(single.since)}` : undefined}
-        actions={<IconButton icon="search" label="Trouver un mentor" href="/mentorat/mentors" />}
-      />
-      <Page className="lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-6">
-        {requests.received.length > 0 && (
-          <section id="demandes" className="grid gap-2 lg:col-span-2" aria-labelledby="demandes-titre">
-            <SectionHead id="demandes-titre" title="Demandes de mentorat reçues" />
-            <ReceivedRequests requests={requests.received} />
-          </section>
-        )}
-        {pairs.length === 0 && (
-          <div className="grid content-start gap-3 lg:col-span-2">
-            <SentRequests sent={requests.sent} />
-            {user.role === "SENIOR" && !user.seniorVerifiedAt ? (
-              <Card className="gap-2">
-                <h2 className="font-display text-lg font-bold">Statut Senior en cours de vérification</h2>
-                <p className="text-sm text-muted">L’équipe KABAD vérifie votre profil GitHub ou LinkedIn. Dès que c’est fait, vous apparaissez dans « Trouver un mentor » et vous recevez une notification.</p>
-                <ButtonLink href="/inscription/profil" variant="secondary" className="justify-self-start">
-                  Vérifier mon profil
-                </ButtonLink>
-              </Card>
-            ) : user.role === "SENIOR" ? (
-              <Card className="gap-2">
-                <h2 className="font-display text-lg font-bold">Aucun binôme pour l’instant</h2>
-                <p className="text-sm text-muted">
-                  {user.mentorCapacity > 0 ? "Les juniors vous trouvent dans « Trouver un mentor ». Vous recevrez leurs demandes ici." : "Vous avez indiqué 0 place : les juniors ne peuvent pas vous écrire. Changez-le dans votre profil."}
-                </p>
-              </Card>
-            ) : (
-              <Card className="gap-3">
-                <h2 className="font-display text-lg font-bold">Trouvez votre mentor</h2>
-                <p className="text-sm text-muted">Un senior vous accompagne sur votre vrai projet, en visio. Les défis à cagnotte demandent 6 h de mentorat confirmées.</p>
-                <MentoringProgress eligibility={e} />
-                <ButtonLink href="/mentorat/mentors" icon="search">
-                  Trouver un mentor
-                </ButtonLink>
-              </Card>
-            )}
-            <CapsulesLink />
+    <Page>
+      {isMentor && (
+        <section aria-labelledby="m-mentor" className="grid gap-3">
+          <h2 id="m-mentor" className="font-display text-md font-extrabold uppercase">
+            {t("list.mentorSide")}
+          </h2>
+          <div className="overflow-hidden rounded-lg border-2 border-line-strong bg-raised">
+            <Row href="/mentorat/demandes" icon="clock" title={t("list.requests")} text={`${t("list.requestsCount", { count: bookings.toAnswer.length })} · ${t("list.upcomingAsMentor", { count: upcomingAsMentor })}`} />
+            <Row href="/mentorat/disponibilites" icon="calendar" title={t("list.availability")} text={t("list.availabilityText")} />
+          </div>
+        </section>
+      )}
+
+      {mine.length > 0 && (
+        <section aria-labelledby="m-mine" className="grid gap-3">
+          <h2 id="m-mine" className="font-display text-md font-extrabold uppercase">
+            {t("list.mySessions")}
+          </h2>
+          {mine.map((b) => (
+            <Link key={b.id} href={`/mentorat/seances/${b.id}`} className="rounded-lg border-2 border-line-strong bg-raised p-4 text-ink no-underline">
+              <BookingSummary startsAt={b.startsAt} minutes={b.minutes} topic={b.topic} otherName={b.mentor.name} timeZone={tz} status={b.status} />
+            </Link>
+          ))}
+        </section>
+      )}
+
+      <form method="get" role="search" className="flex gap-2">
+        {domaine && <input type="hidden" name="domaine" value={domaine} />}
+        <label className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-md border-2 border-line-strong bg-raised px-3.5">
+          <Icon name="search" size={18} className="text-muted" />
+          <input name="q" type="search" defaultValue={q ?? ""} aria-label={t("list.search")} placeholder={t("list.searchPlaceholder")} className="min-w-0 flex-1 bg-transparent text-base outline-none" />
+        </label>
+        <button type="submit" className="h-12 rounded-md bg-ink px-4 text-sm font-extrabold text-raised">
+          {t("list.searchButton")}
+        </button>
+      </form>
+
+      <nav aria-label={t("list.domains")} className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+        {chip(q ? `/mentorat?q=${encodeURIComponent(q)}` : "/mentorat", t("list.all"), !domaine)}
+        {BADGE_DOMAINS.map((d) => chip(`/mentorat?domaine=${encodeURIComponent(d)}${q ? `&q=${encodeURIComponent(q)}` : ""}`, t(`badge.domainList.${d}`), domaine === d))}
+      </nav>
+
+      <section aria-labelledby="m-list" className="grid gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="m-list" className="font-display text-md font-extrabold uppercase">
+            {t("list.heading")}
+          </h2>
+          <span className="text-[13px] font-bold text-muted">{t("list.free")}</span>
+        </div>
+        {shown.length === 0 ? (
+          <p className="py-6 text-center text-muted">{t("list.empty")}</p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {shown.map((m) => (
+              <MentorCard key={m.id} mentor={m} timeZone={tz} />
+            ))}
           </div>
         )}
-        {[...asMentee, ...asMentor].map((p) => (
-          <PairPanel key={p.id} pair={p} eligibility={p.iAm === "MENTEE" ? e : null} />
-        ))}
-        {pairs.length > 0 && requests.sent.length > 0 && (
-          <div className="lg:col-span-2">
-            <SentRequests sent={requests.sent} />
-          </div>
-        )}
-      </Page>
-    </>
+      </section>
+
+      {!isMentor && (
+        <Link href="/mentorat/badge" className="text-ink no-underline">
+          <Card className="grid-cols-[minmax(0,1fr)_auto] items-center gap-3 bg-brand-soft">
+            <span className="grid gap-0.5">
+              <b className="text-[15px]">{t("list.badgeTitle")}</b>
+              <span className="text-[13px] text-muted">{badge?.status === "PENDING" ? t("list.badgePending") : t("list.badgeText")}</span>
+            </span>
+            <Icon name="chevron" size={18} />
+          </Card>
+        </Link>
+      )}
+    </Page>
   );
 }
 
-export default function MentoringPage() {
+export default async function MentoringPage({ searchParams }: PageProps<"/[locale]/mentorat">) {
+  const t = await getTranslations("mentoring");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement du mentorat…</p>}>
-      <MentoringData />
-    </Suspense>
+    <>
+      <TopBar title={t("title")} />
+      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+        <MentoringData searchParams={searchParams as Promise<Search>} />
+      </Suspense>
+    </>
   );
 }

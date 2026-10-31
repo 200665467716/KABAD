@@ -57,7 +57,7 @@ export const addMembersSchema = z.object({
   memberIds: z.array(id).min(1, "Choisissez au moins un participant.").max(GROUP_MAX_MEMBERS),
 });
 
-export const REPORT_REASONS = ["Spam ou arnaque", "Harcèlement ou propos haineux", "Faux profil ou faux statut Senior", "Plagiat dans un défi", "Autre"] as const;
+export const REPORT_REASONS = ["Spam ou arnaque", "Harcèlement ou propos haineux", "Faux profil ou faux badge mentor", "Plagiat dans un hackathon", "Autre"] as const;
 
 export const reportSchema = z.object({
   targetType: z.enum(["USER", "MESSAGE", "CONVERSATION", "INVITATION", "ROOM"]),
@@ -253,7 +253,7 @@ export const testStepSchema = z.object({ index: z.number().int().min(0).max(10),
 
 export const testReportSchema = z.object({
   device: trimmed(2, 40, "Indiquez l’appareil utilisé.", "40 caractères au plus."),
-  answers: z.array(z.string().trim().min(1, "Répondez aux questions de contrôle.").max(60)).min(1),
+  answers: z.array(z.string().trim().min(1, "Répondez aux questions de contrôle.").max(60)).max(3).default([]),
   remarks: z.string().trim().max(2000, "2 000 caractères au plus.").default(""),
 });
 

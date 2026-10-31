@@ -1,27 +1,24 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { pageUser } from "@/server/page";
-import { ProfileSetup } from "./ProfileSetup";
+import { ProfileStep } from "./ProfileStep";
 
-export const metadata: Metadata = { title: "Votre profil" };
-
-async function ProfileSetupData() {
-  const u = await pageUser("/inscription/profil");
-  // A profile already filled in means the member came to edit it, not to finish signing up.
-  const editing = Boolean(u.city);
-  return (
-    <ProfileSetup
-      editing={editing}
-      initial={{ role: u.role, country: u.country, city: u.city, diaspora: u.diaspora, stack: u.stack, profileLink: u.profileLink, headline: u.headline, bio: u.bio, years: u.years, mentorCapacity: u.mentorCapacity, verified: u.seniorVerifiedAt !== null }}
-      profileHref={`/profil/${u.id}`}
-    />
-  );
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations("auth.meta"))("profile") };
 }
 
-export default function ProfileSetupPage() {
+async function ProfileStepData() {
+  const u = await pageUser("/inscription/profil");
+  return <ProfileStep initial={{ country: u.country, city: u.city, level: u.level }} />;
+}
+
+/** Screen A4, step 3 of 5: country, city and level. */
+export default async function ProfileStepPage() {
+  const t = await getTranslations("auth");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement…</p>}>
-      <ProfileSetupData />
+    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <ProfileStepData />
     </Suspense>
   );
 }

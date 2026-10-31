@@ -1,1 +1,106 @@
-{ "admin": {} }
+{
+  "admin": {
+    "title": "Équipe KABAD",
+    "subtitle": "Badges, modération, membres, hackathons et versements",
+    "loading": "Chargement…",
+    "error": "L’action n’a pas abouti.",
+    "nav": {
+      "label": "Administration",
+      "overview": "Vue d’ensemble",
+      "badges": "Badges",
+      "reports": "Signalements",
+      "members": "Membres",
+      "hackathons": "Hackathons",
+      "payouts": "Versements",
+      "journal": "Journal"
+    },
+    "dashboard": {
+      "todo": "À traiter",
+      "activity": "Activité",
+      "pendingBadges": "demandes de badge à examiner",
+      "openReports": "signalements ouverts",
+      "toPublish": "hackathons à publier",
+      "juryHackathons": "hackathons en jury",
+      "payouts": "versements à faire ({count})",
+      "members": "membres",
+      "newMembers": "nouveaux sur 7 jours",
+      "mentors": "mentors badgés",
+      "unverified": "e-mails non confirmés",
+      "messages7d": "messages sur 7 jours",
+      "upcomingSessions": "séances de mentorat à venir",
+      "heldHours": "heures de mentorat tenues",
+      "openHackathons": "hackathons ouverts",
+      "riseProjects": "projets Rise-Up",
+      "suspended": "comptes suspendus"
+    },
+    "badges": {
+      "metaTitle": "Badges · Équipe",
+      "heading": "Demandes de badge mentor",
+      "filter": "Filtrer les demandes",
+      "tabs": {
+        "PENDING": "À examiner · {count}",
+        "APPROVED": "Validées",
+        "REFUSED": "Refusées"
+      },
+      "empty": "Aucune demande ici pour l’instant.",
+      "sent": "Envoyée {when}",
+      "links": "{count, plural, one {# lien} other {# liens}}",
+      "hint": "Vérifie au moins un lien avant de valider un badge.",
+      "detailTitle": "Demande de badge",
+      "backToList": "Retour aux demandes",
+      "status": {
+        "PENDING": "À examiner",
+        "APPROVED": "Validée",
+        "REFUSED": "Refusée"
+      },
+      "expertise": "Expertise",
+      "experience": {
+        "3-5": "3 à 5 ans d’expérience",
+        "5-10": "5 à 10 ans d’expérience",
+        "10+": "10 ans d’expérience et plus"
+      },
+      "providedLinks": "Liens fournis",
+      "github": "GitHub",
+      "linkedin": "LinkedIn",
+      "portfolio": "Portfolio",
+      "bio": "Présentation publique",
+      "topics": "Sujets proposés",
+      "refusalReason": "Motif du refus",
+      "refusalLabel": "Motif du refus",
+      "refusalHint": "(envoyé au candidat)",
+      "refusalPlaceholder": "Ex. : ajoute un lien vers un projet que tu as mené.",
+      "refuse": "Refuser",
+      "approve": "Valider le badge",
+      "cancel": "Annuler",
+      "sendRefusal": "Envoyer le refus",
+      "reviewedOn": "Traitée {when}"
+    },
+    "members": {
+      "metaTitle": "Membres · Équipe",
+      "title": "Membres",
+      "search": "Nom ou e-mail",
+      "filter": "Filtre",
+      "all": "Tous",
+      "suspendedFilter": "Suspendus",
+      "submit": "Filtrer",
+      "empty": "Aucun membre ne correspond.",
+      "team": "Équipe",
+      "mentor": "Mentor",
+      "emailUnverified": "E-mail non confirmé",
+      "suspended": "Suspendu",
+      "reports": "{count, plural, one {# signalement} other {# signalements}}",
+      "meta": "{email} · {place} · inscrit le {date}",
+      "noPlace": "lieu non renseigné",
+      "profile": "Profil : {link}",
+      "reason": "Motif : {reason}",
+      "suspendLabel": "Motif de la suspension",
+      "revokeLabel": "Pourquoi le badge est retiré (lu par le membre)",
+      "cancel": "Annuler",
+      "confirmSuspend": "Confirmer la suspension",
+      "confirmRevoke": "Retirer le badge",
+      "revoke": "Retirer le badge",
+      "reinstate": "Lever la suspension",
+      "suspend": "Suspendre"
+    }
+  }
+}

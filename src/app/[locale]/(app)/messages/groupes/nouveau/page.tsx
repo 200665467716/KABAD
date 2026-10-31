@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/server/auth";
 import { listContacts } from "@/server/messaging";
 import { NewGroupForm } from "./NewGroupForm";
 
-export const metadata: Metadata = { title: "Nouveau groupe" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("messaging.group");
+  return { title: t("metaTitle") };
+}
 
 async function NewGroupData() {
   const user = await getCurrentUser();
@@ -16,7 +19,7 @@ async function NewGroupData() {
 
 export default function NewGroupPage() {
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement de vos contacts…</p>}>
+    <Suspense>
       <NewGroupData />
     </Suspense>
   );

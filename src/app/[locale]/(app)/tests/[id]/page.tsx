@@ -1,93 +1,65 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AppTile } from "@/components/features/AppTile";
-import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
-import { ButtonLink } from "@/components/ui/Button";
-import { Alert, Overline } from "@/components/ui/Display";
-import { Icon, type IconName } from "@/components/ui/Icon";
+import { Page, TopBar } from "@/components/shell/TopBar";
+import { Alert, TagList } from "@/components/ui/Display";
 import { getTestApp } from "@/server/community-tests";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
+import { TestActions } from "./TestActions";
 
-export const metadata: Metadata = { title: "Test" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("tests.detail");
+  return { title: t("metaTitle") };
+}
 
+/** Screen T2: the listing, its steps to tick and the testers' group. */
 async function TestData({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await pageUser(`/tests/${id}`);
-  const t = await orNotFound(getTestApp(user.id, id));
-  if (!t) notFound();
-  const mine = t.owner.id === user.id;
-  const proofs: Array<[IconName, string]> = [
-    ["image", `${t.steps.length} capture${t.steps.length > 1 ? "s" : ""} d’écran, une par étape`],
-    ["question", `${t.questions.length} question${t.questions.length > 1 ? "s" : ""} sur ce que vous avez vu`],
-    ["message", "Vos remarques, en quelques lignes"],
-  ];
-  const canTest = !mine && (t.myReport === null || t.myReport === "REFUSED") && t.slotsLeft > 0;
+  const a = await orNotFound(getTestApp(user.id, id));
+  if (!a) notFound();
+  const t = await getTranslations("tests");
+  const owner = a.owner.id === user.id;
   return (
     <>
-      <TopBar back="/tests" plain />
-      <Page narrow className="flex-1 pt-0">
-        <div className="flex items-center gap-3.5">
-          <AppTile app={t} size="lg" />
-          <div className="grid gap-0.5">
-            <h1 className="font-display text-[26px] leading-[30px] font-bold tracking-[-0.03em]">{t.name}</h1>
+      <TopBar back="/tests" title={t("detail.header")} />
+      <Page narrow className="flex-1">
+        <section className="flex items-center gap-3.5">
+          <AppTile app={a} size="lg" />
+          <div className="grid min-w-0 gap-1">
+            <h2 className="font-display text-xl font-extrabold">{a.name}</h2>
             <span className="text-sm text-muted">
-              par {t.owner.name} · {t.platform === "WEB" ? "Web" : "Android"} · {t.minutes} min
+              {t.rich("detail.byLine", { name: a.owner.name, b: (c) => <b className="text-ink">{c}</b> })}
+              {a.owner.city ? ` · ${a.owner.city}` : ""}
             </span>
+            <TagList items={[...a.platforms.map((p) => t(`platform.${p}`)), t("minutes", { count: a.minutes })]} />
           </div>
-        </div>
-        <p>{t.pitch}</p>
-        {t.myReport === "SUBMITTED" && <Alert tone="info" title="Rapport envoyé.">{t.owner.name.split(" ")[0]} le lit puis le valide.</Alert>}
-        {t.myReport === "VALIDATED" && <Alert tone="success" title="Rapport validé.">Ce test compte sur votre profil. Merci !</Alert>}
-        {t.myReport === "REFUSED" && <Alert tone="danger" title="Rapport refusé.">Vous pouvez refaire le test et envoyer un nouveau rapport.</Alert>}
-        <section className="grid gap-3" aria-labelledby="scenario">
-          <Overline as="h2" id="scenario">
-            Le scénario
-          </Overline>
-          <ol className="m-0 grid list-none gap-3 p-0">
-            {t.steps.map((s, i) => (
-              <li key={i} className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-3">
-                <span className="grid size-7 place-items-center rounded-full bg-brand-soft text-sm font-bold text-brand-text">{i + 1}</span>
-                <span className="pt-0.5 text-sm">{s}</span>
-              </li>
-            ))}
-          </ol>
         </section>
-        <section className="grid gap-2.5 rounded-lg bg-sunken p-4" aria-labelledby="proof">
-          <Overline as="h2" id="proof">
-            Pour prouver votre passage
-          </Overline>
-          {proofs.map(([icon, label]) => (
-            <p key={label} className="flex items-center gap-2 text-sm">
-              <Icon name={icon} size={18} className="text-muted" />
-              {label}
-            </p>
-          ))}
-          <p className="text-xs text-muted">Les tests sont gratuits. Le porteur valide chaque rapport.</p>
-        </section>
+        <p className="text-[15px] leading-[22px]">{a.pitch}</p>
+        {a.myReport === "SUBMITTED" && <Alert tone="info">{t("detail.reportSent", { name: a.owner.name.split(" ")[0] })}</Alert>}
+        {a.myReport === "VALIDATED" && <Alert tone="success">{t("detail.reportValidated")}</Alert>}
+        {a.myReport === "REFUSED" && <Alert tone="danger">{t("detail.reportRefused")}</Alert>}
+        <TestActions app={a} owner={owner} />
       </Page>
-      <ActionBar className="grid-cols-[auto_minmax(0,1fr)]">
-        <ButtonLink href={t.url} variant="secondary" icon="external" target="_blank" rel="noreferrer">
-          Ouvrir l’app
-        </ButtonLink>
-        {mine ? (
-          <ButtonLink href={`/tests/${t.id}/rapports`}>Voir les rapports</ButtonLink>
-        ) : canTest ? (
-          <ButtonLink href={`/tests/${t.id}/rapport`}>Commencer le test</ButtonLink>
-        ) : (
-          <ButtonLink href="/tests" variant="secondary">
-            {t.slotsLeft === 0 && !t.myReport ? "Toutes les places sont prises" : "Retour aux tests"}
-          </ButtonLink>
-        )}
-      </ActionBar>
     </>
+  );
+}
+
+async function Loading() {
+  const t = await getTranslations("tests.detail");
+  return (
+    <p className="p-6 text-muted" role="status">
+      {t("loading")}
+    </p>
   );
 }
 
 export default function TestPage({ params }: PageProps<"/[locale]/tests/[id]">) {
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement du test…</p>}>
+    <Suspense fallback={<Loading />}>
       <TestData params={params} />
     </Suspense>
   );

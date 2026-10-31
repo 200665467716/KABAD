@@ -1,14 +1,16 @@
 "use client";
 
-import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { Link } from "@/i18n/navigation";
 import { InviteSheet, type InviteTarget } from "@/components/features/InviteSheet";
 import { Button, ButtonLink } from "@/components/ui/Button";
-import { Avatar, Badge, Card, PersonRow } from "@/components/ui/Display";
+import { Avatar, Badge, Card, PersonRow, TagList } from "@/components/ui/Display";
 import { initials } from "@/lib/format";
 import type { DirectoryEntry } from "@/lib/domain-types";
 
 export function MemberList({ members }: { members: DirectoryEntry[] }) {
+  const t = useTranslations("profile.members");
   const [target, setTarget] = useState<InviteTarget | null>(null);
   const [invited, setInvited] = useState<string[]>([]);
 
@@ -21,35 +23,29 @@ export function MemberList({ members }: { members: DirectoryEntry[] }) {
             <Card key={m.id} className="content-start gap-3 px-4 py-3.5">
               <Link href={`/profil/${m.id}`} className="text-ink no-underline">
                 <PersonRow
-                  avatar={<Avatar initials={initials(m.name)} />}
+                  avatar={<Avatar initials={initials(m.name)} tone={m.verified ? "brand" : "neutral"} />}
                   name={m.name}
-                  badge={m.role === "SENIOR" ? <Badge tone="brand">{m.verified ? "Senior" : "Senior · à vérifier"}</Badge> : undefined}
-                  meta={[m.headline, m.city, m.diaspora ? "Diaspora" : ""].filter(Boolean).join(" · ")}
+                  badge={m.verified ? <Badge tone="success">{t("mentor")}</Badge> : undefined}
+                  meta={[m.headline, m.city, m.diaspora ? t("diaspora") : ""].filter(Boolean).join(" · ")}
                 />
               </Link>
-              {m.stack.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {m.stack.slice(0, 5).map((s) => (
-                    <Badge key={s}>{s}</Badge>
-                  ))}
-                </div>
-              )}
-              <div className="flex justify-end gap-2 border-t border-line pt-2.5">
+              <TagList items={m.stack.slice(0, 5)} />
+              <div className="flex justify-end gap-2 border-t-2 border-line pt-2.5">
                 {relation === "contact" ? (
                   <ButtonLink href={m.conversationId ? `/messages/${m.conversationId}` : `/profil/${m.id}`} size="sm" variant="secondary" icon="message">
-                    Écrire
+                    {t("write")}
                   </ButtonLink>
                 ) : relation === "invited_you" ? (
                   <ButtonLink href={`/messages/invitations/${m.invitationId}`} size="sm">
-                    Voir son invitation
+                    {t("seeInvitation")}
                   </ButtonLink>
                 ) : relation === "invited" ? (
                   <Button size="sm" variant="secondary" icon="check" disabled>
-                    Invitation envoyée
+                    {t("invited")}
                   </Button>
                 ) : (
-                  <Button size="sm" icon="userPlus" onClick={() => setTarget(m)} aria-label={`Inviter ${m.name}`}>
-                    Inviter
+                  <Button size="sm" variant="ink" icon="userPlus" onClick={() => setTarget(m)} aria-label={t("inviteAria", { name: m.name })}>
+                    {t("invite")}
                   </Button>
                 )}
               </div>

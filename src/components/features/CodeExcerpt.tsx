@@ -9,7 +9,7 @@ export function CodeExcerpt({ source }: { source: string }) {
         ) : p.startsWith("'") || p.startsWith('"') ? (
           <span key={i} className="text-[var(--palm-300)]">{p}</span>
         ) : p.startsWith("//") ? (
-          <span key={i} className="text-[var(--neutral-400)]">{p}</span>
+          <span key={i} className="text-[var(--grey-400)]">{p}</span>
         ) : (
           p
         ),

@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { githubConfig } from "@/server/github";
 import { SignInForm } from "./SignInForm";
 
-export const metadata: Metadata = { title: "Connexion" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations("auth.meta"))("signIn") };
+}
 
 async function SignIn() {
   // Read at request time: the server's environment, not the one of the build.

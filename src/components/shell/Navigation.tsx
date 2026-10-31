@@ -37,7 +37,8 @@ const sideItems: Item[] = [
 
 /** Screens that focus on one task show their own action bar instead of the tab bar. */
 const focused = [
-  /^\/mentorat\/(mentors\/[^/]+\/reserver|seances\/.+|badge|disponibilites)$/,
+  /^\/mentorat\/(mentors\/[^/]+(\/reserver)?|seances\/.+|badge|disponibilites)$/,
+  /^\/admin\/badges\/.+/,
   /^\/hackathons\/(organiser|missions\/.+|[^/]+\/(participer|soumettre|jury|instructeurs))$/,
   /^\/rise-up\/(nouveau|[^/]+\/evenements\/.+)$/,
   /^\/tests\/(nouveau|[^/]+\/(rapport|rapports))$/,
@@ -64,7 +65,7 @@ export function BottomNav() {
             key={it.href}
             href={it.href}
             aria-current={active ? "page" : undefined}
-            className={cn("relative grid h-14 content-center justify-items-center gap-[3px] rounded-2xl text-xs leading-[15px] font-bold no-underline", active ? "bg-brand text-on-brand" : "text-muted")}
+            className={cn("relative grid h-14 min-w-0 content-center justify-items-center gap-[3px] rounded-2xl text-[11px] leading-[15px] font-bold tracking-[-0.01em] no-underline", active ? "bg-brand text-on-brand" : "text-muted")}
           >
             <Icon name={it.icon} size={20} />
             {t(it.label)}

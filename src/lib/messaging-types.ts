@@ -16,6 +16,8 @@ export type ConversationSummary = {
   id: string;
   kind: "DIRECT" | "GROUP";
   title: string;
+  /** Group theme: Fintech, Rise-Up, Test… */
+  theme: string | null;
   otherId: string | null;
   memberCount: number;
   isOwner: boolean;
@@ -30,6 +32,7 @@ export type ConversationDetail = {
   id: string;
   kind: "DIRECT" | "GROUP";
   title: string;
+  theme: string | null;
   other: { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string } | null;
   isOwner: boolean;
   members: Array<{ id: string; name: string; owner: boolean }>;

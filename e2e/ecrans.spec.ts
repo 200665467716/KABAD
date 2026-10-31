@@ -2,34 +2,40 @@ import { expect, test } from "@playwright/test";
 import { salonsEnabled } from "../src/lib/features";
 
 /* Every screen loads without error and without horizontal scrolling, on phone and on computer. */
-const PUBLIC = ["/", "/inscription", "/connexion", "/mot-de-passe-oublie", "/soutenir/api-mobile-money"];
+const PUBLIC = ["/", "/en", "/inscription", "/connexion", "/en/connexion", "/mot-de-passe-oublie", "/soutenir/agritech-sahel"];
 const SIGNED_IN = [
   "/accueil",
+  "/en/accueil",
   "/notifications",
   "/membres",
-  "/membres?role=senior&tech=TypeScript",
   "/compte",
+  "/profil",
   "/profil/awa",
-  "/profil/kossi",
   "/inscription/profil",
+  "/inscription/interets",
   "/inscription/recommandations",
   "/mentorat",
-  "/mentorat/mentors",
-  "/mentorat/demande/nadia",
-  "/mentorat/seances/s3",
-  "/mentorat/seances/nouvelle?binome=awa-kossi",
+  "/mentorat/mentors/awa",
+  "/mentorat/seances/seance-momo",
+  "/mentorat/badge",
   "/capsules",
   "/capsules/webhook-deux-fois",
-  "/defis",
-  "/defis/api-mobile-money",
-  "/defis/inscription-accessible/resultats",
+  "/hackathons",
+  "/hackathons/fintech-inclusion",
+  "/hackathons/fintech-inclusion/participer",
+  "/hackathons/fintech-inclusion/equipe",
+  "/hackathons/organiser",
+  "/hackathons/inscription-accessible/resultats",
+  "/en/hackathons/fintech-inclusion",
+  "/rise-up",
+  "/rise-up/forages-sahel",
+  "/rise-up/nouveau",
   "/tests",
   "/tests/marche-vert",
-  "/tests/sante-direct/rapport",
   "/tests/nouveau",
-  ...(salonsEnabled ? ["/salons", "/salons/salon-entretiens", "/salons/nouveau"] : []),
+  ...(salonsEnabled ? ["/salons", "/salons/nouveau"] : []),
   "/messages",
-  "/messages?onglet=invitations",
+  "/messages/invitations",
   "/messages/groupes/nouveau",
 ];
 
@@ -42,7 +48,7 @@ async function check(page: import("@playwright/test").Page, route: string, signe
   const res = await page.goto(route);
   expect(res?.status()).toBe(200);
   if (signedIn) expect(new URL(page.url()).pathname).not.toBe("/connexion");
-  await expect(page.getByRole("heading", { name: "Page introuvable" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /Page introuvable|Page not found/ })).toHaveCount(0);
   await expect(page.locator("h1").first()).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);

@@ -1,0 +1,85 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
+import { ActionBar, Page } from "@/components/shell/TopBar";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Display";
+import { Checkbox, Select, TextArea, TextField } from "@/components/ui/Field";
+import { api, ApiError } from "@/lib/api";
+import { OPERATORS, SUBMISSION_MAX } from "@/lib/schemas";
+import type { TeamView } from "@/lib/domain-types";
+
+/** H5: the team's solution, editable until the end of the hackathon. */
+export function SubmissionForm({ hackathonId, heading, hasCash, initial }: { hackathonId: string; heading: string; hasCash: boolean; initial: TeamView["submission"] }) {
+  const t = useTranslations("hackathons.submit");
+  const router = useRouter();
+  const [explain, setExplain] = useState(initial?.explanation ?? "");
+  const [error, setError] = useState<{ field?: string; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const err = (f: string) => (error?.field === f ? error.text : undefined);
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/api/hackathons/${hackathonId}/submission`, {
+        method: "PUT",
+        body: {
+          projectName: String(data.get("projectName") ?? ""),
+          repoUrl: String(data.get("repoUrl") ?? ""),
+          demoUrl: String(data.get("demoUrl") ?? ""),
+          explanation: explain,
+          ...(hasCash ? { payoutOperator: String(data.get("operator") ?? ""), payoutPhone: String(data.get("phone") ?? "") } : {}),
+          teamAgrees: data.get("agree") === "on",
+        },
+      });
+      router.push(`/hackathons/${hackathonId}/equipe`);
+      router.refresh();
+    } catch (x) {
+      setError({ field: x instanceof ApiError ? x.field : undefined, text: x instanceof ApiError ? x.message : t("failed") });
+      setBusy(false);
+    }
+  }
+
+  const fields = ["projectName", "repoUrl", "demoUrl", "explanation", "payoutPhone"];
+  return (
+    <form onSubmit={submit} noValidate className="flex flex-1 flex-col">
+      <Page narrow className="flex-1">
+        <div className="grid gap-1">
+          <p className="text-xs font-extrabold tracking-[0.1em] text-brand-text uppercase">{heading}</p>
+          <h2 className="font-display text-2xl font-extrabold uppercase">{t("heading")}</h2>
+        </div>
+        <TextField id="projectName" name="projectName" label={t("projectName")} defaultValue={initial?.projectName} maxLength={60} error={err("projectName")} />
+        <TextField id="repoUrl" name="repoUrl" type="url" label={t("repo")} placeholder="https://github.com/…" defaultValue={initial?.repoUrl} error={err("repoUrl")} />
+        <TextField id="demoUrl" name="demoUrl" type="url" label={t("demo")} hint={t("optional")} placeholder="https://" defaultValue={initial?.demoUrl ?? ""} error={err("demoUrl")} />
+        <TextArea id="explanation" label={t("explanation")} rows={5} value={explain} maxLength={SUBMISSION_MAX} onChange={(e) => setExplain(e.target.value)} counter={`${explain.length} / ${SUBMISSION_MAX}`} error={err("explanation")} />
+        {hasCash && (
+          <div className="grid gap-3 rounded-lg border-2 border-line-strong bg-raised p-4">
+            <p className="text-sm">{t("payoutHelp")}</p>
+            <Select id="operator" name="operator" label={t("operator")} defaultValue={initial?.payoutOperator ?? OPERATORS[0]}>
+              {OPERATORS.map((o) => (
+                <option key={o}>{o}</option>
+              ))}
+            </Select>
+            <TextField id="phone" name="phone" type="tel" label={t("phone")} placeholder="+228 90 00 00 00" defaultValue={initial?.payoutPhone ?? ""} error={err("payoutPhone")} />
+          </div>
+        )}
+        <Checkbox name="agree">{t("agree")}</Checkbox>
+        {error && !fields.includes(error.field ?? "") && (
+          <Alert tone="danger" role="alert">
+            {error.text}
+          </Alert>
+        )}
+      </Page>
+      <ActionBar>
+        <Button type="submit" size="lg" block disabled={busy}>
+          {busy ? t("sending") : initial ? t("update") : t("send")}
+        </Button>
+      </ActionBar>
+    </form>
+  );
+}
