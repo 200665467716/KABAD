@@ -110,13 +110,10 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
   - Route `/api/health`.
   - Supervision externe avec alerte en moins de 5 min.
 
-- [ ] R5. Worker de tâches planifiées : pg-boss (MIT) et un service `worker` dans compose.
-  - Mentorat : relance à 48 h et réaffectation à 72 h (F1.3).
-  - Séances : rappel 1 h avant (F1.5).
-  - Invitations : expiration à 30 j.
-  - Défis : bascule OPEN → JURY.
-  - Versements : mise à disposition 48 h après les résultats (F2.8).
-  - Retirer les expirations faites « à la lecture ».
+- [x] R5. Worker de tâches planifiées : pg-boss (MIT) et un service `worker` dans compose (1er novembre).
+  - `src/server/jobs.ts` : expiration des demandes de séance non traitées, relance du mentor à 48 h, rappel 1 h avant une séance et avant un événement Rise-Up, passage des hackathons au jury, annonce des versements après 48 h, expiration des invitations à 30 j. Chaque tâche est idempotente et testée.
+  - `worker/index.ts`, regroupé par esbuild dans l'image `kabad-worker` ; expirations « à la lecture » retirées (les écritures vérifient toujours les dates).
+  - La réaffectation à 72 h n'a plus d'objet avec les créneaux (D9).
 
 - [ ] R6. Pages publiques indexables.
   - Défis et résultats lisibles sans session, avec les liens du dépôt et de la démo des lauréats (F2.10).

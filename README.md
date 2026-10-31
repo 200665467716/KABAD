@@ -47,12 +47,13 @@ npm run db:seed
 
 ### 5. Démarrer les services
 
-Ouvrez deux terminaux :
+Ouvrez trois terminaux :
 
 | Terminal | Commande | Rôle |
 | --- | --- | --- |
 | 1 | `npm run realtime` | Messages et notifications en direct (port 4001) |
 | 2 | `npm run dev` | L’application : http://localhost:3000 |
+| 3 | `npm run worker` | Tâches planifiées : rappels de séances et d’événements, expirations, passage des hackathons au jury (facultatif en local) |
 
 ### 6. Se connecter
 

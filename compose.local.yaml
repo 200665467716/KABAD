@@ -14,3 +14,5 @@ services:
         NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-}
   realtime:
     build: { context: ., target: realtime }
+  worker:
+    build: { context: ., target: worker }

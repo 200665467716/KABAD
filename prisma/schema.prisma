@@ -368,6 +368,10 @@ model MentoringBooking {
   declineReason String?       @db.VarChar(300)
   createdAt     DateTime      @default(now())
   answeredAt    DateTime?
+  /// The mentor was reminded of a request still waiting for an answer (worker).
+  nudgedAt      DateTime?
+  /// Both members were reminded one hour before the session (worker).
+  remindedAt    DateTime?
 
   @@index([mentorId, startsAt])
   @@index([menteeId, startsAt])
@@ -639,6 +643,8 @@ model Payout {
   reference     String?      @db.VarChar(60)
   status        PayoutStatus @default(PENDING)
   createdAt     DateTime     @default(now())
+  /// The team was told the transfer can be sent, once the contest period is over (worker).
+  notifiedAt    DateTime?
   sentAt        DateTime?
 
   @@unique([hackathonId, role])

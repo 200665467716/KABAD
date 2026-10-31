@@ -4,7 +4,7 @@
  * - a member books a free slot with a topic and a precise problem; one slot holds one active booking
  *   (a partial unique index in PostgreSQL settles two clicks at the same instant);
  * - the mentor accepts or declines; accepting gives both of them the video link;
- * - a request not answered before its slot starts lapses on its own.
+ * - a request not answered before its slot starts lapses (worker, src/server/jobs.ts); it can no longer be accepted.
  */
 import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
@@ -20,14 +20,6 @@ export const BOOKING_WINDOW_DAYS = 30;
 type Tx = Db | Prisma.TransactionClient;
 
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
-
-/** Requests nobody answered before their slot lapse. Cheap and idempotent: run before reading. */
-export async function lapseUnanswered(prisma: Tx = db) {
-  await prisma.mentoringBooking.updateMany({
-    where: { status: "PENDING", startsAt: { lte: new Date() } },
-    data: { status: "DECLINED", declineReason: "Demande expirée : le mentor n’a pas répondu avant la séance.", answeredAt: new Date() },
-  });
-}
 
 async function badgeOf(prisma: Tx, userIds: string[]) {
   const rows = await prisma.mentorBadgeRequest.findMany({
@@ -118,7 +110,6 @@ export async function bookSlot(menteeId: string, input: { mentorId: string; star
   if (input.mentorId === menteeId) throw new DomainError("self", "Vous ne pouvez pas réserver vos propres créneaux.");
   const startsAt = new Date(input.startsAt);
   if (Number.isNaN(startsAt.getTime())) throw new DomainError("bad_slot", "Créneau invalide.", 400, "startsAt");
-  await lapseUnanswered(prisma);
   const [mentor, mentee, blocked, pending] = await Promise.all([
     prisma.user.findFirst({ where: { id: input.mentorId, ...mentorWhere }, select: { id: true, name: true, timeZone: true, availability: { select: { weekday: true, startMin: true, endMin: true } }, blockedDates: { select: { day: true } } } }),
     prisma.user.findUniqueOrThrow({ where: { id: menteeId }, select: { name: true } }),
@@ -174,7 +165,6 @@ function toView(b: BookingRow, viewerId: string): BookingView {
 }
 
 export async function getBooking(userId: string, bookingId: string, prisma: Db = db): Promise<BookingView> {
-  await lapseUnanswered(prisma);
   const b = await prisma.mentoringBooking.findUnique({ where: { id: bookingId }, include: bookingInclude });
   if (!b || (b.mentorId !== userId && b.menteeId !== userId)) throw notFound("Séance introuvable.");
   return toView(b, userId);
@@ -182,7 +172,6 @@ export async function getBooking(userId: string, bookingId: string, prisma: Db =
 
 /** The member's sessions: as a mentee, and as a mentor when they hold the badge. */
 export async function myBookings(userId: string, prisma: Db = db) {
-  await lapseUnanswered(prisma);
   const since = new Date(Date.now() - 60 * 86_400_000);
   const rows = await prisma.mentoringBooking.findMany({
     where: { OR: [{ mentorId: userId }, { menteeId: userId }], startsAt: { gte: since } },
@@ -201,9 +190,9 @@ export async function myBookings(userId: string, prisma: Db = db) {
 }
 
 export async function answerBooking(mentorId: string, bookingId: string, input: { accept: boolean; reason?: string }, prisma: Db = db) {
-  await lapseUnanswered(prisma);
   const b = await prisma.mentoringBooking.findUnique({ where: { id: bookingId }, include: { mentor: { select: { name: true, meetingUrl: true } }, mentee: { select: { timeZone: true } } } });
   if (!b || b.mentorId !== mentorId) throw notFound("Demande introuvable.");
+  if (b.startsAt.getTime() <= Date.now()) throw new DomainError("answered", "Cette demande a expiré : la séance a déjà commencé.", 409);
   return prisma.$transaction(async (tx) => {
     const meetingUrl = input.accept ? b.mentor.meetingUrl || jitsiRoom() : null;
     const { count } = await tx.mentoringBooking.updateMany({

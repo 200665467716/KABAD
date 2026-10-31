@@ -3,7 +3,8 @@
  * - an organizer proposes a hackathon; the KABAD team publishes it after review;
  * - members enter alone or as a team until registrations close; a member is in one team per hackathon;
  *   joining a team goes through a request the captain accepts;
- * - each team sends one solution, editable until the end of the hackathon, which then goes to the jury;
+ * - each team sends one solution, editable until the end of the hackathon, which then goes to the jury
+ *   (the worker records the change, src/server/jobs.ts);
  * - hackathons that require mentoring accept only members who held that much mentoring time (level 3 of D6);
  * - three badged mentors score each solution anonymously on 4 criteria; the mark is the average of their totals;
  * - publishing the results splits the pot: 60/30/10 with a mentor (level 3), 90/10 without (level 2);
@@ -24,10 +25,8 @@ import type { ContributionView, HackathonDetail, HackathonResults, HackathonSumm
 export const CONTEST_HOURS = 48;
 type Tx = Db | Prisma.TransactionClient;
 
-/** Hackathons past their end move to the jury. Cheap and idempotent: run before reading. */
-export async function syncStatuses(prisma: Tx = db) {
-  await prisma.hackathon.updateMany({ where: { status: "OPEN", endsAt: { lte: new Date() } }, data: { status: "JURY" } });
-}
+/** With the jury: recorded as such, or past its end and not recorded yet by the worker. */
+const inJury = (h: { status: string; endsAt: Date }) => h.status === "JURY" || (h.status === "OPEN" && h.endsAt.getTime() <= Date.now());
 
 export async function requireAdmin(userId: string, prisma: Tx = db) {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
@@ -98,6 +97,8 @@ async function summaries(rows: SummaryRow[], prisma: Tx): Promise<HackathonSumma
       endsAt: r.endsAt.toISOString(),
       closesAt: r.closesAt.toISOString(),
       resultsAt: r.resultsAt?.toISOString() ?? null,
+      // Past its end, a hackathon is with the jury even before the worker records it.
+      status: r.status === "OPEN" && r.endsAt.getTime() <= Date.now() ? ("JURY" as const) : r.status,
       ...rest,
       instructors,
       winner: winners.get(r.id) ?? null,
@@ -107,7 +108,6 @@ async function summaries(rows: SummaryRow[], prisma: Tx): Promise<HackathonSumma
 
 /** Published hackathons, plus the viewer's own proposals still under review. */
 export async function listHackathons(viewerId: string | null, prisma: Db = db): Promise<HackathonSummary[]> {
-  await syncStatuses(prisma);
   const rows = await prisma.hackathon.findMany({
     where: { OR: [{ publishedAt: { not: null } }, ...(viewerId ? [{ createdById: viewerId }] : [])] },
     select: summarySelect,
@@ -152,7 +152,6 @@ async function teamOf(prisma: Tx, hackathonId: string, userId: string) {
 }
 
 export async function getHackathon(viewerId: string | null, id: string, prisma: Db = db): Promise<HackathonDetail> {
-  await syncStatuses(prisma);
   const h = await prisma.hackathon.findUnique({
     where: { id },
     select: {
@@ -298,7 +297,6 @@ export async function publishHackathon(adminId: string, id: string, prisma: Db =
 /* Registration and teams */
 
 async function openForEntries(prisma: Tx, hackathonId: string, userId: string) {
-  await syncStatuses(prisma);
   const h = await prisma.hackathon.findUnique({ where: { id: hackathonId }, include: { jurors: { select: { userId: true } } } });
   if (!h || !h.publishedAt) throw notFound("Hackathon introuvable.");
   if (h.status !== "OPEN" || h.closesAt.getTime() <= Date.now()) throw new DomainError("closed", "Les inscriptions à ce hackathon sont closes.", 409);
@@ -414,7 +412,6 @@ export async function myTeam(userId: string, hackathonId: string, prisma: Db = d
 
 /** The teams the member is in, for the home and profile screens. */
 export async function myEntries(userId: string, prisma: Db = db) {
-  await syncStatuses(prisma);
   const seats = await prisma.teamMember.findMany({
     where: { userId },
     select: { team: { select: { id: true, name: true, solo: true, submission: { select: { id: true } }, hackathon: { select: { id: true, title: true, endsAt: true, status: true } } } } },
@@ -440,10 +437,9 @@ export async function submitSolution(
   input: { projectName: string; repoUrl: string; demoUrl?: string; explanation: string; payoutOperator?: string; payoutPhone?: string },
   prisma: Db = db,
 ) {
-  await syncStatuses(prisma);
   const h = await prisma.hackathon.findUnique({ where: { id: hackathonId } });
   if (!h || !h.publishedAt) throw notFound("Hackathon introuvable.");
-  if (h.status !== "OPEN") throw new DomainError("closed", "Ce hackathon est terminé : les solutions ne sont plus acceptées.", 409);
+  if (h.status !== "OPEN" || h.endsAt.getTime() <= Date.now()) throw new DomainError("closed", "Ce hackathon est terminé : les solutions ne sont plus acceptées.", 409);
   if (h.startsAt.getTime() > Date.now()) throw new DomainError("not_started", "Le hackathon n’a pas encore commencé.", 409);
   const team = await teamOf(prisma, hackathonId, userId);
   if (!team) throw forbidden("Inscrivez-vous d’abord à ce hackathon.");
@@ -486,7 +482,6 @@ async function recusals(prisma: Tx, submissions: Array<{ id: string; team: { mem
 }
 
 async function assertJuror(prisma: Db, jurorId: string, hackathonId: string) {
-  await syncStatuses(prisma);
   const h = await prisma.hackathon.findUnique({ where: { id: hackathonId }, include: { jurors: { select: { userId: true } } } });
   if (!h) throw notFound("Hackathon introuvable.");
   if (!h.jurors.some((j) => j.userId === jurorId)) throw forbidden("Cette vue est réservée au jury du hackathon.");
@@ -503,7 +498,7 @@ export async function nextForJury(jurorId: string, hackathonId: string, prisma: 
   const subs = all.filter((s) => !recused.get(s.id)!.has(jurorId));
   const scored = subs.filter((s) => s.scores.length > 0).length;
   const index = subs.findIndex((s) => s.scores.length === 0);
-  const next = h.status === "JURY" && index >= 0 ? subs[index] : null;
+  const next = inJury(h) && index >= 0 ? subs[index] : null;
   return {
     hackathonTitle: h.title,
     total: subs.length,
@@ -514,7 +509,7 @@ export async function nextForJury(jurorId: string, hackathonId: string, prisma: 
 
 export async function scoreSubmission(jurorId: string, hackathonId: string, input: { submissionId: string; works: number; code: number; tests: number; explain: number; comment?: string }, prisma: Db = db) {
   const h = await assertJuror(prisma, jurorId, hackathonId);
-  if (h.status !== "JURY") throw new DomainError("not_jury", h.status === "OPEN" ? "Le hackathon n’est pas encore terminé." : "Les résultats sont déjà publiés.", 409);
+  if (!inJury(h)) throw new DomainError("not_jury", h.status === "OPEN" ? "Le hackathon n’est pas encore terminé." : "Les résultats sont déjà publiés.", 409);
   const sub = await prisma.submission.findUnique({ where: { id: input.submissionId }, include: juryInclude });
   if (!sub || sub.hackathonId !== hackathonId) throw notFound("Solution introuvable.");
   if ((await recusals(prisma, [sub])).get(sub.id)!.has(jurorId)) throw forbidden("Vous accompagnez ou avez accompagné un membre de cette équipe : les autres jurés notent cette solution.");
@@ -555,13 +550,12 @@ export async function closeHackathon(adminId: string, hackathonId: string, prism
 /** Publishes the ranking and prepares the transfers (D6). Every juror must have scored every solution they may score. */
 export async function publishResults(adminId: string, hackathonId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
-  await syncStatuses(prisma);
   const h = await prisma.hackathon.findUnique({
     where: { id: hackathonId },
     include: { jurors: { select: { userId: true } }, submissions: { include: { ...juryInclude, scores: { select: { jurorId: true } } } } },
   });
   if (!h) throw notFound("Hackathon introuvable.");
-  if (h.status !== "JURY") throw new DomainError("not_jury", "Seul un hackathon en jury peut publier ses résultats.", 409);
+  if (!inJury(h)) throw new DomainError("not_jury", "Seul un hackathon en jury peut publier ses résultats.", 409);
   if (h.submissions.length === 0) throw new DomainError("empty", "Aucune solution n’a été soumise.", 409);
   const recused = await recusals(prisma, h.submissions);
   const missing = h.submissions.filter((s) => h.jurors.some((j) => !recused.get(s.id)!.has(j.userId) && !s.scores.some((x) => x.jurorId === j.userId))).length;
@@ -577,7 +571,7 @@ export async function publishResults(adminId: string, hackathonId: string, prism
   return prisma.$transaction(async (tx) => {
     const now = new Date();
     // Two clicks, or two admins at once: only one publication creates the transfers.
-    const { count } = await tx.hackathon.updateMany({ where: { id: hackathonId, status: "JURY" }, data: { status: "DONE", resultsAt: now } });
+    const { count } = await tx.hackathon.updateMany({ where: { id: hackathonId, status: { in: ["OPEN", "JURY"] } }, data: { status: "DONE", resultsAt: now } });
     if (!count) throw new DomainError("already_published", "Les résultats sont déjà publiés.", 409);
     const notes: NotificationInput[] = everyone.filter((e) => !e.won).map((e) => ({ userId: e.userId, actor, text: " : les résultats sont publiés.", href, icon: "trophy", tone: "accent" }));
     const winners = everyone.filter((e) => e.won);
@@ -626,7 +620,6 @@ export async function markPayoutSent(adminId: string, payoutId: string, referenc
 }
 
 export async function getResults(id: string, prisma: Db = db): Promise<HackathonResults> {
-  await syncStatuses(prisma);
   const h = await prisma.hackathon.findUnique({ where: { id }, select: { ...summarySelect, payouts: { include: { beneficiary: { select: { name: true } } }, orderBy: { role: "asc" } } } });
   if (!h || h.status !== "DONE") throw notFound("Résultats introuvables.");
   const [summary] = await summaries([h], prisma);
@@ -729,7 +722,6 @@ export async function missionsFor(userId: string, hackathonId: string, prisma: D
 /** For the admin page: hackathons with their state, proposals to review and transfers still to send. */
 export async function adminOverview(adminId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
-  await syncStatuses(prisma);
   const rows = await prisma.hackathon.findMany({ select: { ...summarySelect, publishedAt: true }, orderBy: { startsAt: "asc" } });
   const hackathons = await summaries(rows, prisma);
   const payouts = await prisma.payout.findMany({ where: { status: "PENDING" }, include: { beneficiary: { select: { name: true } }, hackathon: { select: { title: true, resultsAt: true } } }, orderBy: { createdAt: "asc" } });

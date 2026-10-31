@@ -30,7 +30,7 @@ KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora
   - `src/app/api/**` contient des routes fines qui valident l'entrée (Zod, `src/lib/schemas.ts`) puis appellent `src/server` ;
   - `src/lib` regroupe les règles partagées et pures (testées unitairement).
 - **Argent** (cagnottes, répartition 60/30/10, versements, remboursements) : uniquement dans la couche serveur, dans une transaction PostgreSQL, avec une clé d'idempotence. Le paiement réel reste en **sandbox**.
-- **Tâches différées** (relance à 48 h, réaffectation à 72 h, versement à 48 h, rappels) : jamais pendant une requête web.
+- **Tâches différées** (relances, rappels, expirations, passage au jury, versements à 48 h) : jamais pendant une requête web. Elles vivent dans `src/server/jobs.ts`, idempotentes, et le worker (`worker/index.ts`, pg-boss) les planifie.
 - **Langue** : interface, messages de commit, commentaires et documentation en **français**, dans le style déjà présent (phrases courtes, termes simples). Respecter la densité de commentaires du fichier modifié.
 - **Cible mobile** : Android d'entrée de gamme en 4G lente. LCP < 2,5 s, JS initial < 200 Ko gzip, images WebP, pas de vidéo chargée sans action, 360 à 1 920 px, WCAG 2.1 AA.
 
@@ -38,7 +38,7 @@ KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora
 
 | Commande | Rôle |
 | --- | --- |
-| `npm run dev` / `npm run realtime` | Application (3000) / temps réel (4001) |
+| `npm run dev` / `npm run realtime` / `npm run worker` | Application (3000) / temps réel (4001) / tâches planifiées (pg-boss) |
 | `npm run db:migrate` / `npm run db:seed` | Migrations / données de démonstration (mot de passe `kabad-demo-2026`) |
 | `npm run lint` · `npm run typecheck` · `npm test` | Vérifications rapides : à lancer avant chaque commit |
 | `npm run test:integration` | Règles sur une vraie base (`DATABASE_URL_TEST`, vidée par les tests) |

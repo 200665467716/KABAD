@@ -2,6 +2,7 @@
 #   docker build --target web      -t kabad-web .
 #   docker build --target realtime -t kabad-realtime .
 #   docker build --target migrate  -t kabad-migrate .
+#   docker build --target worker   -t kabad-worker .
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json prisma.config.ts ./
@@ -23,7 +24,7 @@ ARG NEXT_PUBLIC_SALONS=off
 ENV NEXT_PUBLIC_SALONS=$NEXT_PUBLIC_SALONS
 ARG NEXT_PUBLIC_LIVEKIT_URL
 ENV NEXT_PUBLIC_LIVEKIT_URL=$NEXT_PUBLIC_LIVEKIT_URL
-RUN npx prisma generate && npm run build
+RUN npx prisma generate && npm run build && npm run build:worker
 
 # Applies database migrations, then exits. Run before each new version of the web app.
 FROM deps AS migrate
@@ -43,6 +44,18 @@ COPY realtime ./realtime
 USER kabad
 EXPOSE 4001
 CMD ["node", "realtime/server.mjs"]
+
+# Scheduled tasks (reminders, expirations, hackathon closing): one bundled file and the production dependencies.
+FROM node:22-alpine AS worker
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup -S kabad && adduser -S kabad -G kabad
+COPY package.json package-lock.json ./
+COPY tools/no-sharp ./tools/no-sharp
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+COPY --from=build /app/dist/worker.mjs ./worker.mjs
+USER kabad
+CMD ["node", "worker.mjs"]
 
 FROM node:22-alpine AS web
 WORKDIR /app
