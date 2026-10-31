@@ -1,7 +1,9 @@
 import { cn } from "@/lib/cn";
 
-/* 24px stroke icons drawn for KABAD. currentColor, 1.8 stroke, round joins. */
+/* 24px stroke icons drawn for KABAD. currentColor, 2px stroke, round ends (charte « Motif »). */
 const paths = {
+  globe: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z",
+  rise: "m6 15-3 3 3 3M18 15l3 3-3 3M12 21V10M12 14c-3 0-5-2-5-5 3 0 5 2 5 5zM12 11c0-3 2-6 6-6 0 3-2 6-6 6z",
   home: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",
   screen: "M3 4h18v12H3zM8 20h8M12 16v4",
   trophy: "M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6",
@@ -46,7 +48,7 @@ export type IconName = keyof typeof paths;
 
 type Props = { name: IconName; size?: 16 | 18 | 20 | 24; className?: string; label?: string; strokeWidth?: number };
 
-export function Icon({ name, size = 24, className, label, strokeWidth = 1.8 }: Props) {
+export function Icon({ name, size = 24, className, label, strokeWidth = 2 }: Props) {
   return (
     <svg
       viewBox="0 0 24 24"

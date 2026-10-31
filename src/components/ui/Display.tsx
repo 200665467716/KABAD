@@ -1,26 +1,29 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatNumber } from "@/lib/format";
 import { splitPrize } from "@/lib/prize";
+import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "./Icon";
 
-/* Badge */
+/* Badge : toujours un mot avec la couleur d'état (« Confirmée », « En direct »). */
 
-export type BadgeTone = "neutral" | "brand" | "accent" | "success" | "danger" | "solidSuccess" | "onBrand";
+export type BadgeTone = "neutral" | "brand" | "accent" | "success" | "danger" | "solidSuccess" | "onBrand" | "live";
 const badgeTones: Record<BadgeTone, string> = {
   neutral: "bg-sunken text-muted",
-  brand: "bg-brand-soft text-brand-text",
+  brand: "bg-brand-wash text-brand-text",
   accent: "bg-accent text-on-accent",
   success: "bg-success-soft text-success",
   danger: "bg-danger-soft text-danger",
   solidSuccess: "bg-success text-on-success",
   onBrand: "bg-on-brand/15 text-on-brand",
+  live: "bg-ink text-raised",
 };
 
 export function Badge({ tone = "neutral", icon, children, className }: { tone?: BadgeTone; icon?: IconName; children: ReactNode; className?: string }) {
   return (
-    <span className={cn("inline-flex h-6 shrink-0 items-center gap-1 rounded-xs px-2 text-xs font-bold tracking-[0.06em] uppercase", badgeTones[tone], className)}>
+    <span className={cn("inline-flex h-6.5 shrink-0 items-center gap-1.5 rounded-sm px-2.5 text-xs font-extrabold", badgeTones[tone], className)}>
+      {tone === "live" && <span aria-hidden="true" className="size-[7px] rounded-full bg-live" />}
       {icon && <Icon name={icon} size={16} strokeWidth={2.4} className="-ml-0.5 size-3" />}
       {children}
     </span>
@@ -34,27 +37,27 @@ const avatarSizes: Record<AvatarSize, string> = {
   sm: "size-8 text-xs",
   md: "size-10 text-sm",
   lg: "size-14 text-lg",
-  xl: "size-22 text-3xl font-display",
+  xl: "size-22 text-2xl font-display",
 };
 export type AvatarTone = "brand" | "accent" | "success" | "neutral" | "solidAccent";
 const avatarTones: Record<AvatarTone, string> = {
-  brand: "bg-brand-soft text-brand-text",
-  accent: "bg-accent-soft text-accent-text",
+  brand: "bg-brand text-on-brand",
+  accent: "bg-accent text-on-accent",
   success: "bg-success-soft text-success",
-  neutral: "bg-sunken text-muted",
+  neutral: "bg-bg text-ink shadow-[inset_0_0_0_2px_var(--border-strong)]",
   solidAccent: "bg-accent text-on-accent",
 };
 
 export function Avatar({ initials, size = "md", tone = "brand", square, className }: { initials: ReactNode; size?: AvatarSize; tone?: AvatarTone; square?: boolean; className?: string }) {
   return (
-    <span aria-hidden="true" className={cn("inline-grid shrink-0 place-items-center font-bold select-none", square ? "rounded-lg" : "rounded-full", avatarSizes[size], avatarTones[tone], className)}>
+    <span aria-hidden="true" className={cn("inline-grid shrink-0 place-items-center font-extrabold select-none", square ? "rounded-lg" : "rounded-full", avatarSizes[size], avatarTones[tone], className)}>
       {initials}
     </span>
   );
 }
 
 export function AvatarGroup({ children, className }: { children: ReactNode; className?: string }) {
-  return <span className={cn("inline-flex [&>*]:shadow-[0_0_0_2px_var(--bg-raised)] [&>*+*]:-ml-1", className)}>{children}</span>;
+  return <span className={cn("inline-flex [&>*]:shadow-[0_0_0_2px_var(--bg-raised)] [&>*+*]:-ml-2", className)}>{children}</span>;
 }
 
 /* Person row */
@@ -64,7 +67,7 @@ export function PersonRow({ avatar, name, badge, meta, extra, action, className 
     <div className={cn("flex min-w-0 items-center gap-3", className)}>
       {avatar}
       <div className="grid min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-2 font-bold">
+        <span className="flex flex-wrap items-center gap-2 font-extrabold">
           <span className="truncate">{name}</span>
           {badge}
         </span>
@@ -76,14 +79,15 @@ export function PersonRow({ avatar, name, badge, meta, extra, action, className 
   );
 }
 
-/* Card */
+/* Card : bordure encre de 2 px, rayon 18. `featured` ajoute l'ombre décalée : une seule carte vedette par écran. */
 
-export function Card({ className, interactive, ...rest }: { interactive?: boolean } & ComponentProps<"div">) {
+export function Card({ className, interactive, featured, ...rest }: { interactive?: boolean; featured?: boolean } & ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "grid gap-4 rounded-lg border border-line bg-raised p-4 shadow-sm",
-        interactive && "transition-[box-shadow,border-color] duration-200 hover:border-line-strong hover:shadow-md",
+        "grid gap-4 rounded-lg border-2 border-line-strong bg-raised p-4",
+        featured && "rounded-xl shadow-pop",
+        interactive && "transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-pop",
         className,
       )}
       {...rest}
@@ -95,7 +99,7 @@ export function CardLink({ className, ...rest }: ComponentProps<typeof Link>) {
   return (
     <Link
       className={cn(
-        "grid gap-3 rounded-lg border border-line bg-raised p-4 text-ink no-underline shadow-sm transition-[box-shadow,border-color] duration-200 hover:border-line-strong hover:shadow-md",
+        "grid gap-3 rounded-lg border-2 border-line-strong bg-raised p-4 text-ink no-underline transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-pop",
         className,
       )}
       {...rest}
@@ -108,7 +112,7 @@ export function CardLink({ className, ...rest }: ComponentProps<typeof Link>) {
 export function SectionHead({ id, title, action }: { id?: string; title: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <h2 id={id} className="font-display text-lg font-bold tracking-[-0.01em]">
+      <h2 id={id} className="font-display text-md font-extrabold uppercase">
         {title}
       </h2>
       {action}
@@ -118,7 +122,7 @@ export function SectionHead({ id, title, action }: { id?: string; title: ReactNo
 
 export function Overline({ children, className, as: Tag = "p", id }: { children: ReactNode; className?: string; as?: "p" | "h2" | "h3" | "span"; id?: string }) {
   return (
-    <Tag id={id} className={cn("text-xs font-bold tracking-[0.08em] text-muted uppercase", className)}>
+    <Tag id={id} className={cn("text-xs font-extrabold tracking-[0.1em] text-brand-text uppercase", className)}>
       {children}
     </Tag>
   );
@@ -128,7 +132,7 @@ export function Overline({ children, className, as: Tag = "p", id }: { children:
 
 export type AlertTone = "info" | "success" | "danger" | "reward";
 const alertTones: Record<AlertTone, { box: string; icon: string; name: IconName }> = {
-  info: { box: "bg-brand-soft", icon: "text-brand-text", name: "info" },
+  info: { box: "bg-brand-wash", icon: "text-brand-text", name: "info" },
   success: { box: "bg-success-soft", icon: "text-success", name: "check" },
   danger: { box: "bg-danger-soft", icon: "text-danger", name: "info" },
   reward: { box: "bg-accent-soft", icon: "text-accent-text", name: "clock" },
@@ -137,10 +141,10 @@ const alertTones: Record<AlertTone, { box: string; icon: string; name: IconName 
 export function Alert({ tone = "info", title, children, role, className }: { tone?: AlertTone; title?: ReactNode; children: ReactNode; role?: "status" | "alert"; className?: string }) {
   const t = alertTones[tone];
   return (
-    <div role={role} className={cn("grid grid-cols-[20px_1fr] items-start gap-3 rounded-md px-4 py-3 text-sm text-ink", t.box, className)}>
-      <Icon name={t.name} size={20} className={cn("mt-0.5", t.icon)} strokeWidth={tone === "success" ? 2 : 1.8} />
+    <div role={role} className={cn("grid grid-cols-[20px_1fr] items-start gap-3 rounded-action px-4 py-3 text-sm text-ink", t.box, className)}>
+      <Icon name={t.name} size={20} className={cn("mt-0.5", t.icon)} strokeWidth={2} />
       <p>
-        {title && <span className="font-bold">{title} </span>}
+        {title && <span className="font-extrabold">{title} </span>}
         {children}
       </p>
     </div>
@@ -153,7 +157,7 @@ export function Meter({ value, tone = "brand", label, className, height = "h-2" 
   const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
   const fill = tone === "accent" ? "bg-accent" : tone === "success" ? "bg-success" : "bg-brand";
   return (
-    <div role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className={cn("overflow-hidden rounded-full bg-sunken", height, className)}>
+    <div role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className={cn("overflow-hidden rounded-full bg-brand-wash", height, className)}>
       <span className={cn("block h-full rounded-full", fill)} style={{ width: `${pct}%` }} />
     </div>
   );
@@ -161,7 +165,9 @@ export function Meter({ value, tone = "brand", label, className, height = "h-2" 
 
 /* Prize split: 60 / 30 / 10 */
 
-export function PrizeSplit({ total, labels = ["Gagnant", "Son mentor", "KABAD"], className, barHeight = "h-3" }: { total: number; labels?: [string, string, string]; className?: string; barHeight?: string }) {
+export function PrizeSplit({ total, labels, className, barHeight = "h-3" }: { total: number; labels?: [string, string, string]; className?: string; barHeight?: string }) {
+  const t = useTranslations("prize");
+  labels ??= [t("winner"), t("mentor"), t("platform")];
   const s = splitPrize(total);
   const items = [
     { label: labels[0], value: s.winner, dot: "bg-brand" },
@@ -195,7 +201,7 @@ export function PrizeSplit({ total, labels = ["Gagnant", "Son mentor", "KABAD"],
 export function Stat({ value, label }: { value: ReactNode; label: ReactNode }) {
   return (
     <div className="grid gap-0.5">
-      <b className="font-display text-xl font-bold tracking-[-0.02em] tabular">{value}</b>
+      <b className="font-display text-[28px] leading-[30px] font-extrabold tabular">{value}</b>
       <span className="text-xs text-muted">{label}</span>
     </div>
   );
@@ -204,5 +210,5 @@ export function Stat({ value, label }: { value: ReactNode; label: ReactNode }) {
 /* Day separator, system line */
 
 export function DaySeparator({ children }: { children: ReactNode }) {
-  return <span className="justify-self-center rounded-full bg-sunken px-2 py-0.5 text-xs font-bold text-muted">{children}</span>;
+  return <span className="justify-self-center rounded-full bg-brand-wash px-2.5 py-1 text-xs font-extrabold text-muted">{children}</span>;
 }

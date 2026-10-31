@@ -16,7 +16,7 @@ export function LogoMark({ size = 32, inverse = false, className, decorative = f
       aria-label={decorative ? undefined : "KABAD"}
       aria-hidden={decorative || undefined}
     >
-      <rect width="64" height="64" rx="14" fill={ground} />
+      <rect width="64" height="64" rx={inverse ? 10 : 12} fill={ground} />
       <g fill={bars}>
         <rect x="16" y="13" width="8" height="6" rx="1.5" />
         <rect x="38" y="13" width="10" height="6" rx="1.5" />
@@ -36,7 +36,7 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
       <LogoMark size={32} decorative />
-      <span className="font-display text-xl font-bold tracking-[-0.03em]">KABAD</span>
+      <span className="font-display text-lg font-extrabold tracking-[0.04em]">KABAD</span>
     </span>
   );
 }

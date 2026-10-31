@@ -2,25 +2,25 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 const control =
-  "w-full rounded-md border border-line-strong bg-raised px-3 text-base text-ink placeholder:text-subtle focus:border-focus focus:outline-2 focus:outline-offset-0 focus:outline-focus aria-[invalid=true]:border-danger";
+  "w-full rounded-md border-2 border-line-strong bg-raised px-3.5 text-base font-medium text-ink placeholder:text-subtle focus:border-focus focus:outline-2 focus:outline-offset-0 focus:outline-focus aria-[invalid=true]:border-danger";
 
 type Meta = { label: ReactNode; hint?: ReactNode; error?: ReactNode; counter?: ReactNode; className?: string };
 
 function Wrapper({ id, label, hint, error, counter, className, children }: Meta & { id: string; children: ReactNode }) {
   return (
-    <div className={cn("grid gap-1", className)}>
-      <label htmlFor={id} className="text-sm font-bold text-ink">
+    <div className={cn("grid min-w-0 gap-2", className)}>
+      <label htmlFor={id} className="text-sm font-extrabold text-ink">
         {label}
       </label>
       {children}
       {(hint || error || counter) && (
         <div className="flex items-start justify-between gap-3">
           {error ? (
-            <span id={`${id}-msg`} className="text-sm font-bold text-danger">
+            <span id={`${id}-msg`} className="text-sm font-extrabold text-danger">
               {error}
             </span>
           ) : hint ? (
-            <span id={`${id}-msg`} className="text-sm text-muted">
+            <span id={`${id}-msg`} className="text-[13px] leading-[18px] text-muted">
               {hint}
             </span>
           ) : (
@@ -38,7 +38,7 @@ export function TextField({ id, label, hint, error, counter, className, inputCla
     <Wrapper id={id} label={label} hint={hint} error={error} counter={counter} className={className}>
       <input
         id={id}
-        className={cn(control, "h-11", inputClassName)}
+        className={cn(control, "h-12", inputClassName)}
         aria-invalid={error ? true : undefined}
         aria-describedby={hint || error ? `${id}-msg` : undefined}
         {...rest}
@@ -65,7 +65,7 @@ export function TextArea({ id, label, hint, error, counter, className, rows = 4,
 export function Select({ id, label, hint, className, children, ...rest }: Meta & { id: string } & ComponentProps<"select">) {
   return (
     <Wrapper id={id} label={label} hint={hint} className={className}>
-      <select id={id} className={cn(control, "h-11 appearance-none bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-9")} style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666c87' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }} {...rest}>
+      <select id={id} className={cn(control, "h-12 appearance-none bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-9")} style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230d1020' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }} {...rest}>
         {children}
       </select>
     </Wrapper>
@@ -75,7 +75,7 @@ export function Select({ id, label, hint, className, children, ...rest }: Meta &
 export function Checkbox({ children, className, ...rest }: { children: ReactNode; className?: string } & ComponentProps<"input">) {
   return (
     <label className={cn("flex cursor-pointer items-start gap-3 text-sm", className)}>
-      <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-[var(--brand)]" {...rest} />
+      <input type="checkbox" className="size-5.5 shrink-0 accent-[var(--brand)]" {...rest} />
       <span>{children}</span>
     </label>
   );
@@ -86,15 +86,15 @@ export function RadioCard({ checked, heading, description, className, ...rest }:
   return (
     <label
       className={cn(
-        "flex cursor-pointer items-start gap-3 rounded-md border bg-raised px-4 py-3 transition-colors",
-        checked ? "border-brand bg-brand-soft shadow-[inset_0_0_0_1px_var(--brand)]" : "border-line hover:border-line-strong",
+        "flex cursor-pointer items-start gap-3 rounded-action border-2 px-3.5 py-3 transition-colors",
+        checked ? "border-brand bg-brand-soft shadow-[inset_0_0_0_1px_var(--brand)]" : "border-line-strong bg-raised",
         className,
       )}
     >
       <input type="radio" checked={checked} className="mt-0.5 size-5 shrink-0 accent-[var(--brand)]" {...rest} />
       <span className="grid gap-0.5">
-        <span className="font-bold">{heading}</span>
-        {description && <span className="text-sm text-muted">{description}</span>}
+        <span className="text-[15px] leading-5 font-extrabold">{heading}</span>
+        {description && <span className="text-[13px] leading-[18px] text-muted">{description}</span>}
       </span>
     </label>
   );

@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "description": "The community of developers from Africa and the diaspora: mentoring, coding challenges, community testing and messaging.",
+    "notFound": "Page not found"
+  },
+  "common": {
+    "back": "Back",
+    "close": "Close",
+    "skip": "Skip",
+    "retry": "Try again",
+    "home": "Home",
+    "backHome": "Back to home",
+    "seeAll": "See all",
+    "step": "Step {step} of {total}"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "home": "Home",
+    "mentoring": "Mentoring",
+    "challenges": "Challenges",
+    "tests": "Tests",
+    "messages": "Messages",
+    "members": "Members",
+    "voiceRooms": "Voice rooms",
+    "capsules": "Capsules",
+    "notifications": "Notifications",
+    "account": "My account",
+    "admin": "KABAD team",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "unreadMessages": "{count, plural, one {# unread message} other {# unread messages}}",
+    "unreadNotifications": "{count, plural, one {# unread} other {# unread}}",
+    "senior": "Senior",
+    "junior": "Junior"
+  },
+  "language": {
+    "label": "Language",
+    "fr": "Français",
+    "en": "English"
+  },
+  "prize": {
+    "winner": "Winner",
+    "mentor": "Their mentor",
+    "platform": "KABAD"
+  },
+  "errors": {
+    "notFoundTitle": "Page not found",
+    "notFoundText": "This page doesn’t exist, or you don’t have access to it. The link may be incomplete.",
+    "errorTitle": "Something went wrong",
+    "errorText": "It’s not your fault. Try again in a moment; if it keeps happening, let the KABAD team know."
+  }
+}

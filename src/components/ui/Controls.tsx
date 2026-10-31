@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 import { Icon } from "./Icon";
 
@@ -21,7 +22,7 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   return (
-    <div role="tablist" aria-label={label} className={cn("gap-0.5 rounded-md bg-sunken p-[3px]", stretch ? "grid" : "inline-flex", className)} style={stretch ? { gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` } : undefined}>
+    <div role="tablist" aria-label={label} className={cn("gap-1 rounded-action border-2 border-line-strong bg-raised p-1", stretch ? "grid" : "inline-flex", className)} style={stretch ? { gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` } : undefined}>
       {items.map((it) => {
         const selected = it.value === value;
         return (
@@ -32,12 +33,12 @@ export function Segmented<T extends string>({
             aria-selected={selected}
             onClick={() => onChange(it.value)}
             className={cn(
-              "inline-flex h-9 items-center justify-center gap-2 rounded-[6px] px-4 text-sm font-bold whitespace-nowrap transition-colors",
-              selected ? "bg-raised text-ink shadow-sm" : "text-muted hover:text-ink",
+              "inline-flex h-10 items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-extrabold whitespace-nowrap transition-colors",
+              selected ? "bg-ink text-raised" : "text-muted hover:text-ink",
             )}
           >
             {it.label}
-            {it.count !== undefined && it.count > 0 && <span className="inline-grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1.5 text-xs text-on-brand tabular">{it.count}</span>}
+            {it.count !== undefined && it.count > 0 && <span className="inline-grid h-5 min-w-5 place-items-center rounded-full bg-danger px-1.5 text-[11px] text-on-danger tabular">{it.count}</span>}
           </button>
         );
       })}
@@ -52,8 +53,8 @@ export function ToggleChip({ pressed, onClick, children, icon }: { pressed: bool
       aria-pressed={pressed}
       onClick={onClick}
       className={cn(
-        "inline-flex h-9 shrink-0 items-center gap-1 rounded-full border px-3 text-sm font-bold whitespace-nowrap transition-colors",
-        pressed ? "border-ink bg-ink text-raised" : "border-line-strong bg-raised text-ink hover:bg-sunken",
+        "inline-flex h-11 shrink-0 items-center gap-1 rounded-full border-2 border-line-strong px-4 text-sm font-extrabold whitespace-nowrap transition-colors",
+        pressed ? "bg-ink text-raised" : "bg-raised text-ink hover:bg-bg",
       )}
     >
       {icon && <Icon name="plus" size={16} />}
@@ -67,6 +68,7 @@ export function ToggleChip({ pressed, onClick, children, icon }: { pressed: bool
  * so focus is trapped and Escape closes it.
  */
 export function Sheet({ open, onClose, title, children, footer }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode }) {
+  const t = useTranslations("common");
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -85,13 +87,13 @@ export function Sheet({ open, onClose, title, children, footer }: { open: boolea
       }}
       className="m-0 mt-auto w-full max-w-none bg-transparent p-0 text-ink backdrop:bg-[var(--scrim)] sm:m-auto sm:max-w-[480px]"
     >
-      <div className="grid max-h-[88dvh] gap-4 overflow-y-auto rounded-t-xl bg-raised px-4 pt-2 pb-6 shadow-lg safe-bottom sm:rounded-xl sm:px-6 sm:pt-6">
+      <div className="grid max-h-[88dvh] gap-4 overflow-y-auto rounded-t-xl border-2 border-b-0 border-line-strong bg-raised px-4 pt-2 pb-6 safe-bottom sm:rounded-xl sm:border-b-2 sm:px-6 sm:pt-6">
         <span className="h-1 w-10 justify-self-center rounded-full bg-line-strong/50 sm:hidden" aria-hidden="true" />
         <div className="flex items-center justify-between gap-3">
-          <h2 id={titleId} className="font-display text-xl font-bold tracking-[-0.02em]">
+          <h2 id={titleId} className="font-display text-lg font-extrabold uppercase">
             {title}
           </h2>
-          <button type="button" onClick={onClose} aria-label="Fermer" className="inline-grid size-11 place-items-center rounded-full hover:bg-sunken">
+          <button type="button" onClick={onClose} aria-label={t("close")} className="inline-grid size-11 place-items-center rounded-full hover:bg-bg">
             <Icon name="close" />
           </button>
         </div>

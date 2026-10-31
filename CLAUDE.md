@@ -23,7 +23,8 @@ KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora
 - **Données** : PostgreSQL 16 + Prisma 7 (`prisma/schema.prisma`). Toute modification du schéma passe par une migration (`npm run db:migrate -- --name <nom>`), jamais par `db push`.
 - **Temps réel** : `realtime/server.mjs` (Socket.IO alimenté par `pg_notify`).
 - **Paiement** : XedoPay en sandbox (décision D2) ; utiliser le skill `xedopay-integration`.
-- **Langues** : FR par défaut, EN partiel via next-intl (décision D1). Tout nouveau texte d'interface passe par les dictionnaires dès que R30 est livré.
+- **Langues** : FR par défaut, EN partiel via next-intl (décision D1). Les pages vivent sous `src/app/[locale]` ; tout nouveau texte d'interface passe par `messages/fr.json` et `messages/en.json` (`useTranslations` / `getTranslations`). Liens, `useRouter`, `usePathname` et `redirect` viennent de `@/i18n/navigation`, jamais de `next/link` ou `next/navigation`, pour garder le préfixe `/en`.
+- **Design system** : charte « Motif » (canvas Design « KABAD — Refonte »). Tokens dans `src/app/globals.css` (encre, indigo, maïs, sable ; Unbounded pour les titres, Manrope pour le texte), composants dans `src/components/ui`. Règles : un seul bouton indigo et une seule carte à ombre décalée (`featured`) par écran, le maïs est réservé à Africa Rise-Up, cartes et champs bordés d'encre 2 px, zones tactiles de 44 px.
 - **Organisation** :
   - `src/server/*.ts` porte les règles métier, vérifiées côté serveur ;
   - `src/app/api/**` contient des routes fines qui valident l'entrée (Zod, `src/lib/schemas.ts`) puis appellent `src/server` ;

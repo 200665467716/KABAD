@@ -218,7 +218,8 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
 ### Langue
 
 - [ ] R30. Interface EN partielle (D1).
-  - next-intl, dictionnaires `fr` et `en`, sélecteur de langue, langue mémorisée sur le profil.
+  - Socle livré le 31 octobre (branche `dev/design-motif`) : next-intl, routes sous `src/app/[locale]` (FR sans préfixe, EN sous `/en`), dictionnaires `messages/fr.json` et `messages/en.json`, sélecteur de langue (barre latérale, compte, accueil public, inscription et connexion). Coque traduite : navigation, en-têtes, pages d'erreur.
+  - Reste : traduire le texte des écrans (périmètre ci-dessous), les titres de page (`metadata`), les dates (`src/lib/time.ts` reste en `fr-FR`), et mémoriser la langue sur le profil.
   - Périmètre minimal : pages publiques, inscription et connexion, accueil, parcours de démo.
   - Messages d'erreur serveur traduits par clé.
 
