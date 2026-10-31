@@ -73,6 +73,58 @@
       "submit": "Publier l’annonce",
       "submitting": "Publication…",
       "error": "L’annonce n’a pas été publiée. Réessaie."
+    },
+    "report": {
+      "metaTitle": "Rapport de test",
+      "loading": "Chargement…",
+      "title": "Votre rapport",
+      "badFile": "« {name} » n’est pas accepté : une image PNG, JPEG ou WebP de 2 Mo au plus.",
+      "needShots": "{count, plural, one {Ajoutez # capture, une par étape du scénario.} other {Ajoutez # captures, une par étape du scénario.}}",
+      "needAnswers": "Répondez aux questions de contrôle.",
+      "needDevice": "Indiquez l’appareil utilisé.",
+      "error": "Le rapport n’a pas été envoyé. Réessayez.",
+      "sentTitle": "Rapport envoyé.",
+      "sentBody": "{name} le lit puis le valide. Vous recevrez une notification.",
+      "shots": "Captures d’écran, une par étape",
+      "shotsCount": "{count} sur {total}",
+      "shotAlt": "Capture de l’étape {n}",
+      "removeShot": "Retirer la capture de l’étape {n}",
+      "addShot": "Étape {n}",
+      "device": "Appareil utilisé",
+      "devicePlaceholder": "Par exemple : Android, Tecno Spark 10",
+      "remarks": "Vos remarques",
+      "remarksPlaceholder": "Ce qui vous a bloqué, ce qui était clair…",
+      "backToTests": "Retour aux tests",
+      "sending": "Envoi…",
+      "submit": "Envoyer le rapport",
+      "help": "{name} valide votre rapport après l’avoir lu."
+    },
+    "review": {
+      "metaTitle": "Rapports reçus",
+      "loading": "Chargement des rapports…",
+      "title": "Rapports reçus",
+      "subtitle": "{name} · {count, plural, one {# rapport} other {# rapports}}, {toRead} à lire",
+      "status": {
+        "SUBMITTED": "À lire",
+        "VALIDATED": "Validé",
+        "REFUSED": "Refusé"
+      },
+      "questions": "Questions de contrôle",
+      "correct": "bonne réponse",
+      "unexpected": "réponse inattendue",
+      "shots": "Captures",
+      "openShot": "Ouvrir la capture de l’étape {n}",
+      "remarks": "Remarques",
+      "refusalReason": "Motif du refus : {reason}",
+      "refuseLabel": "Pourquoi refusez-vous ce rapport ?",
+      "refuseHint": "{name} verra votre réponse et pourra refaire le test.",
+      "cancel": "Annuler",
+      "confirmRefuse": "Refuser le rapport",
+      "refuse": "Refuser",
+      "validate": "Valider le rapport",
+      "validateLabel": "Valider le rapport de {name}",
+      "error": "La réponse n’a pas été enregistrée. Réessayez.",
+      "empty": "Aucun rapport pour l’instant. Les testeurs de la communauté vont arriver."
     }
   }
 }

@@ -303,7 +303,7 @@ export async function sendInvitation(fromId: string, input: { toId: string; mess
       ? await tx.invitation.update({ where: { id: mine.id }, data: { message, status: "PENDING", createdAt: new Date(), answeredAt: null } })
       : await tx.invitation.create({ data: { fromId, toId, message } });
     await notify(tx, { t: "invitation", invitationId: inv.id, recipients: [toId] });
-    await pushNotifications(tx, [{ userId: toId, actor: from.name, text: "vous invite à échanger.", href: `/messages/invitations/${inv.id}`, icon: "user", tone: "brand" }]);
+    await pushNotifications(tx, [{ userId: toId, actor: from.name, key: "invitationReceived", href: `/messages/invitations/${inv.id}`, icon: "user", tone: "brand" }]);
     return { id: inv.id };
   });
 }
@@ -346,7 +346,7 @@ export async function answerInvitation(userId: string, invitationId: string, acc
     await tx.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: now } });
     await notify(tx, { t: "invitation_answered", invitationId: inv.id, accepted: true, conversationId: conversation.id, recipients: [inv.fromId] });
     await notify(tx, { t: "conversation", conversationId: conversation.id, recipients: [inv.fromId, inv.toId] });
-    await pushNotifications(tx, [{ userId: inv.fromId, actor: inv.to.name, text: "a accepté votre invitation. Vous pouvez discuter.", href: `/messages/${conversation.id}`, icon: "user", tone: "success" }]);
+    await pushNotifications(tx, [{ userId: inv.fromId, actor: inv.to.name, key: "invitationAccepted", href: `/messages/${conversation.id}`, icon: "user", tone: "success" }]);
     return { conversationId: conversation.id };
   });
 }

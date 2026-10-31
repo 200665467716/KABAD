@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
+import { messageValues } from "@/lib/notification-text";
 import { useCallback, useState } from "react";
 import { Page } from "@/components/shell/TopBar";
 import { Button } from "@/components/ui/Button";
@@ -25,6 +26,10 @@ const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(
 
 export function NotificationList({ initial }: { initial: NotificationView[] }) {
   const t = useTranslations("profile.notifications");
+  const kinds = useTranslations("notifications.kinds");
+  const locale = useLocale();
+  // In the reader's language when the notification has a key; older ones keep their French text.
+  const textOf = (n: NotificationView) => (n.key && kinds.has(n.key) ? kinds(n.key, messageValues(n.params, locale)) : n.text);
   const format = useFormatter();
   const now = useNow();
   const { refresh: refreshMe } = useMe();
@@ -90,8 +95,8 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
                   </span>
                   <span className="text-sm leading-5">
                     <b>{n.actor}</b>
-                    {/^[\s:]/.test(n.text) ? "" : " "}
-                    {n.text}
+                    {/^[\s:]/.test(textOf(n)) ? "" : " "}
+                    {textOf(n)}
                   </span>
                   <span className="grid justify-items-end gap-1.5">
                     <span className="text-xs text-muted tabular">{when(n)}</span>

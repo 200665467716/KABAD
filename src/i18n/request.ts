@@ -3,7 +3,7 @@ import { getRequestConfig } from "next-intl/server";
 import { isLocale, routing } from "./routing";
 
 /** One dictionary per module (messages/fr/mentoring.json…), merged with the shell's (messages/fr.json). */
-export const MODULES = ["auth", "home", "mentoring", "hackathons", "rise", "tests", "messaging", "profile", "admin"] as const;
+export const MODULES = ["auth", "home", "mentoring", "hackathons", "rise", "tests", "messaging", "profile", "admin", "notifications", "capsules", "legal"] as const;
 
 async function load(locale: string) {
   const parts = await Promise.all([import(`../../messages/${locale}.json`), ...MODULES.map((m) => import(`../../messages/${locale}/${m}.json`))]);

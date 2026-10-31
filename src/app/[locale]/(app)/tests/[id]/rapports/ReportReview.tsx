@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "@/i18n/navigation";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useState } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { Button } from "@/components/ui/Button";
@@ -9,13 +10,15 @@ import { TextArea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 import { initials } from "@/lib/format";
-import { agoLabel } from "@/lib/time";
 import type { TestAppSummary, TestReportView } from "@/lib/domain-types";
 
-const STATUS = { SUBMITTED: { label: "À lire", tone: "accent" }, VALIDATED: { label: "Validé", tone: "success" }, REFUSED: { label: "Refusé", tone: "danger" } } as const;
+const TONE = { SUBMITTED: "accent", VALIDATED: "success", REFUSED: "danger" } as const;
 
 function ReportCard({ r }: { r: TestReportView }) {
   const router = useRouter();
+  const t = useTranslations("tests.review");
+  const format = useFormatter();
+  const now = useNow();
   const first = r.tester.name.split(" ")[0];
   const [refusing, setRefusing] = useState(false);
   const [reason, setReason] = useState("");
@@ -29,7 +32,7 @@ function ReportCard({ r }: { r: TestReportView }) {
       await api(`/api/test-reports/${r.id}`, { body: validate ? { validate: true } : { validate: false, reason } });
       router.refresh();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "La réponse n’a pas été enregistrée. Réessayez.");
+      setError(e instanceof ApiError ? e.message : t("error"));
       setBusy(false);
     }
   }
@@ -37,28 +40,28 @@ function ReportCard({ r }: { r: TestReportView }) {
   return (
     <Card className="gap-3.5">
       <div className="flex items-start justify-between gap-2">
-        <PersonRow avatar={<Avatar initials={initials(r.tester.name)} tone="accent" />} name={r.tester.name} meta={`${r.device} · ${agoLabel(r.createdAt)}`} />
-        <Badge tone={STATUS[r.status].tone}>{STATUS[r.status].label}</Badge>
+        <PersonRow avatar={<Avatar initials={initials(r.tester.name)} tone="accent" />} name={r.tester.name} meta={`${r.device} · ${format.relativeTime(new Date(r.createdAt), now)}`} />
+        <Badge tone={TONE[r.status]}>{t(`status.${r.status}`)}</Badge>
       </div>
       <div className="grid gap-2">
-        <Overline as="h3">Questions de contrôle</Overline>
+        <Overline as="h3">{t("questions")}</Overline>
         {r.answers.map((a) => (
           <div key={a.question} className="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2.5">
             <Icon name={a.correct ? "checkCircle" : "info"} size={20} className={a.correct ? "text-success" : "text-danger"} strokeWidth={2} />
             <span className="grid">
               <span className="text-sm text-muted">{a.question}</span>
               <span className="text-sm font-bold">
-                {a.answer} · {a.correct ? "bonne réponse" : "réponse inattendue"}
+                {a.answer} · {a.correct ? t("correct") : t("unexpected")}
               </span>
             </span>
           </div>
         ))}
       </div>
       <div className="grid gap-2">
-        <Overline as="h3">Captures</Overline>
+        <Overline as="h3">{t("shots")}</Overline>
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: r.screenshots }, (_, i) => (
-            <a key={i} href={`/api/test-reports/${r.id}/captures/${i}`} target="_blank" rel="noreferrer" aria-label={`Ouvrir la capture de l’étape ${i + 1}`}>
+            <a key={i} href={`/api/test-reports/${r.id}/captures/${i}`} target="_blank" rel="noreferrer" aria-label={t("openShot", { n: i + 1 })}>
               {/* eslint-disable-next-line @next/next/no-img-element -- private image served by the API to the owner only */}
               <img src={`/api/test-reports/${r.id}/captures/${i}`} alt="" className="h-26 w-16 rounded-md border border-line bg-sunken object-cover" />
             </a>
@@ -67,31 +70,31 @@ function ReportCard({ r }: { r: TestReportView }) {
       </div>
       {r.remarks && (
         <div className="grid gap-2">
-          <Overline as="h3">Remarques</Overline>
+          <Overline as="h3">{t("remarks")}</Overline>
           <p className="rounded-md bg-sunken px-3.5 py-3 text-sm whitespace-pre-line">{r.remarks}</p>
         </div>
       )}
-      {r.status === "REFUSED" && r.refusalReason && <p className="text-sm text-muted">Motif du refus : {r.refusalReason}</p>}
+      {r.status === "REFUSED" && r.refusalReason && <p className="text-sm text-muted">{t("refusalReason", { reason: r.refusalReason })}</p>}
       {r.status === "SUBMITTED" &&
         (refusing ? (
           <div className="grid gap-2">
-            <TextArea id={`refus-${r.id}`} label="Pourquoi refusez-vous ce rapport ?" rows={3} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} hint={`${first} verra votre réponse et pourra refaire le test.`} />
+            <TextArea id={`refus-${r.id}`} label={t("refuseLabel")} rows={3} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} hint={t("refuseHint", { name: first })} />
             <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
               <Button variant="secondary" onClick={() => setRefusing(false)} disabled={busy}>
-                Annuler
+                {t("cancel")}
               </Button>
               <Button variant="danger" onClick={() => review(false)} disabled={busy}>
-                Refuser le rapport
+                {t("confirmRefuse")}
               </Button>
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
             <Button variant="secondary" onClick={() => setRefusing(true)} disabled={busy}>
-              Refuser
+              {t("refuse")}
             </Button>
-            <Button variant="success" onClick={() => review(true)} disabled={busy} aria-label={`Valider le rapport de ${r.tester.name}`}>
-              Valider le rapport
+            <Button variant="success" onClick={() => review(true)} disabled={busy} aria-label={t("validateLabel", { name: r.tester.name })}>
+              {t("validate")}
             </Button>
           </div>
         ))}
@@ -105,11 +108,12 @@ function ReportCard({ r }: { r: TestReportView }) {
 }
 
 export function ReportReview({ app, reports }: { app: TestAppSummary; reports: TestReportView[] }) {
+  const t = useTranslations("tests.review");
   return (
     <>
-      <TopBar back="/tests" title="Rapports reçus" subtitle={`${app.name} · ${app.reportsCount} rapport${app.reportsCount > 1 ? "s" : ""}, ${app.toRead} à lire`} />
+      <TopBar back="/tests" title={t("title")} subtitle={t("subtitle", { name: app.name, count: app.reportsCount, toRead: app.toRead })} />
       <Page narrow>
-        {reports.length === 0 ? <p className="py-8 text-center text-muted">Aucun rapport pour l’instant. Les testeurs de la communauté vont arriver.</p> : reports.map((r) => <ReportCard key={r.id} r={r} />)}
+        {reports.length === 0 ? <p className="py-8 text-center text-muted">{t("empty")}</p> : reports.map((r) => <ReportCard key={r.id} r={r} />)}
       </Page>
     </>
   );

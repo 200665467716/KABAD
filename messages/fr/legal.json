@@ -1,0 +1,33 @@
+{
+  "legal": {
+    "terms": {
+      "metaTitle": "Conditions et charte de la communauté",
+      "homeLabel": "KABAD, accueil",
+      "title": "Conditions d’utilisation et charte de la communauté",
+      "version": "Version de travail du {date}, à faire valider avant l’ouverture au public.",
+      "charter": {
+        "title": "La charte",
+        "respect": "On s’adresse aux autres avec respect, quels que soient leur pays, leur langue ou leur niveau.",
+        "abuse": "Pas de harcèlement, de propos haineux, d’arnaque ni de spam, dans les messages comme dans les salons vocaux.",
+        "code": "Dans un défi, le code soumis est le vôtre. L’aide du mentor porte sur l’apprentissage, pas sur la solution.",
+        "honesty": "Le statut Senior et les heures de mentorat se déclarent honnêtement : ils ouvrent des récompenses."
+      },
+      "moderation": {
+        "title": "Ce que nous faisons en cas de problème",
+        "text": "Chaque membre peut signaler un profil, un message, une conversation, une invitation ou un salon, et bloquer quelqu’un. L’équipe KABAD examine les signalements : elle peut classer, retirer un message, fermer un salon, avertir ou suspendre un compte. Chaque décision est enregistrée."
+      },
+      "data": {
+        "title": "Vos données",
+        "kept": "Nous gardons ce qui sert au service : votre profil, vos messages, vos binômes, vos solutions et vos rapports de test.",
+        "voice": "Les salons vocaux ne sont pas enregistrés.",
+        "momo": "Votre numéro Mobile Money n’est utilisé que pour vous verser un gain, et n’est montré qu’à l’équipe.",
+        "account": "Depuis « Mon compte », vous téléchargez toutes vos données et vous supprimez votre compte à tout moment."
+      },
+      "prizes": {
+        "title": "Les défis et les cagnottes",
+        "text": "Une cagnotte est partagée entre le gagnant (60 %), son mentor (30 %) et KABAD (10 %), après la publication des résultats et 48 heures de contestation. Le jury est composé de trois seniors vérifiés ; un juré ne note jamais une personne qu’il accompagne."
+      },
+      "backToSignup": "Retour à l’inscription"
+    }
+  }
+}

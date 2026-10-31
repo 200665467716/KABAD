@@ -2,31 +2,33 @@
 
 import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Alert, Badge, Card } from "@/components/ui/Display";
 import { TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
-import { agoLabel } from "@/lib/time";
 import type { ReportContext, ReportDecision } from "@/server/admin";
-
-const TARGET: Record<ReportContext["targetType"], string> = { USER: "Profil", MESSAGE: "Message", CONVERSATION: "Conversation", INVITATION: "Invitation", ROOM: "Salon vocal" };
 
 function ReportCard({ r }: { r: ReportContext }) {
   const router = useRouter();
+  const t = useTranslations("admin");
+  const format = useFormatter();
+  const now = useNow();
+  const target = r.target;
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<ReportDecision | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function decide(decision: ReportDecision) {
-    if ((decision === "warn" || decision === "suspend") && note.trim().length < 5) return setError("Écrivez le motif : le membre le lira.");
+    if ((decision === "warn" || decision === "suspend") && note.trim().length < 5) return setError(t("reports.needNote"));
     setBusy(decision);
     setError(null);
     try {
       await api(`/api/admin/reports/${r.id}`, { body: { decision, note: note.trim() || undefined } });
       router.refresh();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "L’action n’a pas abouti.");
+      setError(e instanceof ApiError ? e.message : t("error"));
       setBusy(null);
     }
   }
@@ -35,22 +37,31 @@ function ReportCard({ r }: { r: ReportContext }) {
     <Card className="gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="danger">{r.reason}</Badge>
-        <Badge>{TARGET[r.targetType]}</Badge>
+        <Badge>{t(`reports.target.${r.targetType}`)}</Badge>
         <span className="text-xs text-muted">
-          {agoLabel(r.createdAt)} · par{" "}
-          <Link href={`/profil/${r.reporter.id}`} className="text-muted">
-            {r.reporter.name}
-          </Link>
+          {t.rich("reports.meta", {
+            when: format.relativeTime(new Date(r.createdAt), now),
+            name: r.reporter.name,
+            link: (c) => (
+              <Link href={`/profil/${r.reporter.id}`} className="text-muted">
+                {c}
+              </Link>
+            ),
+          })}
         </span>
       </div>
-      {r.target && (
+      {target && (
         <p className="text-sm">
-          Membre visé :{" "}
-          <Link href={`/profil/${r.target.id}`} className="font-bold">
-            {r.target.name}
-          </Link>
-          {r.targetReports > 1 && <b className="text-danger"> · {r.targetReports} signalements au total</b>}
-          {r.target.suspended && <b> · déjà suspendu</b>}
+          {t.rich("reports.targetMember", {
+            name: target.name,
+            link: (c) => (
+              <Link href={`/profil/${target.id}`} className="font-bold">
+                {c}
+              </Link>
+            ),
+          })}
+          {r.targetReports > 1 && <b className="text-danger"> · {t("reports.targetTotal", { count: r.targetReports })}</b>}
+          {target.suspended && <b> · {t("reports.alreadySuspended")}</b>}
         </p>
       )}
       {r.details && <p className="rounded-md bg-sunken px-3 py-2 text-sm">« {r.details} »</p>}
@@ -59,32 +70,32 @@ function ReportCard({ r }: { r: ReportContext }) {
           {r.excerpt.map((x, i) => (
             <li key={i} className={x.reported ? "rounded-xs bg-danger-soft px-2 py-1 text-sm" : "px-2 text-sm text-muted"}>
               <b>{x.author}</b> : {x.body}
-              {x.hidden && <em> (déjà retiré)</em>}
+              {x.hidden && <em> ({t("reports.alreadyHidden")})</em>}
             </li>
           ))}
         </ul>
       )}
       {r.status === "REVIEWED" ? (
-        <p className="text-sm text-muted">Décision : {r.resolution}</p>
+        <p className="text-sm text-muted">{t("reports.decision", { resolution: r.resolution ?? "" })}</p>
       ) : (
         <>
-          <TextField id={`note-${r.id}`} label="Motif ou note (lu par le membre en cas d’avertissement)" value={note} maxLength={250} onChange={(e) => setNote(e.target.value)} />
+          <TextField id={`note-${r.id}`} label={t("reports.noteLabel")} value={note} maxLength={250} onChange={(e) => setNote(e.target.value)} />
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => decide("dismiss")}>
-              Classer sans suite
+              {t("reports.dismiss")}
             </Button>
             {(r.targetType === "MESSAGE" || r.targetType === "ROOM") && (
               <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => decide("hide")}>
-                {r.targetType === "ROOM" ? "Fermer le salon" : "Retirer le message"}
+                {r.targetType === "ROOM" ? t("reports.closeRoom") : t("reports.hideMessage")}
               </Button>
             )}
             {r.target && (
               <>
                 <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => decide("warn")}>
-                  Avertir
+                  {t("reports.warn")}
                 </Button>
                 <Button size="sm" variant="danger" disabled={busy !== null || r.target.suspended} onClick={() => decide("suspend")}>
-                  Suspendre le compte
+                  {t("reports.suspend")}
                 </Button>
               </>
             )}
@@ -101,17 +112,18 @@ function ReportCard({ r }: { r: ReportContext }) {
 }
 
 export function ReportQueue({ reports, status }: { reports: ReportContext[]; status: "OPEN" | "REVIEWED" }) {
+  const t = useTranslations("admin.reports");
   return (
     <>
       <div className="flex gap-3 text-sm font-bold">
         <Link href="/admin/signalements" aria-current={status === "OPEN" ? "page" : undefined} className={status === "OPEN" ? "text-ink" : "text-muted"}>
-          À traiter
+          {t("tabOpen")}
         </Link>
         <Link href="/admin/signalements?vue=traites" aria-current={status === "REVIEWED" ? "page" : undefined} className={status === "REVIEWED" ? "text-ink" : "text-muted"}>
-          Déjà traités
+          {t("tabReviewed")}
         </Link>
       </div>
-      {reports.length === 0 && <p className="py-8 text-center text-muted">{status === "OPEN" ? "Aucun signalement à traiter." : "Aucun signalement traité."}</p>}
+      {reports.length === 0 && <p className="py-8 text-center text-muted">{status === "OPEN" ? t("emptyOpen") : t("emptyReviewed")}</p>}
       {reports.map((r) => (
         <ReportCard key={r.id} r={r} />
       ))}

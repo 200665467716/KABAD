@@ -73,6 +73,58 @@
       "submit": "Publish the listing",
       "submitting": "Publishing…",
       "error": "The listing wasn’t published. Try again."
+    },
+    "report": {
+      "metaTitle": "Test report",
+      "loading": "Loading…",
+      "title": "Your report",
+      "badFile": "“{name}” isn’t accepted: use a PNG, JPEG or WebP image of 2 MB or less.",
+      "needShots": "{count, plural, one {Add # screenshot, one per step of the scenario.} other {Add # screenshots, one per step of the scenario.}}",
+      "needAnswers": "Answer the check questions.",
+      "needDevice": "Tell us which device you used.",
+      "error": "The report wasn’t sent. Try again.",
+      "sentTitle": "Report sent.",
+      "sentBody": "{name} will read it, then validate it. You’ll get a notification.",
+      "shots": "Screenshots, one per step",
+      "shotsCount": "{count} of {total}",
+      "shotAlt": "Screenshot of step {n}",
+      "removeShot": "Remove the screenshot of step {n}",
+      "addShot": "Step {n}",
+      "device": "Device used",
+      "devicePlaceholder": "For example: Android, Tecno Spark 10",
+      "remarks": "Your comments",
+      "remarksPlaceholder": "What got you stuck, what was clear…",
+      "backToTests": "Back to tests",
+      "sending": "Sending…",
+      "submit": "Send the report",
+      "help": "{name} validates your report after reading it."
+    },
+    "review": {
+      "metaTitle": "Reports received",
+      "loading": "Loading reports…",
+      "title": "Reports received",
+      "subtitle": "{name} · {count, plural, one {# report} other {# reports}}, {toRead} to read",
+      "status": {
+        "SUBMITTED": "To read",
+        "VALIDATED": "Validated",
+        "REFUSED": "Refused"
+      },
+      "questions": "Check questions",
+      "correct": "correct answer",
+      "unexpected": "unexpected answer",
+      "shots": "Screenshots",
+      "openShot": "Open the screenshot of step {n}",
+      "remarks": "Comments",
+      "refusalReason": "Reason for refusal: {reason}",
+      "refuseLabel": "Why are you refusing this report?",
+      "refuseHint": "{name} will see your answer and can take the test again.",
+      "cancel": "Cancel",
+      "confirmRefuse": "Refuse the report",
+      "refuse": "Refuse",
+      "validate": "Validate the report",
+      "validateLabel": "Validate {name}’s report",
+      "error": "Your answer wasn’t saved. Try again.",
+      "empty": "No reports yet. Testers from the community are on their way."
     }
   }
 }

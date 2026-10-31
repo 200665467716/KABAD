@@ -6,8 +6,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { pushNotifications, type NotificationInput } from "./notifications";
-import { formatSlot } from "@/lib/time";
-import { formatFCFA } from "@/lib/format";
 import { CONTEST_HOURS } from "./hackathons";
 
 const HOUR = 3600_000;
@@ -28,7 +26,7 @@ export async function lapseUnansweredBookings(now = new Date(), prisma: Db = db)
       where: { id: { in: rows.map((r) => r.id) }, status: "PENDING" },
       data: { status: "DECLINED", declineReason: "Demande expirée : le mentor n’a pas répondu avant la séance.", answeredAt: now },
     });
-    await pushNotifications(tx, rows.map((r) => ({ userId: r.menteeId, actor: r.mentor.name, text: ` n’a pas répondu à temps pour la séance du ${formatSlot(r.startsAt, r.mentee.timeZone)}. Réserve un autre créneau.`, href: `/mentorat/seances/${r.id}`, icon: "clock", tone: "neutral" })));
+    await pushNotifications(tx, rows.map((r) => ({ userId: r.menteeId, actor: r.mentor.name, key: "bookingLapsed", params: { at: r.startsAt.toISOString(), tz: r.mentee.timeZone }, href: `/mentorat/seances/${r.id}`, icon: "clock", tone: "neutral" })));
     return rows.length;
   });
 }
@@ -42,7 +40,7 @@ export async function nudgeMentors(now = new Date(), prisma: Db = db) {
     });
     if (rows.length === 0) return 0;
     await tx.mentoringBooking.updateMany({ where: { id: { in: rows.map((r) => r.id) }, nudgedAt: null }, data: { nudgedAt: now } });
-    await pushNotifications(tx, rows.map((r) => ({ userId: r.mentorId, actor: r.mentee.name, text: ` attend ta réponse pour la séance du ${formatSlot(r.startsAt, r.mentor.timeZone)}.`, href: "/mentorat/demandes", icon: "clock", tone: "brand" })));
+    await pushNotifications(tx, rows.map((r) => ({ userId: r.mentorId, actor: r.mentee.name, key: "bookingNudge", params: { at: r.startsAt.toISOString(), tz: r.mentor.timeZone }, href: "/mentorat/demandes", icon: "clock", tone: "brand" })));
     return rows.length;
   });
 }
@@ -60,8 +58,8 @@ export async function remindSessions(now = new Date(), prisma: Db = db) {
       const minutes = Math.max(1, Math.round((r.startsAt.getTime() - now.getTime()) / 60_000));
       const href = `/mentorat/seances/${r.id}`;
       return [
-        { userId: r.menteeId, actor: r.mentor.name, text: ` : ta séance « ${r.topic} » commence dans ${minutes} min.`, href, icon: "clock" as const, tone: "brand" as const },
-        { userId: r.mentorId, actor: r.mentee.name, text: ` : votre séance « ${r.topic} » commence dans ${minutes} min.`, href, icon: "clock" as const, tone: "brand" as const },
+        { userId: r.menteeId, actor: r.mentor.name, key: "sessionSoonMentee" as const, params: { topic: r.topic, minutes }, href, icon: "clock" as const, tone: "brand" as const },
+        { userId: r.mentorId, actor: r.mentee.name, key: "sessionSoonMentor" as const, params: { topic: r.topic, minutes }, href, icon: "clock" as const, tone: "brand" as const },
       ];
     });
     await pushNotifications(tx, notes);
@@ -80,7 +78,7 @@ export async function remindRiseEvents(now = new Date(), prisma: Db = db) {
     await tx.riseEvent.updateMany({ where: { id: { in: rows.map((r) => r.id) }, remindedAt: null }, data: { remindedAt: now } });
     const notes: NotificationInput[] = rows.flatMap((e) => {
       const minutes = Math.max(1, Math.round((e.startsAt.getTime() - now.getTime()) / 60_000));
-      return e.project.members.map((m) => ({ userId: m.userId, actor: e.project.name, text: ` : « ${e.title} » commence dans ${minutes} min.`, href: `/rise-up/${e.projectId}/evenements/${e.id}`, icon: "radio" as const, tone: "accent" as const }));
+      return e.project.members.map((m) => ({ userId: m.userId, actor: e.project.name, key: "riseEventSoon" as const, params: { title: e.title, minutes }, href: `/rise-up/${e.projectId}/evenements/${e.id}`, icon: "radio" as const, tone: "accent" as const }));
     });
     await pushNotifications(tx, notes);
     return rows.length;
@@ -95,7 +93,7 @@ export async function closeEndedHackathons(now = new Date(), prisma: Db = db) {
     await tx.hackathon.updateMany({ where: { id: { in: rows.map((r) => r.id) }, status: "OPEN" }, data: { status: "JURY" } });
     await pushNotifications(
       tx,
-      rows.flatMap((h) => h.teams.flatMap((t) => t.members.map((m) => ({ userId: m.userId, actor: `Hackathon « ${h.title} »`, text: " est terminé : les solutions passent au jury.", href: `/hackathons/${h.id}`, icon: "trophy" as const, tone: "accent" as const })))),
+      rows.flatMap((h) => h.teams.flatMap((t) => t.members.map((m) => ({ userId: m.userId, actor: h.title, key: "hackathonEnded" as const, href: `/hackathons/${h.id}`, icon: "trophy" as const, tone: "accent" as const })))),
     );
     return rows.length;
   });
@@ -113,7 +111,7 @@ export async function announcePayableTransfers(now = new Date(), prisma: Db = db
     const admins = await tx.user.findMany({ where: { isAdmin: true, suspendedAt: null }, select: { id: true } });
     await pushNotifications(
       tx,
-      admins.flatMap((a) => rows.map((p) => ({ userId: a.id, actor: `Hackathon « ${p.hackathon.title} »`, text: ` : versement de ${formatFCFA(p.amount)} à ${p.beneficiary?.name ?? "KABAD"} à envoyer.`, href: "/admin/versements", icon: "wallet" as const, tone: "accent" as const }))),
+      admins.flatMap((a) => rows.map((p) => ({ userId: a.id, actor: p.hackathon.title, key: "payoutDue" as const, params: { amount: p.amount, name: p.beneficiary?.name ?? "KABAD" }, href: "/admin/versements", icon: "wallet" as const, tone: "accent" as const }))),
     );
     return rows.length;
   });

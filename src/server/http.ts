@@ -2,6 +2,7 @@ import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { ZodError, type ZodType } from "zod";
 import { DomainError } from "./errors";
+import { requestLocale, translateError } from "./error-language";
 
 /** Rejects state-changing requests sent from another site. Cookies are SameSite=Lax; this closes the remaining gap. */
 export function assertSameOrigin(request: Request) {
@@ -36,13 +37,15 @@ export function route<A extends unknown[]>(handler: (request: Request, ...rest: 
       return await handler(request, ...rest);
     } catch (e) {
       unstable_rethrow(e);
-      if (e instanceof DomainError) return Response.json({ error: e.message, code: e.code, field: e.field }, { status: e.status });
+      // In the language of the page that called (English under /en).
+      const say = (message: string) => translateError(message, requestLocale(request));
+      if (e instanceof DomainError) return Response.json({ error: say(e.message), code: e.code, field: e.field }, { status: e.status });
       if (e instanceof ZodError) {
         const first = e.issues[0];
-        return Response.json({ error: first?.message ?? "Données invalides.", code: "invalid", field: first?.path.join(".") }, { status: 400 });
+        return Response.json({ error: say(first?.message ?? "Données invalides."), code: "invalid", field: first?.path.join(".") }, { status: 400 });
       }
       console.error(e);
-      return Response.json({ error: "Une erreur est survenue. Réessayez dans un instant.", code: "internal" }, { status: 500 });
+      return Response.json({ error: say("Une erreur est survenue. Réessayez dans un instant."), code: "internal" }, { status: 500 });
     }
   };
 }

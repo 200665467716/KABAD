@@ -163,7 +163,7 @@ export async function resolveReport(adminId: string, reportId: string, decision:
       await tx.voiceRoom.update({ where: { id: r.targetId }, data: { hiddenAt: new Date() } });
     }
     if (decision === "warn") {
-      await pushNotifications(tx, [{ userId: r.targetUserId!, actor: "Équipe KABAD", text: `vous adresse un avertissement : ${note?.trim() || r.reason}. En cas de récidive, votre compte peut être suspendu.`, href: "/compte", icon: "info", tone: "accent" }]);
+      await pushNotifications(tx, [{ userId: r.targetUserId!, actor: "KABAD", key: "warning", params: { reason: note?.trim() || r.reason }, href: "/compte", icon: "info", tone: "accent" }]);
     }
     await tx.report.updateMany({
       where: { status: "OPEN", OR: [{ id: r.id }, { targetType: r.targetType, targetId: r.targetId }] },
@@ -240,7 +240,7 @@ export async function revokeBadge(adminId: string, userId: string, reason: strin
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: userId }, data: { seniorVerifiedAt: null, role: "JUNIOR" } });
     await tx.mentoringBooking.updateMany({ where: { mentorId: userId, status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gt: new Date() } }, data: { status: "CANCELLED", answeredAt: new Date() } });
-    await pushNotifications(tx, [{ userId, actor: "Équipe KABAD", text: ` t’a retiré le badge mentor : ${reason}.`, href: "/mentorat/badge", icon: "info", tone: "neutral" }]);
+    await pushNotifications(tx, [{ userId, actor: "KABAD", key: "badgeRevoked", params: { reason }, href: "/mentorat/badge", icon: "info", tone: "neutral" }]);
     await logAction(tx, adminId, "badge:revoke", userId, reason);
   });
   return { ok: true };
@@ -265,7 +265,7 @@ export async function setJury(adminId: string, hackathonId: string, jurorIds: st
     await tx.hackathonJuror.deleteMany({ where: { hackathonId } });
     await tx.hackathonJuror.createMany({ data: jurors.map((userId) => ({ hackathonId, userId })) });
     const added = jurors.filter((id) => !before.includes(id));
-    await pushNotifications(tx, added.map((userId) => ({ userId, actor: "Équipe KABAD", text: ` t’a nommé au jury du hackathon « ${h.title} ».`, href: `/hackathons/${hackathonId}`, icon: "trophy" as const, tone: "accent" as const })));
+    await pushNotifications(tx, added.map((userId) => ({ userId, actor: "KABAD", key: "juryAppointed" as const, params: { title: h.title }, href: `/hackathons/${hackathonId}`, icon: "trophy" as const, tone: "accent" as const })));
     await logAction(tx, adminId, "hackathon:jury", hackathonId, jurors.join(","));
     return { ok: true };
   });

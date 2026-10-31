@@ -101,6 +101,54 @@
       "revoke": "Withdraw the badge",
       "reinstate": "Lift the suspension",
       "suspend": "Suspend"
+    },
+    "reports": {
+      "metaTitle": "Reports",
+      "title": "Reports",
+      "target": {
+        "USER": "Profile",
+        "MESSAGE": "Message",
+        "CONVERSATION": "Conversation",
+        "INVITATION": "Invitation",
+        "ROOM": "Voice room"
+      },
+      "needNote": "Write the reason: the member will read it.",
+      "meta": "{when} · by <link>{name}</link>",
+      "targetMember": "Reported member: <link>{name}</link>",
+      "targetTotal": "{count} reports in total",
+      "alreadySuspended": "already suspended",
+      "alreadyHidden": "already removed",
+      "decision": "Decision: {resolution}",
+      "noteLabel": "Reason or note (read by the member if warned)",
+      "dismiss": "Dismiss",
+      "closeRoom": "Close the room",
+      "hideMessage": "Remove the message",
+      "warn": "Warn",
+      "suspend": "Suspend the account",
+      "tabOpen": "To review",
+      "tabReviewed": "Reviewed",
+      "emptyOpen": "No reports to review.",
+      "emptyReviewed": "No reviewed reports."
+    },
+    "journal": {
+      "metaTitle": "Log · Team",
+      "title": "Log",
+      "intro": "Every team action is recorded here, so we can account for it.",
+      "empty": "No actions yet.",
+      "actions": {
+        "reportDismiss": "dismissed a report",
+        "reportHide": "removed content",
+        "reportWarn": "warned a member",
+        "reportSuspend": "suspended a member (report)",
+        "memberSuspend": "suspended a member",
+        "memberReinstate": "lifted a suspension",
+        "seniorVerify": "approved a Senior status",
+        "seniorReject": "refused a Senior status",
+        "challengeCreate": "created a challenge",
+        "challengeClose": "closed a challenge",
+        "challengePublish": "published results",
+        "payoutSent": "recorded a payout"
+      }
     }
   }
 }

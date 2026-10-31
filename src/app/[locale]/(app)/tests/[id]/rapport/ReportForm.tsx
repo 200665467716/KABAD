@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -14,6 +15,7 @@ const MAX_BYTES = 2 * 1024 * 1024;
 const TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export function ReportForm({ app: t }: { app: TestAppDetail }) {
+  const tr = useTranslations("tests.report");
   const owner = t.owner.name.split(" ")[0];
   const [shots, setShots] = useState<Shot[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -30,16 +32,16 @@ export function ReportForm({ app: t }: { app: TestAppDetail }) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     const bad = files.find((f) => !TYPES.includes(f.type) || f.size > MAX_BYTES);
-    if (bad) return setError(`« ${bad.name} » n’est pas accepté : une image PNG, JPEG ou WebP de 2 Mo au plus.`);
+    if (bad) return setError(tr("badFile", { name: bad.name }));
     setError(null);
     setShots((s) => [...s, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))].slice(0, t.steps.length));
   }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (shots.length < t.steps.length) return setError(`Ajoutez ${t.steps.length} captures, une par étape du scénario.`);
-    if (t.questions.some((_, i) => !answers[i]?.trim())) return setError("Répondez aux questions de contrôle.");
-    if (!device.trim()) return setError("Indiquez l’appareil utilisé.");
+    if (shots.length < t.steps.length) return setError(tr("needShots", { count: t.steps.length }));
+    if (t.questions.some((_, i) => !answers[i]?.trim())) return setError(tr("needAnswers"));
+    if (!device.trim()) return setError(tr("needDevice"));
     const form = new FormData();
     form.set("report", JSON.stringify({ device, answers: t.questions.map((_, i) => answers[i]), remarks }));
     shots.forEach((s) => form.append("shot", s.file));
@@ -49,7 +51,7 @@ export function ReportForm({ app: t }: { app: TestAppDetail }) {
       await api(`/api/tests/${t.id}/reports`, { body: form });
       setSent(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Le rapport n’a pas été envoyé. Réessayez.");
+      setError(err instanceof ApiError ? err.message : tr("error"));
     } finally {
       setBusy(false);
     }
@@ -57,29 +59,29 @@ export function ReportForm({ app: t }: { app: TestAppDetail }) {
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-1 flex-col">
-      <TopBar back={`/tests/${t.id}`} close title="Votre rapport" subtitle={t.name} />
+      <TopBar back={`/tests/${t.id}`} close title={tr("title")} subtitle={t.name} />
       <Page narrow className="flex-1">
         {sent ? (
-          <Alert tone="success" role="status" title="Rapport envoyé.">
-            {owner} le lit puis le valide. Vous recevrez une notification.
+          <Alert tone="success" role="status" title={tr("sentTitle")}>
+            {tr("sentBody", { name: owner })}
           </Alert>
         ) : (
           <>
             <section className="grid gap-2" aria-labelledby="shots">
               <div className="flex items-baseline justify-between">
                 <h2 id="shots" className="text-sm font-bold">
-                  Captures d’écran, une par étape
+                  {tr("shots")}
                 </h2>
                 <span className="text-xs text-muted tabular">
-                  {shots.length} sur {t.steps.length}
+                  {tr("shotsCount", { count: shots.length, total: t.steps.length })}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {shots.map((s, i) => (
                   <span key={s.url} className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element -- local previews from the member's own files */}
-                    <img src={s.url} alt={`Capture de l’étape ${i + 1}`} className="h-26 w-16 rounded-md border border-line object-cover" />
-                    <button type="button" onClick={() => setShots((x) => x.filter((y) => y !== s))} aria-label={`Retirer la capture de l’étape ${i + 1}`} className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-ink text-bg">
+                    <img src={s.url} alt={tr("shotAlt", { n: i + 1 })} className="h-26 w-16 rounded-md border border-line object-cover" />
+                    <button type="button" onClick={() => setShots((x) => x.filter((y) => y !== s))} aria-label={tr("removeShot", { n: i + 1 })} className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-ink text-bg">
                       <Icon name="close" size={16} />
                     </button>
                   </span>
@@ -87,7 +89,7 @@ export function ReportForm({ app: t }: { app: TestAppDetail }) {
                 {shots.length < t.steps.length && (
                   <label className="grid h-26 w-16 cursor-pointer place-items-center content-center gap-1 rounded-md border-[1.5px] border-dashed border-line-strong bg-raised text-center text-[11px] leading-[14px] font-bold text-muted focus-within:outline-2 focus-within:outline-focus">
                     <Icon name="plus" size={18} />
-                    Étape {shots.length + 1}
+                    {tr("addShot", { n: shots.length + 1 })}
                     <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" onChange={addShots} />
                   </label>
                 )}
@@ -107,8 +109,8 @@ export function ReportForm({ app: t }: { app: TestAppDetail }) {
                 <TextField key={q.q} id={`q${i}`} label={`${i + 1}. ${q.q}`} value={answers[i] ?? ""} maxLength={60} onChange={(e) => setAnswers((a) => ({ ...a, [i]: e.target.value }))} />
               ),
             )}
-            <TextField id="device" label="Appareil utilisé" placeholder="Par exemple : Android, Tecno Spark 10" value={device} maxLength={40} onChange={(e) => setDevice(e.target.value)} />
-            <TextArea id="remarks" label="Vos remarques" rows={4} placeholder="Ce qui vous a bloqué, ce qui était clair…" value={remarks} maxLength={2000} onChange={(e) => setRemarks(e.target.value)} />
+            <TextField id="device" label={tr("device")} placeholder={tr("devicePlaceholder")} value={device} maxLength={40} onChange={(e) => setDevice(e.target.value)} />
+            <TextArea id="remarks" label={tr("remarks")} rows={4} placeholder={tr("remarksPlaceholder")} value={remarks} maxLength={2000} onChange={(e) => setRemarks(e.target.value)} />
             {error && (
               <Alert tone="danger" role="alert">
                 {error}
@@ -120,14 +122,14 @@ export function ReportForm({ app: t }: { app: TestAppDetail }) {
       <ActionBar>
         {sent ? (
           <ButtonLink href="/tests" size="lg" block>
-            Retour aux tests
+            {tr("backToTests")}
           </ButtonLink>
         ) : (
           <>
             <Button type="submit" size="lg" block disabled={busy}>
-              {busy ? "Envoi…" : "Envoyer le rapport"}
+              {busy ? tr("sending") : tr("submit")}
             </Button>
-            <p className="text-center text-xs text-muted">{owner} valide votre rapport après l’avoir lu.</p>
+            <p className="text-center text-xs text-muted">{tr("help", { name: owner })}</p>
           </>
         )}
       </ActionBar>

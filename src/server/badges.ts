@@ -78,7 +78,7 @@ const data = (input: BadgeInput) => ({
 
 async function notifyAdmins(tx: Prisma.TransactionClient, name: string, requestId: string) {
   const admins = await tx.user.findMany({ where: { isAdmin: true, suspendedAt: null }, select: { id: true } });
-  await pushNotifications(tx, admins.map((a) => ({ userId: a.id, actor: name, text: " demande le badge mentor.", href: `/admin/badges/${requestId}`, icon: "check", tone: "brand" })));
+  await pushNotifications(tx, admins.map((a) => ({ userId: a.id, actor: name, key: "badgeRequested", href: `/admin/badges/${requestId}`, icon: "check", tone: "brand" })));
 }
 
 /** Sends a new request, or updates the one still waiting for a decision. */
@@ -143,8 +143,8 @@ export async function reviewBadge(adminId: string, id: string, input: { approve:
     await tx.adminAction.create({ data: { adminId, action: input.approve ? "badge:grant" : "badge:refuse", targetId: r.userId, details: input.approve ? null : input.reason!.trim().slice(0, 300) } });
     await pushNotifications(tx, [
       input.approve
-        ? { userId: r.userId, actor: "KABAD", text: " t’a accordé le badge mentor. Ouvre tes premiers créneaux.", href: "/mentorat/badge", icon: "check", tone: "success" }
-        : { userId: r.userId, actor: "KABAD", text: ` n’a pas validé ta demande de badge : « ${input.reason!.trim().slice(0, 200)} »`, href: "/mentorat/badge", icon: "info", tone: "neutral" },
+        ? { userId: r.userId, actor: "KABAD", key: "badgeGranted", href: "/mentorat/badge", icon: "check", tone: "success" }
+        : { userId: r.userId, actor: "KABAD", key: "badgeRefused", params: { reason: input.reason!.trim().slice(0, 200) }, href: "/mentorat/badge", icon: "info", tone: "neutral" },
     ]);
     return { ok: true };
   });

@@ -234,7 +234,8 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
 
 - [ ] R30. Interface EN partielle (D1).
   - Livré le 31 octobre avec la refonte (branche `dev/design-motif`) : next-intl, routes sous `src/app/[locale]` (FR sans préfixe, EN sous `/en`), un dictionnaire par module dans `messages/fr/` et `messages/en/` (`npm run messages` vérifie que les clés concordent), sélecteur de langue, langue mémorisée sur le compte et reprise à la connexion. Tous les écrans de la refonte sont traduits.
-  - Reste : les textes écrits par le serveur (notifications, messages d'erreur), les formulaires de rapport de test, capsules, signalements et journal de l'équipe.
+  - Le 1er novembre : notifications stockées avec une clé et traduites à l'affichage (`messages/*/notifications.json`), messages d'erreur de l'API traduits selon la langue de la page (`src/server/error-messages.en.json`), rapports de test, capsules, conditions d'utilisation, signalements et journal traduits.
+  - Reste : les e-mails (en français), les salons vocaux (coupés, D3), et l'harmonisation tutoiement/vouvoiement en français (rapports de test, capsules, bandeau de vérification vouvoient encore).
 
 ## P2 — Les « Should » (si le temps le permet)
 

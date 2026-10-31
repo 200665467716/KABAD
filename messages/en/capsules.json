@@ -1,0 +1,39 @@
+{
+  "capsules": {
+    "metaTitle": "Capsules",
+    "title": "Capsules",
+    "loading": "Loading capsules…",
+    "publish": "Publish",
+    "themesLabel": "Themes",
+    "all": "All",
+    "theme": {
+      "BACKEND": "Back-end",
+      "MOBILE": "Mobile",
+      "CAREER": "Career"
+    },
+    "intro": "What seniors have learned, in under 5 minutes.",
+    "minutes": "{count} min",
+    "reads": "{count, plural, one {# read} other {# reads}}",
+    "empty": "No capsules in this theme yet.",
+    "detail": {
+      "metaTitle": "Capsule",
+      "loading": "Loading the capsule…"
+    },
+    "form": {
+      "metaTitle": "Publish a capsule",
+      "loading": "Loading…",
+      "title": "Publish a capsule",
+      "titleLabel": "Title",
+      "titlePlaceholder": "What you learned, in one sentence",
+      "theme": "Theme",
+      "body": "Your capsule",
+      "bodyHint": "Separate paragraphs with a blank line.",
+      "code": "Code excerpt (optional)",
+      "tags": "Keywords (optional, separated by commas)",
+      "tagsPlaceholder": "Payments, Testing",
+      "error": "The capsule wasn’t published. Try again.",
+      "submitting": "Publishing…",
+      "submit": "Publish the capsule"
+    }
+  }
+}

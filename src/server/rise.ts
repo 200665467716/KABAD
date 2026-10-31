@@ -13,7 +13,6 @@ import { DomainError, forbidden, notFound } from "./errors";
 import { joinCommunityGroup, leaveCommunityGroup, openCommunityGroup } from "./messaging";
 import { pushNotifications } from "./notifications";
 import { jitsiRoom } from "@/lib/mentoring";
-import { formatSlot } from "@/lib/time";
 import type { RiseDomain, RiseEventView, RisePostView, RiseProjectDetail, RiseProjectSummary } from "@/lib/domain-types";
 
 type Tx = Db | Prisma.TransactionClient;
@@ -139,7 +138,7 @@ export async function joinProject(userId: string, projectId: string, input: { sk
     await tx.riseMember.create({ data: { projectId, userId, skill: input.skill ?? "" } });
     if (p.conversationId) await joinCommunityGroup(tx, p.conversationId, userId);
     const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
-    await pushNotifications(tx, [{ userId: p.initiatorId, actor: me.name, text: ` a rejoint ton projet « ${p.name} ».`, href: `/rise-up/${projectId}`, icon: "users", tone: "accent" }]);
+    await pushNotifications(tx, [{ userId: p.initiatorId, actor: me.name, key: "riseJoined", params: { title: p.name }, href: `/rise-up/${projectId}`, icon: "users", tone: "accent" }]);
     return { ok: true };
   });
 }
@@ -192,7 +191,7 @@ export async function createEvent(userId: string, projectId: string, input: { ti
     if (input.notify) {
       await pushNotifications(
         tx,
-        p.members.filter((m) => m.userId !== userId).map((m) => ({ userId: m.userId, actor: p.name, text: ` : « ${input.title} » le ${formatSlot(startsAt, m.user.timeZone)}.`, href: `/rise-up/${projectId}/evenements/${e.id}`, icon: "radio", tone: "accent" })),
+        p.members.filter((m) => m.userId !== userId).map((m) => ({ userId: m.userId, actor: p.name, key: "riseEvent", params: { title: input.title, at: startsAt.toISOString(), tz: m.user.timeZone }, href: `/rise-up/${projectId}/evenements/${e.id}`, icon: "radio", tone: "accent" })),
       );
     }
     return { id: e.id };

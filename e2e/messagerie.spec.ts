@@ -105,3 +105,11 @@ test("un PDF joint arrive chez l’autre membre et se télécharge", async ({ br
   await kossi.context().close();
   await yao.context().close();
 });
+
+test("en anglais, l’erreur de connexion arrive en anglais", async ({ page }) => {
+  await page.goto("/en/connexion");
+  await page.getByLabel("E-mail").fill(EMAIL.kossi);
+  await page.getByLabel("Password", { exact: true }).fill("wrong-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByText("Incorrect email or password.")).toBeVisible();
+});

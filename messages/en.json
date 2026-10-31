@@ -50,5 +50,12 @@
     "notFoundText": "This page doesn’t exist, or you don’t have access to it. The link may be incomplete.",
     "errorTitle": "Something went wrong",
     "errorText": "It’s not your fault. Try again in a moment; if it keeps happening, let the KABAD team know."
+  },
+  "verifyBanner": {
+    "text": "Confirm your email address to invite members and write to them.",
+    "sent": "Email sent.",
+    "resend": "Resend the email",
+    "error": "Couldn’t send it.",
+    "account": "My account"
   }
 }

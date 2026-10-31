@@ -354,22 +354,18 @@ async function main() {
     ],
   });
 
-  /* Kossi's notifications (screen P2) */
-  const n = (actor: string, text: string, href: string, icon: string, tone: string, ago: number, read = false) => ({ userId: "kossi", actor, text, href, icon, tone, createdAt: minutesAgo(ago), readAt: read ? minutesAgo(ago - 1) : null });
+  /* Kossi's notifications (screen P2). The text is written in the reader's language from the key. */
+  const n = (userId: string, actor: string, key: string, params: Record<string, string | number> | undefined, text: string, href: string, icon: string, tone: string, ago: number, read = false) => ({ userId, actor, key, params, text, href, icon, tone, createdAt: minutesAgo(ago), readAt: read ? minutesAgo(ago - 1) : null });
   await db.notification.createMany({
     data: [
-      n("Awa Diop", " a accepté ta séance de jeudi à 15 h.", "/mentorat/seances/seance-momo", "check", "success", 35),
-      n("Nadia Bello", " veut échanger avec toi.", "/messages/invitations", "user", "brand", 73),
-      n("Forages d’eau potable", " : un salon est en direct.", "/rise-up/forages-sahel", "radio", "accent", 15),
-      n("Marché Vert", " : nouvelle version à tester.", "/tests/marche-vert", "check", "brand", 60 * 26, true),
-      n("KABAD", " : nouveau hackathon « Santé connectée », à Dakar.", "/hackathons/sante-connectee", "trophy", "accent", 60 * 24 * 2, true),
-    ],
-  });
-  // Awa has a mission to answer and a request to read.
-  await db.notification.createMany({
-    data: [
-      { userId: "awa", actor: "FinLab Cotonou", text: " te propose une mission d’instructeur rémunérée.", href: "/hackathons/missions/mission-awa", icon: "wallet", tone: "accent", createdAt: minutesAgo(160) },
-      { userId: "awa", actor: "Fatou Sow", text: " demande une séance : « Sécuriser les webhooks d’un agrégateur de paiement ».", href: "/mentorat/demandes", icon: "clock", tone: "brand", createdAt: minutesAgo(180) },
+      n("kossi", "Awa Diop", "bookingAccepted", { at: thursday.toISOString(), tz: "Africa/Lome" }, " a accepté ta séance de jeudi à 15 h.", "/mentorat/seances/seance-momo", "check", "success", 35),
+      n("kossi", "Nadia Bello", "invitationReceived", undefined, " t’invite à échanger.", "/messages/invitations", "user", "brand", 73),
+      n("kossi", "Suivre les forages d’eau potable au Sahel", "riseEvent", { title: "Choisir les capteurs de niveau", at: minutesAgo(15).toISOString(), tz: "Africa/Lome" }, " : « Choisir les capteurs de niveau ».", "/rise-up/forages-sahel", "radio", "accent", 15),
+      n("kossi", "Edem Amouzou", "testJoined", { title: "Kalo" }, " a rejoint les testeurs de « Kalo ».", "/tests/kalo", "users", "brand", 60 * 26, true),
+      n("kossi", "Collectif Santé Dakar", "hackathonProposed", { title: "Santé connectée" }, " propose le hackathon « Santé connectée ».", "/hackathons/sante-connectee", "trophy", "accent", 60 * 24 * 2, true),
+      // Awa has a mission to answer and a request to read.
+      n("awa", "FinLab Cotonou", "missionProposed", undefined, " te propose une mission d’instructeur rémunérée.", "/hackathons/missions/mission-awa", "wallet", "accent", 160),
+      n("awa", "Fatou Sow", "bookingRequested", { at: nextWeekday(2, 16, 0, 2).toISOString(), tz: "Africa/Dakar", topic: "Sécuriser les webhooks d’un agrégateur de paiement" }, " demande une séance.", "/mentorat/demandes", "clock", "brand", 180),
     ],
   });
 

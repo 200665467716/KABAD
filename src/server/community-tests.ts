@@ -116,7 +116,7 @@ export async function joinTest(userId: string, testAppId: string, prisma: Db = d
     await tx.testParticipant.create({ data: { testAppId, userId } });
     if (a.conversationId) await joinCommunityGroup(tx, a.conversationId, userId);
     const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
-    await pushNotifications(tx, [{ userId: a.ownerId, actor: me.name, text: ` a rejoint les testeurs de « ${a.name} ».`, href: `/tests/${a.id}`, icon: "users", tone: "brand" }]);
+    await pushNotifications(tx, [{ userId: a.ownerId, actor: me.name, key: "testJoined", params: { title: a.name }, href: `/tests/${a.id}`, icon: "users", tone: "brand" }]);
     return { conversationId: a.conversationId };
   });
 }
@@ -180,7 +180,7 @@ export async function submitReport(testerId: string, testAppId: string, input: {
         screenshots: { create: screenshots.map((s, position) => ({ position, mime: s.mime, data: Buffer.from(s.data) })) },
       },
     });
-    await pushNotifications(tx, [{ userId: a.ownerId, actor: tester.name, text: `a envoyé un rapport de test sur « ${a.name} ».`, href: `/tests/${a.id}/rapports`, icon: "check", tone: "brand" }]);
+    await pushNotifications(tx, [{ userId: a.ownerId, actor: tester.name, key: "testReport", params: { title: a.name }, href: `/tests/${a.id}/rapports`, icon: "check", tone: "brand" }]);
     return { id: r.id };
   });
 }
@@ -223,8 +223,8 @@ export async function reviewReport(ownerId: string, reportId: string, decision: 
     });
     await pushNotifications(tx, [
       decision.validate
-        ? { userId: r.testerId, actor: owner.name, text: `a validé votre rapport de test sur « ${r.testApp.name} ».`, href: `/tests/${r.testApp.id}`, icon: "check", tone: "success" }
-        : { userId: r.testerId, actor: owner.name, text: `a refusé votre rapport sur « ${r.testApp.name} » : ${decision.reason}`, href: `/tests/${r.testApp.id}`, icon: "check", tone: "neutral" },
+        ? { userId: r.testerId, actor: owner.name, key: "testReportValidated", params: { title: r.testApp.name }, href: `/tests/${r.testApp.id}`, icon: "check", tone: "success" }
+        : { userId: r.testerId, actor: owner.name, key: "testReportRefused", params: { title: r.testApp.name, reason: decision.reason }, href: `/tests/${r.testApp.id}`, icon: "check", tone: "neutral" },
     ]);
     return { ok: true };
   });

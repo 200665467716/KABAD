@@ -12,7 +12,6 @@ import { DomainError, forbidden, notFound } from "./errors";
 import { pushNotifications } from "./notifications";
 import { freeSlots, isOfferedSlot, rangesProblem, type WeeklyRange } from "@/lib/slots";
 import { heldMinutes, jitsiRoom, MAX_PENDING_BOOKINGS, mentoringEligibility, SESSION_MINUTES, type Eligibility } from "@/lib/mentoring";
-import { formatSlot } from "@/lib/time";
 import type { AvailabilityView, BookingView, MentorCard, MentorDetail } from "@/lib/domain-types";
 
 /** How far ahead slots are offered. */
@@ -132,7 +131,7 @@ export async function bookSlot(menteeId: string, input: { mentorId: string; star
       const b = await tx.mentoringBooking.create({
         data: { mentorId: mentor.id, menteeId, startsAt, minutes: SESSION_MINUTES, topic: input.topic, problem: input.problem, link: input.link || null },
       });
-      await pushNotifications(tx, [{ userId: mentor.id, actor: mentee.name, text: ` demande une séance le ${formatSlot(startsAt, mentor.timeZone)} : « ${input.topic} ».`, href: "/mentorat/demandes", icon: "clock", tone: "brand" }]);
+      await pushNotifications(tx, [{ userId: mentor.id, actor: mentee.name, key: "bookingRequested", params: { at: startsAt.toISOString(), tz: mentor.timeZone, topic: input.topic }, href: "/mentorat/demandes", icon: "clock", tone: "brand" }]);
       return { id: b.id };
     });
   } catch (e) {
@@ -200,11 +199,11 @@ export async function answerBooking(mentorId: string, bookingId: string, input: 
       data: input.accept ? { status: "ACCEPTED", meetingUrl, answeredAt: new Date() } : { status: "DECLINED", declineReason: input.reason || null, answeredAt: new Date() },
     });
     if (!count) throw new DomainError("answered", "Cette demande a déjà reçu une réponse ou a expiré.", 409);
-    const when = formatSlot(b.startsAt, b.mentee.timeZone);
+    const when = { at: b.startsAt.toISOString(), tz: b.mentee.timeZone };
     await pushNotifications(tx, [
       input.accept
-        ? { userId: b.menteeId, actor: b.mentor.name, text: ` a accepté ta séance du ${when}.`, href: `/mentorat/seances/${b.id}`, icon: "check", tone: "success" }
-        : { userId: b.menteeId, actor: b.mentor.name, text: ` ne peut pas assurer la séance du ${when}${input.reason ? ` : « ${input.reason} »` : "."}`, href: `/mentorat/seances/${b.id}`, icon: "clock", tone: "neutral" },
+        ? { userId: b.menteeId, actor: b.mentor.name, key: "bookingAccepted", params: when, href: `/mentorat/seances/${b.id}`, icon: "check", tone: "success" }
+        : { userId: b.menteeId, actor: b.mentor.name, key: input.reason ? "bookingDeclinedReason" : "bookingDeclined", params: { ...when, ...(input.reason ? { reason: input.reason } : {}) }, href: `/mentorat/seances/${b.id}`, icon: "clock", tone: "neutral" },
     ]);
     return { status: input.accept ? "ACCEPTED" : "DECLINED", meetingUrl };
   });
@@ -220,7 +219,7 @@ export async function cancelBooking(userId: string, bookingId: string, prisma: D
     if (!count) throw new DomainError("closed", "Cette séance n’est plus active.", 409);
     const byMentor = userId === b.mentorId;
     const other = byMentor ? { id: b.menteeId, tz: b.mentee.timeZone } : { id: b.mentorId, tz: b.mentor.timeZone };
-    await pushNotifications(tx, [{ userId: other.id, actor: byMentor ? b.mentor.name : b.mentee.name, text: ` a annulé la séance du ${formatSlot(b.startsAt, other.tz)}.`, href: `/mentorat/seances/${b.id}`, icon: "clock", tone: "neutral" }]);
+    await pushNotifications(tx, [{ userId: other.id, actor: byMentor ? b.mentor.name : b.mentee.name, key: "bookingCancelled", params: { at: b.startsAt.toISOString(), tz: other.tz }, href: `/mentorat/seances/${b.id}`, icon: "clock", tone: "neutral" }]);
     return { ok: true };
   });
 }

@@ -833,9 +833,14 @@ model Notification {
   id        String    @id @default(cuid())
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// Short name shown in bold: a member, a group or a challenge.
+  /// Short name shown in bold: a member, a group or a hackathon.
   actor     String    @db.VarChar(120)
+  /// French text, kept for reading without the dictionaries (e-mails, older notifications).
   text      String    @db.VarChar(300)
+  /// Key in messages/<locale>/notifications.json: the screen shows the text in the reader's language.
+  key       String?   @db.VarChar(60)
+  /// Values of the message: names, amounts, and "at" (ISO date) shown in the time zone "tz".
+  params    Json?
   href      String    @db.VarChar(200)
   icon      String    @db.VarChar(20)
   tone      String    @db.VarChar(20)

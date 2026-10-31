@@ -50,5 +50,12 @@
     "notFoundText": "Cette page n’existe pas, ou vous n’y avez pas accès. Le lien est peut-être incomplet.",
     "errorTitle": "Une erreur est survenue",
     "errorText": "Ce n’est pas de votre faute. Réessayez dans un instant ; si cela continue, prévenez l’équipe KABAD."
+  },
+  "verifyBanner": {
+    "text": "Confirmez votre adresse e-mail pour inviter des membres et leur écrire.",
+    "sent": "E-mail envoyé.",
+    "resend": "Renvoyer l’e-mail",
+    "error": "Envoi impossible.",
+    "account": "Mon compte"
   }
 }

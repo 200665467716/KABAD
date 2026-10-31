@@ -135,7 +135,7 @@ export async function startRoom(hostId: string, roomId: string, prisma: Db = db)
     const interested = await tx.roomInterest.findMany({ where: { roomId }, select: { userId: true } });
     await pushNotifications(
       tx,
-      interested.map((i) => ({ userId: i.userId, actor: host.name, text: `est en direct : « ${r.title} ». Rejoignez le salon.`, href: `/salons/${roomId}`, icon: "radio" as const, tone: "accent" as const })),
+      interested.map((i) => ({ userId: i.userId, actor: host.name, key: "roomLive" as const, params: { title: r.title }, href: `/salons/${roomId}`, icon: "radio" as const, tone: "accent" as const })),
     );
     await changed(tx, roomId, interested.map((i) => i.userId));
     return { ok: true };

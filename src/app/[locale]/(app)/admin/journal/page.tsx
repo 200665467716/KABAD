@@ -1,56 +1,71 @@
 import type { Metadata } from "next";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
-import { agoLabel } from "@/lib/time";
 import { auditLog } from "@/server/admin";
 import { adminUser } from "@/server/admin-page";
 import { AdminNav } from "../AdminNav";
 
-export const metadata: Metadata = { title: "Journal · Équipe", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.journal");
+  return { title: t("metaTitle"), robots: { index: false } };
+}
 
-const ACTIONS: Record<string, string> = {
-  "report:dismiss": "a classé un signalement",
-  "report:hide": "a retiré un contenu",
-  "report:warn": "a averti un membre",
-  "report:suspend": "a suspendu un membre (signalement)",
-  "member:suspend": "a suspendu un membre",
-  "member:reinstate": "a levé une suspension",
-  "senior:verify": "a validé un statut Senior",
-  "senior:reject": "a refusé un statut Senior",
-  "challenge:create": "a créé un défi",
-  "challenge:close": "a clôturé un défi",
-  "challenge:publish": "a publié des résultats",
-  "payout:sent": "a enregistré un versement",
-};
+/** Audit action code → its label key in admin.journal.actions; unknown codes are shown as is. */
+const ACTIONS = {
+  "report:dismiss": "reportDismiss",
+  "report:hide": "reportHide",
+  "report:warn": "reportWarn",
+  "report:suspend": "reportSuspend",
+  "member:suspend": "memberSuspend",
+  "member:reinstate": "memberReinstate",
+  "senior:verify": "seniorVerify",
+  "senior:reject": "seniorReject",
+  "challenge:create": "challengeCreate",
+  "challenge:close": "challengeClose",
+  "challenge:publish": "challengePublish",
+  "payout:sent": "payoutSent",
+} as const;
+
+function actionKey(action: string) {
+  return Object.hasOwn(ACTIONS, action) ? ACTIONS[action as keyof typeof ACTIONS] : null;
+}
 
 async function Data() {
   const user = await adminUser("/admin/journal");
   const rows = await auditLog(user.id);
+  const t = await getTranslations("admin.journal");
+  const format = await getFormatter();
+  const actionLabel = (action: string) => {
+    const key = actionKey(action);
+    return key ? t(`actions.${key}`) : action;
+  };
   return (
     <Page narrow>
       <AdminNav current="/admin/journal" />
-      <p className="text-sm text-muted">Chaque action de l’équipe est enregistrée ici, pour pouvoir en répondre.</p>
+      <p className="text-sm text-muted">{t("intro")}</p>
       <ul className="m-0 grid list-none divide-y divide-line rounded-lg border-2 border-line-strong bg-raised p-0">
         {rows.map((r) => (
           <li key={r.id} className="grid gap-0.5 px-4 py-3 text-sm">
             <span>
-              <b>{r.admin}</b> {ACTIONS[r.action] ?? r.action}
+              <b>{r.admin}</b> {actionLabel(r.action)}
               {r.details ? ` : ${r.details}` : ""}
             </span>
-            <span className="text-xs text-muted">{agoLabel(r.createdAt)}</span>
+            <span className="text-xs text-muted">{format.relativeTime(new Date(r.createdAt))}</span>
           </li>
         ))}
       </ul>
-      {rows.length === 0 && <p className="py-8 text-center text-muted">Aucune action pour l’instant.</p>}
+      {rows.length === 0 && <p className="py-8 text-center text-muted">{t("empty")}</p>}
     </Page>
   );
 }
 
-export default function JournalPage() {
+export default async function JournalPage() {
+  const t = await getTranslations("admin");
   return (
     <>
-      <TopBar back="/admin" title="Journal" />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement…</p>}>
+      <TopBar back="/admin" title={t("journal.title")} />
+      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
         <Data />
       </Suspense>
     </>

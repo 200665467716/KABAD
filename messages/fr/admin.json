@@ -101,6 +101,54 @@
       "revoke": "Retirer le badge",
       "reinstate": "Lever la suspension",
       "suspend": "Suspendre"
+    },
+    "reports": {
+      "metaTitle": "Signalements",
+      "title": "Signalements",
+      "target": {
+        "USER": "Profil",
+        "MESSAGE": "Message",
+        "CONVERSATION": "Conversation",
+        "INVITATION": "Invitation",
+        "ROOM": "Salon vocal"
+      },
+      "needNote": "Écrivez le motif : le membre le lira.",
+      "meta": "{when} · par <link>{name}</link>",
+      "targetMember": "Membre visé : <link>{name}</link>",
+      "targetTotal": "{count} signalements au total",
+      "alreadySuspended": "déjà suspendu",
+      "alreadyHidden": "déjà retiré",
+      "decision": "Décision : {resolution}",
+      "noteLabel": "Motif ou note (lu par le membre en cas d’avertissement)",
+      "dismiss": "Classer sans suite",
+      "closeRoom": "Fermer le salon",
+      "hideMessage": "Retirer le message",
+      "warn": "Avertir",
+      "suspend": "Suspendre le compte",
+      "tabOpen": "À traiter",
+      "tabReviewed": "Déjà traités",
+      "emptyOpen": "Aucun signalement à traiter.",
+      "emptyReviewed": "Aucun signalement traité."
+    },
+    "journal": {
+      "metaTitle": "Journal · Équipe",
+      "title": "Journal",
+      "intro": "Chaque action de l’équipe est enregistrée ici, pour pouvoir en répondre.",
+      "empty": "Aucune action pour l’instant.",
+      "actions": {
+        "reportDismiss": "a classé un signalement",
+        "reportHide": "a retiré un contenu",
+        "reportWarn": "a averti un membre",
+        "reportSuspend": "a suspendu un membre (signalement)",
+        "memberSuspend": "a suspendu un membre",
+        "memberReinstate": "a levé une suspension",
+        "seniorVerify": "a validé un statut Senior",
+        "seniorReject": "a refusé un statut Senior",
+        "challengeCreate": "a créé un défi",
+        "challengeClose": "a clôturé un défi",
+        "challengePublish": "a publié des résultats",
+        "payoutSent": "a enregistré un versement"
+      }
     }
   }
 }

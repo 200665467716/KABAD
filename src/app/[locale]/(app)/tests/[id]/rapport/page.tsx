@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { Suspense } from "react";
 import { getTestApp } from "@/server/community-tests";
@@ -8,7 +8,10 @@ import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 import { ReportForm } from "./ReportForm";
 
-export const metadata: Metadata = { title: "Rapport de test" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("tests.report");
+  return { title: t("metaTitle") };
+}
 
 async function ReportData({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,9 +23,10 @@ async function ReportData({ params }: { params: Promise<{ id: string }> }) {
   return <ReportForm app={t} />;
 }
 
-export default function ReportPage({ params }: PageProps<"/[locale]/tests/[id]/rapport">) {
+export default async function ReportPage({ params }: PageProps<"/[locale]/tests/[id]/rapport">) {
+  const t = await getTranslations("tests.report");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">Chargement…</p>}>
+    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
       <ReportData params={params} />
     </Suspense>
   );
