@@ -182,7 +182,7 @@ Le concours CADEV interdit les licences GPL, AGPL et LGPL. `npm run licenses` le
 | MIT-0 | `nodemailer` (e-mails) |
 | ISC, BSD-2-Clause, BSD-3-Clause, 0BSD, Unlicense | Petites dépendances |
 | CC-BY-4.0 | `caniuse-lite` : données de compatibilité des navigateurs utilisées par Next.js (une licence de données, pas de code) |
-| OFL-1.1 | Polices Inter et JetBrains Mono |
+| OFL-1.1 | Polices Manrope et Unbounded, livrées dans `src/app/fonts` avec leur licence |
 
 ### Services séparés, non intégrés au code
 

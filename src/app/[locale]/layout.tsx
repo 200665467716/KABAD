@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Unbounded } from "next/font/google";
+import localFont from "next/font/local";
 import { notFound } from "next/navigation";
 import { locale as rootLocale } from "next/root-params";
 import { NextIntlClientProvider } from "next-intl";
@@ -8,9 +8,10 @@ import { isLocale, routing } from "@/i18n/routing";
 import "../globals.css";
 
 // Charte « Motif » : Unbounded pour les titres, Manrope pour tout le reste.
-// Les deux couvrent le latin étendu (lettres de nombreuses langues d'Afrique de l'Ouest et du Centre).
-const unbounded = Unbounded({ variable: "--font-unbounded", subsets: ["latin", "latin-ext"], weight: ["600", "700", "800"], display: "swap" });
-const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin", "latin-ext"], display: "swap" });
+// Les fichiers sont dans le dépôt (src/app/fonts, licence SIL OFL 1.1) : la compilation ne dépend pas de Google Fonts,
+// qui peut être injoignable derrière un pare-feu ou un VPN. Ils couvrent le latin et le latin étendu.
+const unbounded = localFont({ src: "../fonts/Unbounded-Variable.woff2", variable: "--font-unbounded", weight: "600 800", display: "swap" });
+const manrope = localFont({ src: "../fonts/Manrope-Variable.woff2", variable: "--font-manrope", weight: "200 800", display: "swap" });
 
 /** Les deux langues sont pré-rendues ; toute autre valeur du segment donne une page introuvable. */
 export function generateStaticParams() {
