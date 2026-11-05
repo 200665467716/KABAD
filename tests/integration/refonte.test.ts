@@ -142,6 +142,13 @@ describe("tests communautaires", () => {
     await refused(setStep("yao", "app", 0, true, prisma), "forbidden");
   });
 
+  it("deux inscriptions simultanées ne prennent pas deux fois la dernière place", async () => {
+    await prisma.testApp.create({ data: { id: "app", ownerId: "awa", name: "Kalo", platforms: ["WEB"], url: "https://x.tg", minutes: 10, slots: 1, pitch: "p", task: "t", steps: ["Créer"], questions: [] } });
+    const results = await Promise.allSettled([joinTest("kossi", "app", prisma), joinTest("yao", "app", prisma)]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(await prisma.testParticipant.count({ where: { testAppId: "app" } })).toBe(1);
+  });
+
   it("l’auteur ouvre le groupe de testeurs à la publication ; il suit le test dans la messagerie", async () => {
     const app = { name: "Kalo", platforms: ["WEB" as const], url: "https://kalo.tg", minutes: 10, slots: 5, pitch: "p", task: "t", steps: ["Ajouter une dépense"], questions: [] };
     const { id, conversationId } = await createTestApp("awa", app, prisma);

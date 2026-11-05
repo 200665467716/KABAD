@@ -113,31 +113,30 @@ async function openTestersGroup(tx: Prisma.TransactionClient, app: { ownerId: st
 
 /**
  * Returns the app's testers' group. An app left without one (published before the groups existed)
- * gets it now, opened by its author, with the testers already registered.
+ * gets it now, opened by its author, with the testers already registered. The caller holds the app's lock.
  */
-async function testersGroup(tx: Prisma.TransactionClient, testAppId: string) {
-  // The lock makes two simultaneous joins open a single group.
-  await tx.$queryRaw`SELECT id FROM "TestApp" WHERE id = ${testAppId} FOR UPDATE`;
-  const a = await tx.testApp.findUniqueOrThrow({ where: { id: testAppId }, select: { ownerId: true, name: true, url: true, conversationId: true } });
+async function testersGroup(tx: Prisma.TransactionClient, a: { id: string; ownerId: string; name: string; url: string; conversationId: string | null }) {
   if (a.conversationId) return a.conversationId;
   const conversationId = await openTestersGroup(tx, a);
-  await tx.testApp.update({ where: { id: testAppId }, data: { conversationId } });
-  const testers = await tx.testParticipant.findMany({ where: { testAppId }, select: { userId: true }, orderBy: { joinedAt: "asc" } });
+  await tx.testApp.update({ where: { id: a.id }, data: { conversationId } });
+  const testers = await tx.testParticipant.findMany({ where: { testAppId: a.id }, select: { userId: true }, orderBy: { joinedAt: "asc" } });
   for (const t of testers) await joinCommunityGroup(tx, conversationId, t.userId);
   return conversationId;
 }
 
 /** Takes one of the places and opens the testers' group. */
 export async function joinTest(userId: string, testAppId: string, prisma: Db = db) {
-  const a = await prisma.testApp.findUnique({ where: { id: testAppId }, include: { _count: { select: { participants: true } }, participants: { where: { userId }, select: { userId: true } } } });
-  if (!a || !a.active) throw notFound("Application introuvable.");
-  if (a.ownerId === userId) throw forbidden("Tu ne peux pas tester ta propre application.");
-  const already = a.participants.length > 0;
-  if (!already && a._count.participants >= a.slots) throw new DomainError("full", "Toutes les places de test sont prises.", 409);
   return prisma.$transaction(async (tx) => {
+    // The app's row is locked first: two simultaneous joins can neither take the last place twice nor open two groups.
+    await tx.$queryRaw`SELECT id FROM "TestApp" WHERE id = ${testAppId} FOR UPDATE`;
+    const a = await tx.testApp.findUnique({ where: { id: testAppId }, include: { _count: { select: { participants: true } }, participants: { where: { userId }, select: { userId: true } } } });
+    if (!a || !a.active) throw notFound("Application introuvable.");
+    if (a.ownerId === userId) throw forbidden("Tu ne peux pas tester ta propre application.");
+    const already = a.participants.length > 0;
+    if (!already && a._count.participants >= a.slots) throw new DomainError("full", "Toutes les places de test sont prises.", 409);
     if (!already) await tx.testParticipant.create({ data: { testAppId, userId } });
     // A tester already registered but missing from the group (older data) is added back.
-    const conversationId = await testersGroup(tx, testAppId);
+    const conversationId = await testersGroup(tx, a);
     await joinCommunityGroup(tx, conversationId, userId);
     if (!already) {
       const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
