@@ -42,8 +42,10 @@ export default async function RootLayout({ children }: LayoutProps<"/[locale]">)
   const locale = await rootLocale();
   if (!isLocale(locale)) notFound();
   return (
-    <html lang={locale} className={`${unbounded.variable} ${manrope.variable}`}>
-      {/* Some browser extensions add attributes to <body> before React loads; this ignores those attributes only, not the content. */}
+    // Des extensions du navigateur (Scribe, Grammarly, gestionnaires de mots de passe…) ajoutent des attributs
+    // à <html> et <body> avant que React se charge. suppressHydrationWarning ignore ces seuls attributs,
+    // sur ces seules balises : un vrai écart dans le contenu de la page reste signalé.
+    <html lang={locale} className={`${unbounded.variable} ${manrope.variable}`} suppressHydrationWarning>
       <body className="min-h-dvh" suppressHydrationWarning>
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
