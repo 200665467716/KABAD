@@ -10,12 +10,13 @@ import type profile from "../../messages/fr/profile.json";
 import type admin from "../../messages/fr/admin.json";
 import type notifications from "../../messages/fr/notifications.json";
 import type legal from "../../messages/fr/legal.json";
+import type landing from "../../messages/fr/landing.json";
 import type { routing } from "./routing";
 
 /* Les clés de traduction sont vérifiées par TypeScript : le français est la référence. */
 declare module "next-intl" {
   interface AppConfig {
     Locale: (typeof routing.locales)[number];
-    Messages: typeof shell & typeof auth & typeof home & typeof mentoring & typeof hackathons & typeof rise & typeof tests & typeof messaging & typeof profile & typeof admin & typeof notifications & typeof legal;
+    Messages: typeof shell & typeof auth & typeof home & typeof mentoring & typeof hackathons & typeof rise & typeof tests & typeof messaging & typeof profile & typeof admin & typeof notifications & typeof legal & typeof landing;
   }
 }

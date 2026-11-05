@@ -1,0 +1,147 @@
+/*
+ * Animations de la présentation KABAD. Importées par le lecteur seul : chargées avec lui, au clic.
+ * Préfixe kp- (KABAD présentation) pour ne rien croiser du reste de l'interface.
+ * Chaque élément animé reçoit son délai en style (--d). En pause, tout s'arrête au même endroit.
+ * Avec « réduire les animations », la règle globale de globals.css ramène les durées à 0 :
+ * chaque scène s'affiche directement dans son état final.
+ */
+.kp-frame {
+  container-type: inline-size;
+}
+
+.kp-paused,
+.kp-paused * {
+  animation-play-state: paused !important;
+}
+
+.kp-up,
+.kp-pop,
+.kp-left,
+.kp-right,
+.kp-grow,
+.kp-draw,
+.kp-fill {
+  animation-delay: var(--d, 0s);
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.kp-up {
+  animation-name: kp-up;
+  animation-duration: 0.7s;
+}
+.kp-pop {
+  animation-name: kp-pop;
+  animation-duration: 0.5s;
+}
+.kp-left {
+  animation-name: kp-left;
+  animation-duration: 0.6s;
+}
+.kp-right {
+  animation-name: kp-right;
+  animation-duration: 0.6s;
+}
+.kp-grow {
+  animation-name: kp-grow;
+  animation-duration: 1.4s;
+  transform-origin: bottom center;
+}
+.kp-draw {
+  animation-name: kp-draw;
+  animation-duration: 0.8s;
+  transform-origin: left center;
+}
+.kp-fill {
+  animation-name: kp-fill;
+  animation-timing-function: linear;
+  transform-origin: left center;
+}
+
+@keyframes kp-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kp-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kp-left {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kp-right {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kp-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes kp-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: none;
+  }
+}
+/* The progress of the current scene: its end moves the presentation on. */
+@keyframes kp-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* Sizes follow the frame, from the phone to the large screen. */
+.kp-title {
+  font-size: clamp(20px, 5cqw, 46px);
+  line-height: 1.15;
+}
+.kp-titleXl {
+  font-size: clamp(30px, 9cqw, 92px);
+  line-height: 1;
+}
+.kp-text {
+  font-size: clamp(14px, 2.6cqw, 26px);
+  line-height: 1.35;
+}
+.kp-overline {
+  font-size: clamp(11px, 1.7cqw, 16px);
+  letter-spacing: 0.12em;
+}

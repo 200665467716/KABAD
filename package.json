@@ -19,6 +19,7 @@
     "test:integration": "vitest run --project integration",
     "admin:promote": "tsx scripts/promote-admin.ts",
     "messages": "node tools/check-messages.mjs",
+    "presentation:video": "node scripts/record-presentation.mjs",
     "worker": "node --env-file-if-exists=.env --import tsx worker/index.ts",
     "build:worker": "esbuild worker/index.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/worker.mjs --packages=external --alias:@=./src --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\""
   },

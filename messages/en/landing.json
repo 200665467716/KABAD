@@ -1,0 +1,119 @@
+{
+  "landing": {
+    "meta": {
+      "title": "KABAD · The exchange platform for African devs",
+      "description": "Free mentoring, hackathons, app testing, messaging and Africa Rise-Up projects: the exchange platform for devs in Africa and the diaspora. By devs, for devs."
+    },
+    "nav": {
+      "label": "Main navigation",
+      "signIn": "Sign in",
+      "join": "Join"
+    },
+    "hero": {
+      "kicker": "The exchange platform for African devs",
+      "titleStart": "Let’s create the next generation of ",
+      "titleHighlight": "African devs",
+      "subtitle": "More productive and more skilled in the age of AI.",
+      "join": "Join the community",
+      "watch": "Watch the presentation",
+      "motto": "By devs, for devs."
+    },
+    "video": {
+      "overline": "Presentation",
+      "title": "KABAD in 40 seconds",
+      "lead": "A short animated presentation of the platform. It only loads if you start it.",
+      "play": "Start the presentation",
+      "duration": "40 s",
+      "pause": "Pause",
+      "resume": "Resume",
+      "replay": "Watch again from the start",
+      "next": "Next scene",
+      "scene": "Scene {n} of {total}",
+      "goTo": "Go to scene {n}",
+      "fullScreen": "Watch full screen",
+      "transcript": "Presentation text",
+      "loading": "Loading the presentation…",
+      "metaTitle": "Presentation"
+    },
+    "scenes": {
+      "intro": { "title": "KABAD", "text": "By devs, for devs." },
+      "vision": { "title": "Let’s create the next generation of African devs", "text": "More productive and more skilled in the age of AI." },
+      "mentoring": {
+        "overline": "Mentoring",
+        "title": "A verified mentor, 30 minutes, one precise problem.",
+        "topic": "Payment API",
+        "confirmed": "Session confirmed · Google Meet link"
+      },
+      "hackathons": {
+        "overline": "Hackathons",
+        "title": "Real hackathons, solo or as a team.",
+        "ticket": "Hackathon",
+        "in": "In",
+        "days": "days",
+        "team": "Your team"
+      },
+      "tests": {
+        "overline": "App testing",
+        "title": "The community tests your app.",
+        "step1": "Create an account",
+        "step2": "Place an order",
+        "step3": "Send feedback"
+      },
+      "messaging": {
+        "overline": "Messages",
+        "title": "Your network, across the continent.",
+        "bubble1": "Hi! Do you code in Flutter?",
+        "bubble2": "Yes, for two years. Shall we talk?",
+        "bubble3": "Voice note · 0:12"
+      },
+      "rise": {
+        "overline": "Africa Rise-Up",
+        "title": "Projects for Africa: water, health, farming…",
+        "tags": "Water · Health · Farming · Education · Energy"
+      },
+      "outro": { "title": "Join the community", "text": "By devs, for devs." }
+    },
+    "mission": {
+      "overline": "Our mission",
+      "title": "Three steps, one ambition",
+      "grow": { "title": "Help devs grow", "text": "Free mentoring, hackathons, mutual help and community feedback on your apps." },
+      "solve": { "title": "Solve real problems in Africa", "text": "Water, health, farming, education, energy, finance: solutions built here, for here." },
+      "showcase": { "title": "Showcase these solutions worldwide", "text": "Projects born on KABAD deserve to be seen beyond the continent." }
+    },
+    "features": {
+      "overline": "On KABAD",
+      "title": "Five spaces to move forward together",
+      "mentoring": { "name": "Mentoring", "text": "Book a free 30-minute session with a mentor badged by KABAD, on a precise problem. The Google Meet link arrives as soon as they accept." },
+      "hackathons": { "name": "Hackathons", "text": "Real hackathons created by organisations: online, on site or hybrid. Solo or as a team." },
+      "tests": { "name": "App testing", "text": "Publish your app, gather a group of testers and get precise feedback, with screenshots." },
+      "messaging": { "name": "Messages", "text": "Invite devs, exchange text, audio, images and files, create your groups." },
+      "rise": { "name": "Africa Rise-Up", "text": "Bring devs from several countries together around projects that answer real African challenges." }
+    },
+    "audience": {
+      "overline": "Who is it for?",
+      "title": "For every dev, and for those who help them grow",
+      "devsTitle": "Devs in Africa and the diaspora",
+      "devsText": "From the aspiring dev discovering code to the senior who designs systems and leads.",
+      "levels": "Aspiring · Beginner · Intermediate · Senior",
+      "orgsTitle": "Organisations",
+      "orgsText": "Companies, incubators and communities that run hackathons and want to meet talent."
+    },
+    "steps": {
+      "overline": "How it works",
+      "title": "Ready in a few minutes",
+      "one": "Create your account with your e-mail.",
+      "two": "Tell us your level and what you are looking for.",
+      "three": "Invite devs, book a mentor or join a hackathon."
+    },
+    "final": {
+      "title": "Join the community",
+      "text": "Mentoring, hackathons, app testing, messages and Africa Rise-Up, in one place.",
+      "join": "Join the community"
+    },
+    "footer": {
+      "conditions": "Terms of use",
+      "presentation": "Presentation",
+      "cadev": "Project presented at the 2026 African Developers Cup."
+    }
+  }
+}

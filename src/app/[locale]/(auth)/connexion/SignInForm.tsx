@@ -42,7 +42,7 @@ export function SignInForm({ github, demo }: { github: boolean; demo: boolean })
   return (
     <form onSubmit={submit} noValidate>
       <AuthFrame
-        back="/"
+        back="/bienvenue"
         heading={t("heading")}
         title={t("title")}
         lead={t("lead")}
