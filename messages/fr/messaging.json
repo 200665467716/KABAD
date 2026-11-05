@@ -112,7 +112,11 @@
       "owner": "Responsable du groupe",
       "remove": "Retirer",
       "removeLabel": "Retirer {name} du groupe",
-      "failed": "L’action n’a pas abouti. Réessaie."
+      "failed": "L’action n’a pas abouti. Réessaie.",
+      "openTest": "Voir l’annonce de test",
+      "openProject": "Voir le projet",
+      "linkedTest": "Ce groupe suit l’annonce de test : on y entre en rejoignant le test et on en sort en le quittant.",
+      "linkedProject": "Ce groupe suit le projet Rise-Up : on y entre en rejoignant le projet et on en sort en le quittant."
     },
     "group": {
       "metaTitle": "Nouveau groupe",

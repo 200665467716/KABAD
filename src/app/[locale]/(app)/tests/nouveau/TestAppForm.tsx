@@ -146,6 +146,7 @@ export function TestAppForm() {
             </Button>
           )}
         </fieldset>
+        <Alert tone="info">{t("form.groupInfo")}</Alert>
         {error && (
           <Alert tone="danger" role="alert">
             {error.text}

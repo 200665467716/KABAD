@@ -112,7 +112,11 @@
       "owner": "Group owner",
       "remove": "Remove",
       "removeLabel": "Remove {name} from the group",
-      "failed": "That didn’t work. Try again."
+      "failed": "That didn’t work. Try again.",
+      "openTest": "See the test listing",
+      "openProject": "See the project",
+      "linkedTest": "This group follows the test listing: you join it by joining the test and leave it by leaving the test.",
+      "linkedProject": "This group follows the Rise-Up project: you join it by joining the project and leave it by leaving the project."
     },
     "group": {
       "metaTitle": "New group",

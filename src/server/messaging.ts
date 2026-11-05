@@ -130,7 +130,11 @@ export async function getConversation(userId: string, conversationId: string, op
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 100);
   const c = await prisma.conversation.findUniqueOrThrow({
     where: { id: conversationId },
-    include: { members: { include: { user: { select: { id: true, name: true, role: true, city: true } } }, orderBy: { joinedAt: "asc" } } },
+    include: {
+      members: { include: { user: { select: { id: true, name: true, role: true, city: true } } }, orderBy: { joinedAt: "asc" } },
+      testApp: { select: { id: true } },
+      project: { select: { id: true } },
+    },
   });
   const rows = await prisma.message.findMany({
     where: { conversationId, ...(opts.before ? { createdAt: { lt: new Date(opts.before) } } : {}) },
@@ -148,6 +152,7 @@ export async function getConversation(userId: string, conversationId: string, op
     theme: c.theme,
     other: other ? { id: other.id, name: other.name, role: other.role, city: other.city } : null,
     isOwner: c.createdById === userId,
+    linked: c.testApp ? { kind: "test", id: c.testApp.id } : c.project ? { kind: "rise", id: c.project.id } : null,
     members: c.members.map((x) => ({ id: x.user.id, name: x.user.name, owner: x.role === "OWNER" })),
     lastReadAt: m.lastReadAt.toISOString(),
     hasMore: rows.length > limit,
@@ -353,6 +358,13 @@ export async function answerInvitation(userId: string, invitationId: string, acc
 
 /* Private groups */
 
+/** The group of an app to test or of a Rise-Up project follows it: its members change only from there. */
+async function assertPrivateGroup(prisma: Db | Prisma.TransactionClient, conversationId: string) {
+  const c = await prisma.conversation.findUnique({ where: { id: conversationId }, select: { testApp: { select: { id: true } }, project: { select: { id: true } } } });
+  if (c?.testApp) throw new DomainError("community_group", "Ce groupe suit l’application à tester : on le rejoint ou on le quitte depuis l’annonce.", 409);
+  if (c?.project) throw new DomainError("community_group", "Ce groupe suit le projet Rise-Up : on le rejoint ou on le quitte depuis le projet.", 409);
+}
+
 async function assertAllContacts(tx: Prisma.TransactionClient | Db, ownerId: string, ids: string[]) {
   const found = await tx.contact.findMany({ where: { userId: ownerId, contactId: { in: ids } }, select: { contactId: true } });
   if (found.length !== ids.length) throw forbidden("Tu ne peux ajouter que tes contacts.");
@@ -391,6 +403,7 @@ export async function addGroupMembers(userId: string, conversationId: string, me
   const m = await membership(prisma, userId, conversationId);
   if (m.conversation.kind !== "GROUP") throw new DomainError("not_group", "On ne peut ajouter des participants qu’à un groupe.");
   if (m.conversation.createdById !== userId) throw forbidden("Seul le créateur du groupe peut ajouter des participants.");
+  await assertPrivateGroup(prisma, conversationId);
   const current = new Set(m.conversation.members.map((x) => x.userId));
   const ids = [...new Set(memberIds)].filter((id) => !current.has(id));
   if (ids.length === 0) throw new DomainError("no_new_members", "Ces personnes sont déjà dans le groupe.");
@@ -420,6 +433,7 @@ export async function removeGroupMember(userId: string, conversationId: string, 
   if (m.conversation.kind !== "GROUP") throw new DomainError("not_group", "On ne retire des participants que d’un groupe.");
   if (m.conversation.createdById !== userId) throw forbidden("Seul le créateur du groupe peut retirer des participants.");
   if (memberId === userId) throw new DomainError("self", "Pour partir, quitte le groupe.");
+  await assertPrivateGroup(prisma, conversationId);
   const everyone = m.conversation.members.map((x) => x.userId);
   if (!everyone.includes(memberId)) throw notFound("Ce membre ne fait pas partie du groupe.");
 
@@ -442,6 +456,7 @@ export async function removeGroupMember(userId: string, conversationId: string, 
 export async function leaveGroup(userId: string, conversationId: string, prisma: Db = db) {
   const m = await membership(prisma, userId, conversationId);
   if (m.conversation.kind !== "GROUP") throw new DomainError("not_group", "On ne peut quitter qu’un groupe.");
+  await assertPrivateGroup(prisma, conversationId);
   const everyone = m.conversation.members.map((x) => x.userId);
 
   return prisma.$transaction(async (tx) => {

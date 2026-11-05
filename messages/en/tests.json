@@ -72,7 +72,8 @@
       "addQuestion": "Add a question",
       "submit": "Publish the listing",
       "submitting": "Publishing…",
-      "error": "The listing wasn’t published. Try again."
+      "error": "The listing wasn’t published. Try again.",
+      "groupInfo": "Publishing opens your testers’ group in your messages, with the install link. Each tester joins it by joining the test."
     },
     "report": {
       "metaTitle": "Test report",

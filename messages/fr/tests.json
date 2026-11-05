@@ -72,7 +72,8 @@
       "addQuestion": "Ajouter une question",
       "submit": "Publier l’annonce",
       "submitting": "Publication…",
-      "error": "L’annonce n’a pas été publiée. Réessaie."
+      "error": "L’annonce n’a pas été publiée. Réessaie.",
+      "groupInfo": "En publiant, tu ouvres ton groupe de testeurs dans ta messagerie, avec le lien d’installation. Chaque testeur y entre en rejoignant le test."
     },
     "report": {
       "metaTitle": "Rapport de test",

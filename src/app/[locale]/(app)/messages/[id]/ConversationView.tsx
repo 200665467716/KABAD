@@ -8,7 +8,7 @@ import { MessageBubble, SystemLine } from "@/components/features/Thread";
 import { AttachButton, AttachmentView, VoiceRecorder } from "@/components/features/messaging/Attachments";
 import { ReportSheet } from "@/components/features/ReportSheet";
 import { TopBar } from "@/components/shell/TopBar";
-import { Button, IconButton } from "@/components/ui/Button";
+import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Controls";
 import { Alert, Avatar, DaySeparator } from "@/components/ui/Display";
 import { api, ApiError } from "@/lib/api";
@@ -50,6 +50,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   const stickToBottom = useRef(true);
   const keepOffset = useRef<number | null>(null);
   const group = detail.kind === "GROUP";
+  // The group of an app to test or of a Rise-Up project changes only from there.
+  const manageable = group && detail.isOwner && !detail.linked;
 
   const markRead = useCallback(() => {
     if (document.visibilityState === "visible") api(`/api/conversations/${detail.id}/read`, { method: "POST" }).catch(() => {});
@@ -198,7 +200,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
         subtitle={group ? `${t("memberCount", { count: detail.members.length })} · ${memberNames}` : detail.other ? `${detail.other.role === "SENIOR" ? `${t("mentor")} · ` : ""}${detail.other.city}` : undefined}
         actions={
           <>
-            {group && detail.isOwner && <IconButton icon="userPlus" label={t("addMembers")} onClick={() => setAdding(true)} />}
+            {manageable && <IconButton icon="userPlus" label={t("addMembers")} onClick={() => setAdding(true)} />}
             {group && <IconButton icon="users" label={t("members")} onClick={() => setPeople(true)} />}
             <IconButton icon="more" label={t("report")} onClick={() => setReport(true)} />
           </>
@@ -281,7 +283,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
       <ReportSheet open={report} onClose={() => setReport(false)} subject={t("subjectConversation")} target={{ type: "CONVERSATION", id: detail.id }} onBlocked={() => !group && setBlocked(true)} />
       <ReportSheet open={reportMessage !== null} onClose={() => setReportMessage(null)} subject={t("subjectMessage")} target={{ type: "MESSAGE", id: reportMessage ?? "" }} onBlocked={() => !group && setBlocked(true)} />
       {group && <MembersSheet open={people} onClose={() => setPeople(false)} detail={detail} meId={me.id} onChanged={reload} onLeft={() => router.replace("/messages")} />}
-      {group && detail.isOwner && <AddMembersSheet open={adding} onClose={() => setAdding(false)} conversationId={detail.id} memberIds={detail.members.map((m) => m.id)} onAdded={reload} />}
+      {manageable && <AddMembersSheet open={adding} onClose={() => setAdding(false)} conversationId={detail.id} memberIds={detail.members.map((m) => m.id)} onAdded={reload} />}
     </div>
   );
 }
@@ -389,7 +391,11 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
       onClose={onClose}
       title={t("title", { count: detail.members.length })}
       footer={
-        confirmLeave ? (
+        detail.linked ? (
+          <ButtonLink href={detail.linked.kind === "test" ? `/tests/${detail.linked.id}` : `/rise-up/${detail.linked.id}`} variant="secondary" size="lg" block>
+            {detail.linked.kind === "test" ? t("openTest") : t("openProject")}
+          </ButtonLink>
+        ) : confirmLeave ? (
           <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
             <Button variant="secondary" onClick={() => setConfirmLeave(false)}>
               {t("cancel")}
@@ -405,6 +411,7 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
         )
       }
     >
+      {detail.linked && <Alert tone="info">{detail.linked.kind === "test" ? t("linkedTest") : t("linkedProject")}</Alert>}
       {confirmLeave && (
         <Alert tone="info">
           {t("leaveInfo")}
@@ -421,7 +428,7 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
               </Link>
               {m.owner && <span className="text-xs text-muted">{t("owner")}</span>}
             </span>
-            {detail.isOwner && m.id !== meId ? (
+            {detail.isOwner && !detail.linked && m.id !== meId ? (
               <Button
                 variant="ghost"
                 size="sm"

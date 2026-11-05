@@ -1,6 +1,7 @@
 /*
  * Community tests: a member publishes an app with a short scenario and control questions.
- * Other members join its testers' group (where the install link is shared), tick the steps as they go,
+ * Publishing opens the testers' group in the author's messaging, with the install link; the author runs it.
+ * Other members join this group by joining the test (and leave it by leaving the test), tick the steps as they go,
  * then send a report with one screenshot per step. The owner reads each report, then validates or
  * refuses it with a reason. Places are limited to the number of testers wanted.
  */
@@ -93,16 +94,37 @@ export async function createTestApp(
     }
   }
   return prisma.$transaction(async (tx) => {
-    const owner = await tx.user.findUniqueOrThrow({ where: { id: ownerId }, select: { name: true } });
-    const conversationId = await openCommunityGroup(tx, {
-      name: `Testeurs ${input.name}`,
-      theme: "Test",
-      ownerId,
-      intro: `${owner.name.split(" ")[0]} a ouvert le groupe de test. Installer l’app : ${input.url}`,
-    });
+    const conversationId = await openTestersGroup(tx, { ownerId, name: input.name, url: input.url });
     const a = await tx.testApp.create({ data: { ownerId, ...input, questions: input.questions, conversationId } });
-    return { id: a.id };
+    return { id: a.id, conversationId };
   });
+}
+
+/** The author opens the testers' group: it appears in their messaging, with the install link. */
+async function openTestersGroup(tx: Prisma.TransactionClient, app: { ownerId: string; name: string; url: string }) {
+  const owner = await tx.user.findUniqueOrThrow({ where: { id: app.ownerId }, select: { name: true } });
+  return openCommunityGroup(tx, {
+    name: `Testeurs ${app.name}`,
+    theme: "Test",
+    ownerId: app.ownerId,
+    intro: `${owner.name.split(" ")[0]} a ouvert le groupe de test. Installer l’app : ${app.url}`,
+  });
+}
+
+/**
+ * Returns the app's testers' group. An app left without one (published before the groups existed)
+ * gets it now, opened by its author, with the testers already registered.
+ */
+async function testersGroup(tx: Prisma.TransactionClient, testAppId: string) {
+  // The lock makes two simultaneous joins open a single group.
+  await tx.$queryRaw`SELECT id FROM "TestApp" WHERE id = ${testAppId} FOR UPDATE`;
+  const a = await tx.testApp.findUniqueOrThrow({ where: { id: testAppId }, select: { ownerId: true, name: true, url: true, conversationId: true } });
+  if (a.conversationId) return a.conversationId;
+  const conversationId = await openTestersGroup(tx, a);
+  await tx.testApp.update({ where: { id: testAppId }, data: { conversationId } });
+  const testers = await tx.testParticipant.findMany({ where: { testAppId }, select: { userId: true }, orderBy: { joinedAt: "asc" } });
+  for (const t of testers) await joinCommunityGroup(tx, conversationId, t.userId);
+  return conversationId;
 }
 
 /** Takes one of the places and opens the testers' group. */
@@ -110,14 +132,18 @@ export async function joinTest(userId: string, testAppId: string, prisma: Db = d
   const a = await prisma.testApp.findUnique({ where: { id: testAppId }, include: { _count: { select: { participants: true } }, participants: { where: { userId }, select: { userId: true } } } });
   if (!a || !a.active) throw notFound("Application introuvable.");
   if (a.ownerId === userId) throw forbidden("Tu ne peux pas tester ta propre application.");
-  if (a.participants.length) return { conversationId: a.conversationId };
-  if (a._count.participants >= a.slots) throw new DomainError("full", "Toutes les places de test sont prises.", 409);
+  const already = a.participants.length > 0;
+  if (!already && a._count.participants >= a.slots) throw new DomainError("full", "Toutes les places de test sont prises.", 409);
   return prisma.$transaction(async (tx) => {
-    await tx.testParticipant.create({ data: { testAppId, userId } });
-    if (a.conversationId) await joinCommunityGroup(tx, a.conversationId, userId);
-    const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
-    await pushNotifications(tx, [{ userId: a.ownerId, actor: me.name, key: "testJoined", params: { title: a.name }, href: `/tests/${a.id}`, icon: "users", tone: "brand" }]);
-    return { conversationId: a.conversationId };
+    if (!already) await tx.testParticipant.create({ data: { testAppId, userId } });
+    // A tester already registered but missing from the group (older data) is added back.
+    const conversationId = await testersGroup(tx, testAppId);
+    await joinCommunityGroup(tx, conversationId, userId);
+    if (!already) {
+      const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+      await pushNotifications(tx, [{ userId: a.ownerId, actor: me.name, key: "testJoined", params: { title: a.name }, href: `/tests/${a.id}`, icon: "users", tone: "brand" }]);
+    }
+    return { conversationId };
   });
 }
 

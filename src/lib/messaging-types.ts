@@ -39,6 +39,8 @@ export type ConversationDetail = {
   theme: string | null;
   other: { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string } | null;
   isOwner: boolean;
+  /** A community group follows an app to test or a Rise-Up project: one joins or leaves it from there. */
+  linked: { kind: "test" | "rise"; id: string } | null;
   members: Array<{ id: string; name: string; owner: boolean }>;
   lastReadAt: string;
   hasMore: boolean;

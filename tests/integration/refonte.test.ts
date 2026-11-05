@@ -3,7 +3,8 @@ import { DomainError } from "@/server/errors";
 import { answerBooking, bookSlot, eligibility, getMentor, saveAvailability } from "@/server/mentoring";
 import { requestBadge, reviewBadge } from "@/server/badges";
 import { answerJoinRequest, getHackathon, publishResults, register, scoreSubmission, submitSolution } from "@/server/hackathons";
-import { joinTest, setStep } from "@/server/community-tests";
+import { createTestApp, joinTest, leaveTest, setStep } from "@/server/community-tests";
+import { leaveGroup, listConversations } from "@/server/messaging";
 import { addPost, createProject, joinProject } from "@/server/rise";
 import { sendVerificationEmail, verifyEmailCode } from "@/server/account";
 import { makeUsers, prisma, resetDb } from "./helpers";
@@ -139,6 +140,30 @@ describe("tests communautaires", () => {
     expect((await setStep("kossi", "app", 1, true, prisma)).doneSteps).toEqual([1]);
     await refused(setStep("kossi", "app", 5, true, prisma), "step");
     await refused(setStep("yao", "app", 0, true, prisma), "forbidden");
+  });
+
+  it("l’auteur ouvre le groupe de testeurs à la publication ; il suit le test dans la messagerie", async () => {
+    const app = { name: "Kalo", platforms: ["WEB" as const], url: "https://kalo.tg", minutes: 10, slots: 5, pitch: "p", task: "t", steps: ["Ajouter une dépense"], questions: [] };
+    const { id, conversationId } = await createTestApp("awa", app, prisma);
+    expect(await listConversations("awa", prisma)).toEqual([expect.objectContaining({ id: conversationId, title: "Testeurs Kalo", kind: "GROUP", isOwner: true })]);
+
+    expect((await joinTest("kossi", id, prisma)).conversationId).toBe(conversationId);
+    expect((await listConversations("kossi", prisma)).map((c) => c.id)).toEqual([conversationId]);
+    // On entre et on sort du groupe par le test, pas par la messagerie : l’auteur ne peut pas le perdre.
+    await refused(leaveGroup("awa", conversationId, prisma), "community_group");
+    await refused(leaveGroup("kossi", conversationId, prisma), "community_group");
+    await leaveTest("kossi", id, prisma);
+    expect(await listConversations("kossi", prisma)).toHaveLength(0);
+    expect(await listConversations("awa", prisma)).toHaveLength(1);
+  });
+
+  it("une application publiée sans groupe en reçoit un, ouvert par son auteur, avec les testeurs déjà inscrits", async () => {
+    await prisma.testApp.create({ data: { id: "ancienne", ownerId: "awa", name: "Tontine", platforms: ["WEB"], url: "https://x.tg", minutes: 10, slots: 5, pitch: "p", task: "t", steps: ["Créer"], questions: [], participants: { create: { userId: "fatou" } } } });
+    const [first, again] = await Promise.all([joinTest("kossi", "ancienne", prisma), joinTest("yao", "ancienne", prisma)]);
+    expect(again.conversationId).toBe(first.conversationId);
+    const group = await prisma.conversation.findUniqueOrThrow({ where: { id: first.conversationId }, include: { members: true } });
+    expect(group.createdById).toBe("awa");
+    expect(group.members.map((m) => m.userId).sort()).toEqual(["awa", "fatou", "kossi", "yao"]);
   });
 });
 

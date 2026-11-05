@@ -107,6 +107,8 @@
     "Salon introuvable.": "Room not found.",
     "Séance introuvable.": "Session not found.",
     "Seul le créateur du groupe peut ajouter des participants.": "Only the group’s creator can add participants.",
+    "Ce groupe suit l’application à tester : on le rejoint ou on le quitte depuis l’annonce.": "This group follows the app to test: join or leave it from the listing.",
+    "Ce groupe suit le projet Rise-Up : on le rejoint ou on le quitte depuis le projet.": "This group follows the Rise-Up project: join or leave it from the project.",
     "Seul le créateur du groupe peut retirer des participants.": "Only the group’s creator can remove participants.",
     "Seul le porteur de l’application lit ses rapports.": "Only the app’s owner can read its reports.",
     "Seul l’organisateur recrute les instructeurs.": "Only the organizer can recruit instructors.",
