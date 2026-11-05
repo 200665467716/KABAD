@@ -78,7 +78,6 @@ model User {
   blockedDates         BlockedDate[]
   bookingsAsMentor     MentoringBooking[]   @relation("BookingMentor")
   bookingsAsMentee     MentoringBooking[]   @relation("BookingMentee")
-  capsules             Capsule[]
   hackathonsCreated    Hackathon[]
   juries               HackathonJuror[]
   teamsCaptained       Team[]
@@ -376,29 +375,6 @@ model MentoringBooking {
   @@index([mentorId, startsAt])
   @@index([menteeId, startsAt])
   @@index([status, startsAt])
-}
-
-enum CapsuleTheme {
-  BACKEND
-  MOBILE
-  CAREER
-}
-
-/// What a senior learned, readable in under 5 minutes.
-model Capsule {
-  id        String       @id @default(cuid())
-  authorId  String
-  author    User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  title     String       @db.VarChar(120)
-  theme     CapsuleTheme
-  tags      String[]     @default([])
-  minutes   Int
-  body      String       @db.VarChar(6000)
-  code      String?      @db.VarChar(2000)
-  reads     Int          @default(0)
-  createdAt DateTime     @default(now())
-
-  @@index([theme, createdAt])
 }
 
 /**

@@ -18,8 +18,6 @@ const SIGNED_IN = [
   "/mentorat/mentors/awa",
   "/mentorat/seances/seance-momo",
   "/mentorat/badge",
-  "/capsules",
-  "/capsules/webhook-deux-fois",
   "/hackathons",
   "/hackathons/fintech-inclusion",
   "/hackathons/fintech-inclusion/participer",

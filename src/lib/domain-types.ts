@@ -100,19 +100,6 @@ export type BadgeRequestView = {
   candidate: { id: string; name: string; city: string; country: string };
 };
 
-export type CapsuleView = {
-  id: string;
-  title: string;
-  theme: "BACKEND" | "MOBILE" | "CAREER";
-  tags: string[];
-  minutes: number;
-  body: string;
-  code: string | null;
-  reads: number;
-  createdAt: string;
-  author: { id: string; name: string };
-};
-
 /* Hackathons */
 
 export type HackathonFormat = "ONLINE" | "ONSITE" | "HYBRID";

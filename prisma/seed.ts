@@ -343,17 +343,6 @@ async function main() {
   await report("marche-vert", "fatou", "Le bouton « Valider » reste gris après la commande sur Tecno Spark.", "SUBMITTED", 120);
   await report("marche-vert", "aicha", "Commande simple. Les photos chargent lentement en 3G.", "VALIDATED", 60 * 24);
 
-  /* Capsules */
-  await db.capsule.createMany({
-    data: [
-      { id: "webhook-deux-fois", authorId: "awa", title: "Recevoir un webhook deux fois sans payer deux fois", theme: "BACKEND", tags: ["Paiement"], minutes: 3, reads: 212, createdAt: minutesAgo(60 * 24 * 6),
-        body: "Un opérateur de paiement renvoie un webhook tant qu’il n’a pas reçu de réponse 200. Votre serveur le recevra donc parfois deux fois, ou plus.\n\nLa parade : enregistrer l’identifiant de l’événement avec une contrainte d’unicité avant de traiter quoi que ce soit. Si l’insertion échoue, l’événement est déjà traité : répondez 200 et arrêtez-vous là.\n\nVérifiez aussi la signature avant tout, sinon n’importe qui peut vous envoyer un faux paiement.",
-        code: "const seen = await db.event.findUnique({\n  where: { id: req.headers['x-event-id'] }\n})\nif (seen) return res.sendStatus(200) // déjà traité" },
-      { id: "flutter-3g", authorId: "aicha", title: "Une app Flutter qui marche avec une connexion 3G instable", theme: "MOBILE", tags: ["Réseau"], minutes: 4, reads: 387, createdAt: minutesAgo(60 * 24 * 20),
-        body: "Partez du principe que le réseau va couper. Gardez les données en local d’abord (SQLite ou Hive), affichez-les tout de suite, puis synchronisez en arrière-plan.\n\nMettez les envois dans une file avec un identifiant unique : si l’envoi échoue, il repartira plus tard sans créer de doublon côté serveur.\n\nRéduisez la taille des réponses : pagination, images compressées, et des délais d’attente courts avec de nouvelles tentatives espacées." },
-    ],
-  });
-
   /* Kossi's notifications (screen P2). The text is written in the reader's language from the key. */
   const n = (userId: string, actor: string, key: string, params: Record<string, string | number> | undefined, text: string, href: string, icon: string, tone: string, ago: number, read = false) => ({ userId, actor, key, params, text, href, icon, tone, createdAt: minutesAgo(ago), readAt: read ? minutesAgo(ago - 1) : null });
   await db.notification.createMany({

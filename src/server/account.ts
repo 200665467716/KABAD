@@ -116,7 +116,7 @@ export async function signOutEverywhere(userId: string, prisma: Db = db) {
 
 /** Everything the member wrote or declared, in one JSON file. */
 export async function exportData(userId: string, prisma: Db = db) {
-  const [user, messages, invitations, bookings, teams, badgeRequests, riseProjects, risePosts, reports, capsules, testApps] = await Promise.all([
+  const [user, messages, invitations, bookings, teams, badgeRequests, riseProjects, risePosts, reports, testApps] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: { id: true, email: true, name: true, role: true, level: true, city: true, country: true, diaspora: true, years: true, headline: true, bio: true, stack: true, goals: true, locale: true, timeZone: true, profileLink: true, githubLogin: true, createdAt: true },
@@ -129,10 +129,9 @@ export async function exportData(userId: string, prisma: Db = db) {
     prisma.riseMember.findMany({ where: { userId }, select: { projectId: true, skill: true, joinedAt: true } }),
     prisma.risePost.findMany({ where: { authorId: userId }, select: { projectId: true, body: true, createdAt: true } }),
     prisma.testReport.findMany({ where: { testerId: userId }, select: { testAppId: true, device: true, answers: true, remarks: true, status: true, createdAt: true } }),
-    prisma.capsule.findMany({ where: { authorId: userId } }),
     prisma.testApp.findMany({ where: { ownerId: userId } }),
   ]);
-  return { exportedAt: new Date().toISOString(), user, messages, invitations, mentoring: bookings, hackathons: teams, badgeRequests, riseProjects, risePosts, testReports: reports, capsules, testApps };
+  return { exportedAt: new Date().toISOString(), user, messages, invitations, mentoring: bookings, hackathons: teams, badgeRequests, riseProjects, risePosts, testReports: reports, testApps };
 }
 
 /**

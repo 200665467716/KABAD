@@ -139,14 +139,6 @@ export const badgeRequestSchema = z.object({
 
 export const reviewBadgeSchema = z.object({ approve: z.boolean(), reason: z.string().trim().max(500).optional() });
 
-export const capsuleSchema = z.object({
-  title: trimmed(8, 120, "Donne un titre clair (8 caractères au moins).", "Le titre fait 120 caractères au plus."),
-  theme: z.enum(["BACKEND", "MOBILE", "CAREER"], "Choisis un thème."),
-  body: trimmed(80, 6000, "Une capsule fait au moins 80 caractères.", "Une capsule se lit en moins de 5 minutes : 6 000 caractères au plus."),
-  code: z.string().max(2000, "L’extrait de code fait 2 000 caractères au plus.").optional(),
-  tags: z.array(trimmed(2, 20, "Mot-clé trop court.", "Mot-clé trop long.")).max(3, "3 mots-clés au plus.").default([]),
-});
-
 /* Hackathons */
 
 export const OPERATORS = ["Moov Money", "MTN MoMo", "Orange Money", "Wave", "Airtel Money", "Flooz", "T-Money"] as const;

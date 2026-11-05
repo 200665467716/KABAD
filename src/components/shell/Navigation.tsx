@@ -14,7 +14,7 @@ import { hardNavigate } from "@/lib/hard-navigate";
 import { salonsEnabled } from "@/lib/features";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
-type Label = "home" | "mentoring" | "hackathons" | "riseUp" | "tests" | "messages" | "members" | "voiceRooms" | "capsules";
+type Label = "home" | "mentoring" | "hackathons" | "riseUp" | "tests" | "messages" | "members" | "voiceRooms";
 type Item = { href: string; label: Label; icon: IconName; match: string[] };
 
 /* Bottom bar of the design: Accueil · Mentorat · Hackathons · Rise-Up · Messages. */
@@ -31,7 +31,6 @@ const sideItems: Item[] = [
   ...items,
   { href: "/tests", label: "tests", icon: "clipboard", match: ["/tests"] },
   { href: "/membres", label: "members", icon: "userPlus", match: ["/membres"] },
-  { href: "/capsules", label: "capsules", icon: "capsule", match: ["/capsules"] },
   ...(salonsEnabled ? [{ href: "/salons", label: "voiceRooms", icon: "radio", match: ["/salons"] } satisfies Item] : []),
 ];
 
