@@ -4,10 +4,12 @@
 
 Chaque tâche se fait avec `/suivant <ID>`, et `/etat` donne l'avancement. Une tâche cochée a passé lint, typecheck et tests, et est commitée.
 
+**Référence produit : `docs/point-projet.md`** (point de mise à jour du 5 novembre 2026). Quand il contredit le cahier des charges, une ancienne note ou le code, c'est lui qui fait foi. Les tâches P1 écrites avant la refonte sont à relire à sa lumière (voir l'encadré en tête du P1).
+
 Ordre de priorité, guidé par la grille du jury :
 
 - P0 conditionne la recevabilité et une démo stable.
-- P1 couvre les exigences « Must » du cahier encore manquantes, et Africa'Raise-up.
+- P1 couvre les exigences « Must » du cahier encore manquantes, et Africa Rise-Up.
 - P2 couvre les « Should », à faire si le temps le permet.
 
 Repères : F0 à F5 désignent les fonctionnalités du produit (ci-dessous). F1.1, F2.10, etc. désignent les exigences du cahier des charges (PDF du 15 octobre 2026).
@@ -23,11 +25,11 @@ KABAD est une plateforme d'échange catalyseur de croissance, de montée en comp
 | F2 | Hackathons | Seul ou en équipe, avec ou sans récompense, en 3 niveaux (D6, D8) | R11, R15 à R17, R40 |
 | F3 | Tests communautaires | Faire tester ses applications par d'autres développeurs | R18 à R20 |
 | F4 | Messagerie | Invitations, message de connexion, groupes de conversation | R21 à R23, R43 |
-| F5 | Africa'Raise-up | Projets communautaires, avec un canal de discussion et des salons de réflexion par projet | R24 à R26 |
+| F5 | Africa Rise-Up | Projets communautaires, avec un canal de discussion et des salons de réflexion par projet | R24 à R26 |
 
 Les tâches transverses (mise en ligne, worker, langue, PWA, tests) servent toutes les fonctionnalités.
 
-Africa'Raise-up réunit les développeurs d'Afrique et de la diaspora pour construire de vraies solutions, valorisées à l'international, à des problèmes concrets de l'Afrique.
+Africa Rise-Up (« l'Afrique se relève ») réunit les développeurs d'Afrique et de la diaspora pour construire de vraies solutions, valorisées à l'international, à des problèmes concrets de l'Afrique.
 
 Pas d'événements simples dans KABAD. Un événement n'a de valeur que s'il lance un projet communautaire où les développeurs d'Afrique sont mis à contribution. De simples événements nous rendraient remplaçables par WhatsApp, Telegram ou Google Meet. Les salons vocaux génériques restent donc coupés (R9), et les salons de réflexion n'existent qu'à l'intérieur d'un projet (R26).
 
@@ -45,7 +47,7 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
 
 - [x] D3. Salons vocaux retirés pour la CADEV (26 octobre).
   - On masque la fonction et on retire LiveKit de `compose.yaml`, de la CI et des e2e (R9).
-  - Le code reste en place, derrière un interrupteur. D7 dira s'il revient dans Africa'Raise-up.
+  - Le code reste en place, derrière un interrupteur. D7 dira s'il revient dans Africa Rise-Up.
 
 - [x] D4. Écarts du code : alignement sur le cahier (26 octobre).
   - Demande de mentorat : relance à 48 h, réaffectation à 72 h (R5).
@@ -64,7 +66,7 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
   - Niveau 3 : récompense par cagnotte communautaire ou sponsor, avec mentor. 60 % au gagnant, 30 % à son mentor, 10 % à KABAD.
   - Aux niveaux 2 et 3, la moitié de la part de KABAD (5 % du total) est mise en réserve pour abonder de futures cagnottes.
 
-- [x] D7. Salons de réflexion d'Africa'Raise-up : lien visio externe (31 octobre).
+- [x] D7. Salons de réflexion d'Africa Rise-Up : lien visio externe (31 octobre).
   - Un événement de projet porte un lien Meet ou Jitsi ; sans lien saisi, KABAD crée une salle Jitsi.
   - LiveKit reste coupé (D3) : il pèse sur le serveur de 1 vCPU et ouvre des ports UDP.
 
@@ -79,6 +81,13 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
   - Le binôme et le journal de séances disparaissent. Le temps de mentorat exigé par un hackathon
     (niveau 3 de D6) se compte en séances tenues.
   - Le statut de mentor vient d'un badge demandé par le membre et validé par l'équipe KABAD.
+
+- [x] D10. Point de mise à jour du projet (5 novembre), dans `docs/point-projet.md`.
+  - Il fait foi sur le cahier des charges et les anciennes notes.
+  - Capsules retirées du produit : elles venaient des premières idées.
+  - Authentification par e-mail et mot de passe uniquement (mot de passe de 8 caractères dont un chiffre) ; pas de GitHub ni de Google en V1 (R48).
+  - Visio par Google Meet en V1 ; une landing page publique présente KABAD.
+  - Questions encore ouvertes : partie 8 du point projet (visio à long terme, salon vocal Rise-Up, rémunération des instructeurs, jury des hackathons, organisations autorisées, durée des séances).
 
 ## P0 — Recevable, en ligne, stable (objectif : 2 novembre)
 
@@ -116,9 +125,8 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
   - La réaffectation à 72 h n'a plus d'objet avec les créneaux (D9).
 
 - [ ] R6. Pages publiques indexables.
-  - Défis et résultats lisibles sans session, avec les liens du dépôt et de la démo des lauréats (F2.10).
-  - `generateMetadata`, OpenGraph, `robots.ts` et `sitemap.ts`.
-  - Page d'accueil qui reprend le thème : « la plateforme d'échange africaine, pour les devs, par les devs ».
+  - Fait le 5 novembre : landing page `/` (vision, mission, cinq espaces, présentation animée), statique, avec titre, description et OpenGraph, en FR et en EN.
+  - Reste : hackathons et résultats lisibles sans session, avec les liens du dépôt et de la démo des lauréats (F2.10) ; `robots.ts` et `sitemap.ts`.
 
 - [ ] R7. Points de réputation, socle commun.
   - Un modèle `ReputationEvent`.
@@ -136,7 +144,24 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
 - [x] Tests : unitaires, intégration (10 nouveaux), e2e réécrits (99 passent, téléphone et ordinateur).
 - [x] Rappels et expirations par le worker (R5) ; pièces jointes et notes vocales (R43).
 
-## P1 — Les « Must » manquants et Africa'Raise-up (objectif : 11 novembre)
+## Mise à jour du 5 novembre (branche `dev/modifications`)
+
+- [x] Invitations : le premier message devient facultatif (étape 5/5 de l'inscription et fiche d'un membre). Une invitation envoyée apparaît dans la messagerie de l'expéditeur, avec son message et le badge « En attente », jusqu'à la réponse.
+- [x] Groupes de testeurs : ouverts par l'auteur à la publication, toujours visibles dans la messagerie. Une migration donne un groupe aux apps publiées avant la refonte ; on entre et on sort du groupe par le test (ou le projet Rise-Up), plus par la messagerie. Inscription au test sous verrou : la dernière place ne se prend qu'une fois.
+- [x] Capsules retirées : écrans, API, schéma (migration `retrait_capsules`), navigation, dictionnaires, données de démo.
+- [x] Landing page `/` et présentation animée de 40 s (chargée au clic, `/presentation` en plein écran, `npm run presentation:video` pour le fichier vidéo). L'écran A1 passe à `/bienvenue`.
+- [x] `docs/point-projet.md`, README et feuille de route à jour.
+- Tests : 32 unitaires, 45 d'intégration, 107 e2e.
+
+## P1 — Les « Must » manquants et Africa Rise-Up (objectif : 11 novembre)
+
+> **À réaligner sur `docs/point-projet.md`** avant de les prendre : R11 à R17 décrivent encore les défis (devenus hackathons, D8), R12 à R14 le binôme de mentorat (devenu des créneaux, D9), R24 à R26 l'ancien Africa'Raise-up. Une partie est déjà couverte par la refonte. Relire chaque tâche avec l'équipe, puis la réécrire ou la retirer.
+
+### Socle
+
+- [ ] R48. Authentification alignée sur le point projet (D10).
+  - Mot de passe de 8 caractères dont au moins un chiffre (le code demande aujourd'hui 12 caractères, sans chiffre imposé).
+  - Retirer la connexion GitHub (`/api/auth/github`, bouton de connexion, variables `GITHUB_CLIENT_*`) : prévue pour la V2.
 
 ### Profil et socle (F0)
 
@@ -210,10 +235,10 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
   - Un membre bloqué ne peut plus écrire à celui qui l'a bloqué, même dans un groupe commun.
 
 - [ ] R23. Règles d'invitation.
-  - Délai de 30 j après un refus, et expiration à 30 j (via R5).
+  - Délai de 30 j après un refus (le code applique encore 90 j : `REINVITE_AFTER_DAYS`), et expiration à 30 j (via R5).
   - 5 à 10 recommandations, aussi dans l'espace Conversations.
 
-### Africa'Raise-up (F5)
+### Africa Rise-Up (F5)
 
 - [ ] R24. Projets communautaires.
   - Un membre propose un projet : problème africain concret, objectif, compétences recherchées, lien du dépôt.
@@ -232,9 +257,9 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
 
 ### Langue
 
-- [ ] R30. Interface EN partielle (D1).
+- [x] R30. Interface EN partielle (D1).
   - Livré le 31 octobre avec la refonte (branche `dev/design-motif`) : next-intl, routes sous `src/app/[locale]` (FR sans préfixe, EN sous `/en`), un dictionnaire par module dans `messages/fr/` et `messages/en/` (`npm run messages` vérifie que les clés concordent), sélecteur de langue, langue mémorisée sur le compte et reprise à la connexion. Tous les écrans de la refonte sont traduits.
-  - Le 1er novembre : notifications stockées avec une clé et traduites à l'affichage (`messages/*/notifications.json`), messages d'erreur de l'API traduits selon la langue de la page (`src/server/error-messages.en.json`), rapports de test, capsules, conditions d'utilisation, signalements et journal traduits.
+  - Le 1er novembre : notifications stockées avec une clé et traduites à l'affichage (`messages/*/notifications.json`), messages d'erreur de l'API traduits selon la langue de la page (`src/server/error-messages.en.json`), rapports de test, conditions d'utilisation, signalements et journal traduits.
   - E-mails du compte dans la langue du membre (`src/server/emails.ts`, langue enregistrée à l'inscription). Le français tutoie partout, sauf les conditions d'utilisation qui vouvoient. Reste : la traduction anglaise des salons vocaux (coupés, D3).
 
 ## P2 — Les « Should » (si le temps le permet)
@@ -249,9 +274,7 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
   - Soumission d'un lien, réponse en texte ou en vidéo MP4.
   - Vidéo de 5 min et 200 Mo au plus, chargée seulement sur action.
 
-- [ ] R42. Capsules (F1.9).
-  - Accord explicite du mentoré, anonymisation.
-  - Classement par thème et niveau via l'API Claude.
+- [x] R42. ~~Capsules (F1.9)~~ : retirées du produit le 5 novembre (D10). Le code reste dans l'historique Git.
 
 - [ ] R43. Messagerie enrichie (F4.6, F4.7).
   - Fait le 1er novembre : PDF, images et notes vocales (2 Mo, 2 minutes), reconnus à leur contenu, lisibles par les seuls membres de la conversation, retirés avec le message par la modération.
@@ -262,7 +285,7 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
   - Service worker et coquille hors ligne, écran de démarrage iOS.
 
 - [ ] R45. Signalement étendu.
-  - Capsule, défi, solution, app, rapport, projet Africa'Raise-up.
+  - Hackathon, solution, app, rapport, projet Africa Rise-Up.
 
 - [ ] R46. Performance et accessibilité mesurées.
   - Lighthouse en CI (LCP, poids du JS).
@@ -279,9 +302,8 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
 - [ ] S2. Dossier `docs/soumission/` : composants et licences, usage de l'IA, démo, pitch.
 
 - [ ] S3. Mettre à jour le README et le cahier des charges.
-  - Auth faite maison au lieu d'Auth.js.
-  - Salons vocaux retirés (D3) et écarts assumés.
-  - Africa'Raise-up (F5) et les 3 niveaux de défis (D6).
+  - README à jour le 5 novembre (produit après la refonte, comptes de démo, landing page, vidéo de présentation). À relire juste avant la soumission.
+  - Cahier des charges : l'aligner sur `docs/point-projet.md` (hackathons au lieu des défis, mentorat par créneaux, Africa Rise-Up, capsules retirées), auth faite maison au lieu d'Auth.js, salons vocaux retirés (D3) et écarts assumés.
 
 - [ ] S4. La veille : démo vérifiée en ligne et comptes de démonstration testés.
 
@@ -291,3 +313,4 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
   - Vote des pairs par chaque membre, du 15 novembre 18h au 16 novembre 23h59. Obligatoire, sinon le projet est exclu.
 
 - [ ] S6. Campagne du vote du public (17 au 20 novembre) : messages et visuels prêts.
+  - La vidéo de présentation est prête à tourner : `npm run presentation:video` (format paysage, ou `-- --vertical` pour les statuts et stories).

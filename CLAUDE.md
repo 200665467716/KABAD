@@ -2,11 +2,12 @@
 
 # KABAD — consignes pour Claude Code
 
-KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora : mentorat, défis de code, tests communautaires, messagerie. Les salons vocaux (LiveKit) sont retirés pour la CADEV (décision D3). C'est le projet de l'équipe pour la **CADEV 2026** (Coupe d'Afrique des Développeurs, Systalink).
+KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora : mentorat par créneaux, hackathons, tests d'apps, messagerie et Africa Rise-Up. Les salons vocaux (LiveKit) sont retirés pour la CADEV (décision D3). C'est le projet de l'équipe pour la **CADEV 2026** (Coupe d'Afrique des Développeurs, Systalink).
 
 - **Thème officiel** : « Construire la plateforme d'échange africaine, pour les devs, par les devs. »
 - **Date limite de soumission : 15 novembre 2026, 17h00 GMT.** Rien n'est accepté après.
-- **Cahier des charges** : `../KABAD — Cahier des charges.md` (source de vérité produit, priorités Must / Should / V2).
+- **Point projet** : `docs/point-projet.md` (vision, décisions et fonctionnalités du 5 novembre 2026). Il fait foi quand il contredit le cahier des charges ou le code ; l'équipe peut le modifier à tout moment.
+- **Cahier des charges** : `../KABAD — Cahier des charges.md` (priorités Must / Should / V2), antérieur à la refonte.
 - **Feuille de route** : `docs/ROADMAP.md` (ce qui reste à faire, dans l'ordre). La tenir à jour à chaque tâche terminée.
 - **Équipe** : Emmerson Michel da MATHA (produit), Koffi Amos Sivitra (tech lead), Claude (développement).
 
