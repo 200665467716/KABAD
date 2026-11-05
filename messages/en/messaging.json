@@ -20,7 +20,9 @@
       "unread": "{count} unread",
       "yesterday": "Yesterday",
       "voiceNote": "Voice note",
-      "file": "File"
+      "file": "File",
+      "pending": "Pending",
+      "inviteSentNoMessage": "Invitation sent"
     },
     "invitations": {
       "metaTitle": "Invitations",
@@ -28,7 +30,7 @@
       "loading": "Loading invitations…",
       "received": "Received",
       "sent": "Sent",
-      "intro": "Read the first message. The chat opens if you accept.",
+      "intro": "The chat opens if you accept.",
       "noReceived": "No pending invitation.",
       "accept": "Accept",
       "decline": "Decline",
@@ -40,7 +42,8 @@
       "noSent": "No invitation sent.",
       "findMembers": "Find members to invite",
       "read": "Read",
-      "error": "Your answer wasn’t sent. Try again."
+      "error": "Your answer wasn’t sent. Try again.",
+      "noMessage": "No message"
     },
     "invitation": {
       "metaTitle": "Invitation",
@@ -175,8 +178,8 @@
       "mentor": "Mentor",
       "diaspora": "Diaspora",
       "years": "{count, plural, one {# year} other {# years}}",
-      "label": "Your first message",
-      "hint": "Introduce yourself and say what you are looking for.",
+      "label": "Your first message (optional)",
+      "hint": "Introduce yourself and say what you are looking for. You can also invite without a message.",
       "signIn": "Sign in",
       "note": "The chat opens only if {name} accepts your invitation.",
       "error": "The invitation wasn’t sent. Try again."

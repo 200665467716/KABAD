@@ -79,7 +79,7 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
                       </span>
                       <Icon name="chevron" size={18} className="text-subtle" />
                     </Link>
-                    <p className="rounded-action bg-bg px-3 py-2.5 text-sm">{i.message}</p>
+                    {i.message && <p className="rounded-action bg-bg px-3 py-2.5 text-sm">{i.message}</p>}
                     {done?.accepted ? (
                       <div className="flex items-center justify-between gap-3">
                         <Badge tone="success" icon="check">
@@ -132,7 +132,7 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
                     <Link href={`/profil/${i.toId}`} className="truncate text-[15px] font-extrabold text-ink no-underline">
                       {i.to.name}
                     </Link>
-                    <span className="truncate text-[13px] text-muted">{i.message}</span>
+                    <span className="truncate text-[13px] text-muted">{i.message || t("noMessage")}</span>
                   </span>
                   <span className="grid justify-items-end gap-1">
                     <Badge tone="brand">{t("pending")}</Badge>

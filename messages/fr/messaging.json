@@ -20,7 +20,9 @@
       "unread": "{count, plural, one {# non lu} other {# non lus}}",
       "yesterday": "Hier",
       "voiceNote": "Note vocale",
-      "file": "Fichier"
+      "file": "Fichier",
+      "pending": "En attente",
+      "inviteSentNoMessage": "Invitation envoyée"
     },
     "invitations": {
       "metaTitle": "Invitations",
@@ -28,7 +30,7 @@
       "loading": "Chargement des invitations…",
       "received": "Reçues",
       "sent": "Envoyées",
-      "intro": "Lis le premier message. La discussion s’ouvre si tu acceptes.",
+      "intro": "La discussion s’ouvre si tu acceptes.",
       "noReceived": "Aucune invitation en attente.",
       "accept": "Accepter",
       "decline": "Refuser",
@@ -40,7 +42,8 @@
       "noSent": "Aucune invitation envoyée.",
       "findMembers": "Trouver des membres à inviter",
       "read": "Lire",
-      "error": "La réponse n’est pas partie. Réessaie."
+      "error": "La réponse n’est pas partie. Réessaie.",
+      "noMessage": "Sans message"
     },
     "invitation": {
       "metaTitle": "Invitation",
@@ -175,8 +178,8 @@
       "mentor": "Mentor",
       "diaspora": "Diaspora",
       "years": "{count, plural, one {# an} other {# ans}}",
-      "label": "Ton premier message",
-      "hint": "Présente-toi et dis ce que tu cherches.",
+      "label": "Ton premier message (facultatif)",
+      "hint": "Présente-toi et dis ce que tu cherches. Tu peux aussi inviter sans message.",
       "signIn": "Se connecter",
       "note": "La discussion s’ouvre seulement si {name} accepte ton invitation.",
       "error": "L’invitation n’est pas partie. Réessaie."

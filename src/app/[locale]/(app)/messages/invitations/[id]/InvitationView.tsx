@@ -51,7 +51,7 @@ export function InvitationView({ invitation }: { invitation: InvitationDetail })
           </div>
           {from.role === "SENIOR" && <Badge tone="brand">{t("mentor")}</Badge>}
         </div>
-        <MessageBubble text={invitation.message} time={time.short(invitation.createdAt)} />
+        {invitation.message && <MessageBubble text={invitation.message} time={time.short(invitation.createdAt)} />}
         {answered ? (
           <Alert tone="info">{t("alreadyAnswered")}</Alert>
         ) : (

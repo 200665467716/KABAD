@@ -18,7 +18,7 @@ async function InboxData({ searchParams }: { searchParams: Promise<Record<string
   // Former links to the invitations tab.
   if ((await searchParams).onglet === "invitations") redirect({ href: "/messages/invitations", locale: await getLocale() });
   const [conversations, invitations] = await Promise.all([listConversations(user.id), listInvitations(user.id)]);
-  return <Inbox me={user.id} initialConversations={conversations} initialInvitations={invitations.received} />;
+  return <Inbox me={user.id} initialConversations={conversations} initialInvitations={invitations.received} initialSent={invitations.sent} />;
 }
 
 async function InboxSkeleton() {

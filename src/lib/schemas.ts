@@ -27,15 +27,12 @@ export const signupSchema = z.object({
 
 export const invitationSchema = z.object({
   toId: id,
+  // Optional: an invitation can leave without a message.
   message: z
     .string()
+    .default("")
     .transform((s) => s.trim())
-    .pipe(
-      z
-        .string()
-        .min(1, "Écris un premier message pour te présenter.")
-        .refine((s) => Array.from(s).length <= INVITATION_MAX_LENGTH, `Le premier message fait ${INVITATION_MAX_LENGTH} caractères au plus.`),
-    ),
+    .pipe(z.string().refine((s) => Array.from(s).length <= INVITATION_MAX_LENGTH, `Le premier message fait ${INVITATION_MAX_LENGTH} caractères au plus.`)),
 });
 
 export const answerInvitationSchema = z.object({ accept: z.boolean() });

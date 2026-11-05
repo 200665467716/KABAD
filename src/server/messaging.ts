@@ -1,6 +1,6 @@
 /*
  * Messaging rules, enforced on the server:
- * - a first contact is an invitation with one message of 300 characters at most;
+ * - a first contact is an invitation, with an optional first message of 300 characters at most;
  * - a conversation opens only once the invitation is accepted, and both become contacts;
  * - groups are private: only their creator adds participants, chosen among the creator's contacts;
  * - only members read and write in a conversation; blocking stops direct messages and invitations.
@@ -315,7 +315,7 @@ export async function cancelInvitation(userId: string, invitationId: string, pri
   return { ok: true };
 }
 
-/** Accepting makes both members contacts and opens their conversation, starting with the invitation's message. */
+/** Accepting makes both members contacts and opens their conversation, starting with the invitation's message if there is one. */
 export async function answerInvitation(userId: string, invitationId: string, accept: boolean, prisma: Db = db) {
   const inv = await prisma.invitation.findUnique({ where: { id: invitationId }, include: { to: { select: { name: true } } } });
   if (!inv || inv.toId !== userId) throw notFound("Invitation introuvable.");
@@ -341,7 +341,7 @@ export async function answerInvitation(userId: string, invitationId: string, acc
         data: { kind: "DIRECT", directKey: key, lastMessageAt: now, members: { create: [{ userId: inv.fromId, lastReadAt: now }, { userId: inv.toId, lastReadAt: now }] } },
       });
     }
-    await tx.message.create({ data: { conversationId: conversation.id, authorId: inv.fromId, body: inv.message, createdAt: inv.createdAt } });
+    if (inv.message) await tx.message.create({ data: { conversationId: conversation.id, authorId: inv.fromId, body: inv.message, createdAt: inv.createdAt } });
     await tx.message.create({ data: { conversationId: conversation.id, kind: "SYSTEM", body: `${firstName(inv.to.name)} a accepté l’invitation`, createdAt: now } });
     await tx.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: now } });
     await notify(tx, { t: "invitation_answered", invitationId: inv.id, accepted: true, conversationId: conversation.id, recipients: [inv.fromId] });

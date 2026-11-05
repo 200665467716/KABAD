@@ -5,30 +5,47 @@ import { useCallback, useState } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink, IconButton } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Controls";
-import { Avatar, AvatarGroup } from "@/components/ui/Display";
+import { Avatar, AvatarGroup, Badge } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { Link } from "@/i18n/navigation";
 import { api } from "@/lib/api";
 import { initials } from "@/lib/format";
-import type { ConversationSummary, ReceivedInvitation } from "@/lib/messaging-types";
+import type { ConversationSummary, ReceivedInvitation, SentInvitation } from "@/lib/messaging-types";
 import { useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
 import { useChatTime } from "./useChatTime";
 
 type Filter = "all" | "people" | "groups";
 
-/** Screen MS1: received invitations first, then the conversations, live. */
-export function Inbox({ me, initialConversations, initialInvitations }: { me: string; initialConversations: ConversationSummary[]; initialInvitations: ReceivedInvitation[] }) {
+type Row = { type: "conversation"; at: string; c: ConversationSummary } | { type: "sent"; at: string; i: SentInvitation };
+
+/**
+ * Screen MS1: received invitations first, then the conversations, live.
+ * An invitation sent and not answered yet shows among the people, with its message: the sender keeps track of it.
+ */
+export function Inbox({
+  me,
+  initialConversations,
+  initialInvitations,
+  initialSent,
+}: {
+  me: string;
+  initialConversations: ConversationSummary[];
+  initialInvitations: ReceivedInvitation[];
+  initialSent: SentInvitation[];
+}) {
   const t = useTranslations("messaging.inbox");
   const time = useChatTime();
   const [filter, setFilter] = useState<Filter>("all");
   const [conversations, setConversations] = useState(initialConversations);
   const [invitations, setInvitations] = useState(initialInvitations);
+  const [sent, setSent] = useState(initialSent);
 
   const refresh = useCallback(async () => {
     try {
-      const [c, i] = await Promise.all([api<{ conversations: ConversationSummary[] }>("/api/conversations"), api<{ received: ReceivedInvitation[] }>("/api/invitations")]);
+      const [c, i] = await Promise.all([api<{ conversations: ConversationSummary[] }>("/api/conversations"), api<{ received: ReceivedInvitation[]; sent: SentInvitation[] }>("/api/invitations")]);
       setConversations(c.conversations);
       setInvitations(i.received);
+      setSent(i.sent);
     } catch {
       // Keep what is on screen; the next event or reconnection will try again.
     }
@@ -56,7 +73,10 @@ export function Inbox({ me, initialConversations, initialInvitations }: { me: st
   useRealtime("invitation:answered", () => refresh());
   useRealtimeReconnect(refresh);
 
-  const shown = conversations.filter((c) => filter === "all" || (filter === "groups") === (c.kind === "GROUP"));
+  const rows: Row[] = [
+    ...conversations.filter((c) => filter === "all" || (filter === "groups") === (c.kind === "GROUP")).map((c): Row => ({ type: "conversation", at: c.lastMessageAt, c })),
+    ...(filter === "groups" ? [] : sent.map((i): Row => ({ type: "sent", at: i.createdAt, i }))),
+  ].sort((a, b) => b.at.localeCompare(a.at));
   const firstNames = invitations.map((i) => i.from.name.split(" ")[0]);
   const names = firstNames.length <= 1 ? firstNames.join("") : `${firstNames.slice(0, -1).join(", ")} ${t("and")} ${firstNames[firstNames.length - 1]}`;
 
@@ -89,18 +109,37 @@ export function Inbox({ me, initialConversations, initialInvitations }: { me: st
             { value: "groups", label: t("tabGroups") },
           ]}
         />
-        {conversations.length === 0 ? (
+        {conversations.length === 0 && sent.length === 0 ? (
           <div className="grid justify-items-center gap-3 py-10 text-center">
             <p className="text-muted">{t("empty")}</p>
             <ButtonLink href="/membres" icon="search">
               {t("members")}
             </ButtonLink>
           </div>
-        ) : shown.length === 0 ? (
+        ) : rows.length === 0 ? (
           <p className="py-6 text-center text-muted">{t("emptyFilter")}</p>
         ) : (
           <ul className="m-0 list-none overflow-hidden rounded-lg border-2 border-line-strong bg-raised p-0 [&>li+li]:border-t-2 [&>li+li]:border-line">
-            {shown.map((c) => {
+            {rows.map((row) => {
+              if (row.type === "sent") {
+                const i = row.i;
+                return (
+                  <li key={`sent-${i.id}`}>
+                    <Link href="/messages/invitations" className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 text-ink no-underline hover:bg-bg">
+                      <Avatar initials={initials(i.to.name)} />
+                      <span className="grid min-w-0">
+                        <b className="truncate text-[15px] leading-5">{i.to.name}</b>
+                        <small className="truncate text-[13px] leading-[18px] text-muted">{i.message ? `${t("you")} : ${i.message.split("\n")[0]}` : t("inviteSentNoMessage")}</small>
+                      </span>
+                      <span className="grid justify-items-end gap-1">
+                        <span className="text-xs text-muted tabular">{time.short(i.createdAt)}</span>
+                        <Badge tone="brand">{t("pending")}</Badge>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              }
+              const c = row.c;
               const group = c.kind === "GROUP";
               const author = c.last && !c.last.system && (group || c.last.authorId === me) ? `${c.last.authorId === me ? t("you") : (c.last.authorName ?? "").split(" ")[0]} : ` : "";
               return (

@@ -25,8 +25,8 @@ describe("format", () => {
 });
 
 describe("invitation message", () => {
-  it("refuses an empty message", () => {
-    expect(checkInvitationMessage("   ").ok).toBe(false);
+  it("accepts no message at all: the message is optional", () => {
+    expect(checkInvitationMessage("   ")).toEqual({ ok: true, message: "" });
   });
 
   it("accepts up to 300 characters, counted as the reader sees them", () => {

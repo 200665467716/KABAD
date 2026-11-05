@@ -12,7 +12,7 @@ import type { MemberCard } from "@/lib/domain-types";
 import { initials } from "@/lib/format";
 import { charactersLeft, checkInvitationMessage, INVITATION_MAX_LENGTH } from "@/lib/invitation";
 
-/** Invite a member with one first message (300 characters at most). The conversation opens once they accept. */
+/** Invite a member, with an optional first message (300 characters at most). The conversation opens once they accept. */
 export type InviteTarget = Pick<MemberCard, "id" | "name" | "role" | "city"> & Partial<Pick<MemberCard, "diaspora" | "headline" | "years">>;
 
 export function InviteSheet({ target, open, onClose, onSent }: { target: InviteTarget | null; open: boolean; onClose: () => void; onSent: (id: string) => void }) {
@@ -66,7 +66,6 @@ export function InviteSheet({ target, open, onClose, onSent }: { target: InviteT
         value={text}
         maxLength={INVITATION_MAX_LENGTH}
         onChange={(e) => setText(e.target.value)}
-        placeholder={t("hint")}
         hint={t("hint")}
         error={error}
         counter={`${INVITATION_MAX_LENGTH - left} / ${INVITATION_MAX_LENGTH}`}

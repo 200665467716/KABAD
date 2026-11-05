@@ -39,6 +39,17 @@ describe("invitations", () => {
     expect(await prisma.contact.count()).toBe(2);
   });
 
+  it("sends an invitation without a message, kept by the sender until it is answered", async () => {
+    const { id } = await sendInvitation("kossi", { toId: "moussa", message: "" }, prisma);
+    expect((await listInvitations("kossi", prisma)).sent).toEqual([expect.objectContaining({ id, toId: "moussa", message: "" })]);
+
+    const { conversationId } = await answerInvitation("moussa", id, true, prisma);
+    const conv = await getConversation("moussa", conversationId!, {}, prisma);
+    // No empty bubble: only the acceptance line.
+    expect(conv.messages.map((m) => m.body)).toEqual(["Moussa a accepté l’invitation"]);
+    expect((await listInvitations("kossi", prisma)).sent).toHaveLength(0);
+  });
+
   it("refuses inviting yourself, inviting twice, or inviting an existing contact", async () => {
     await refused(sendInvitation("kossi", { toId: "kossi", message: "x" }, prisma), "self");
     await sendInvitation("kossi", { toId: "moussa", message: "x" }, prisma);
