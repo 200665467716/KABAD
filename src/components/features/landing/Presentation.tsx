@@ -15,6 +15,7 @@ const s = { frame: "kp-frame", paused: "kp-paused", up: "kp-up", pop: "kp-pop", 
  * La présentation animée de KABAD (« vidéo motion »), écrite en code plutôt qu'en fichier vidéo :
  * quelques kilo-octets au lieu de plusieurs mégas en 4G, nette sur tous les écrans, et traduite.
  * Huit scènes s'enchaînent ; la fin de la barre de progression d'une scène lance la suivante.
+ * Texte et illustration côte à côte sur un écran large en paysage, l'un sous l'autre sinon.
  * scripts/record-presentation.mjs l'enregistre en fichier vidéo pour les réseaux sociaux.
  */
 
@@ -129,17 +130,17 @@ function Layout({ overline, title, visual, tone }: { overline: string; title: st
   return (
     <div
       className={cn(
-        "flex h-full flex-col justify-center gap-[6cqw] px-[7cqw] pt-14 pb-16 @xl:flex-row @xl:items-center @xl:gap-[5cqw]",
+        "flex h-full flex-col justify-center gap-[6cqw] px-[7cqw] pt-14 pb-16 @xl:landscape:flex-row @xl:landscape:items-center @xl:landscape:gap-[5cqw]",
         tone === "light" && "bg-[var(--sand)] text-[var(--ink)]",
         tone === "dark" && "bg-[var(--ink)] text-white",
         tone === "rise" && "bg-[var(--maize)] text-[var(--maize-deep)]",
       )}
     >
-      <div className="grid gap-[1.6cqw] @xl:flex-1">
+      <div className="grid gap-[1.6cqw] @xl:landscape:flex-1">
         <p {...at(s.up, 0.1, cn(s.overline, "font-extrabold uppercase", tone === "light" ? "text-[var(--indigo)]" : tone === "dark" ? "text-[var(--maize)]" : ""))}>{overline}</p>
         <h2 {...at(s.up, 0.3, cn(s.title, "font-display font-extrabold uppercase"))}>{title}</h2>
       </div>
-      <div className="grid justify-items-center @xl:flex-1 @4xl:scale-125">{visual}</div>
+      <div className="grid justify-items-center @xl:landscape:flex-1 @4xl:scale-125">{visual}</div>
     </div>
   );
 }
