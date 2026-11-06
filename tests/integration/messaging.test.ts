@@ -9,6 +9,7 @@ import {
   listConversations,
   listInvitations,
   markRead,
+  REINVITE_AFTER_DAYS,
   sendInvitation,
   sendMessage,
   unreadTotal,
@@ -65,6 +66,17 @@ describe("invitations", () => {
     await answerInvitation("moussa", id, false, prisma);
     await refused(answerInvitation("moussa", id, true, prisma), "already_answered");
     await refused(sendInvitation("kossi", { toId: "moussa", message: "encore" }, prisma), "declined");
+  });
+
+  it("after a refusal, the same member can be invited again only after 30 days", async () => {
+    const { id } = await sendInvitation("kossi", { toId: "moussa", message: "x" }, prisma);
+    await answerInvitation("moussa", id, false, prisma);
+    const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000);
+    await prisma.invitation.update({ where: { id }, data: { answeredAt: daysAgo(REINVITE_AFTER_DAYS - 1) } });
+    await refused(sendInvitation("kossi", { toId: "moussa", message: "encore" }, prisma), "declined");
+    await prisma.invitation.update({ where: { id }, data: { answeredAt: daysAgo(REINVITE_AFTER_DAYS + 1) } });
+    expect((await sendInvitation("kossi", { toId: "moussa", message: "encore" }, prisma)).id).toBe(id);
+    expect(REINVITE_AFTER_DAYS).toBe(30);
   });
 
   it("notifies the recipient through PostgreSQL only after the commit", async () => {

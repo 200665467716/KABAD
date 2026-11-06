@@ -19,7 +19,7 @@ export type { ChatMessage, ConversationSummary };
 
 const directKey = (a: string, b: string) => [a, b].sort().join(":");
 /** After a refusal, the same person can be invited again only after this delay. */
-export const REINVITE_AFTER_DAYS = 90;
+export const REINVITE_AFTER_DAYS = 30;
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
 const listNames = (names: string[]) => (names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`);
 

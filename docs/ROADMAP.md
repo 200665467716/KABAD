@@ -161,7 +161,7 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
 
 - [ ] R48. Authentification alignée sur le point projet (D10).
   - Mot de passe de 8 caractères dont au moins un chiffre (le code demande aujourd'hui 12 caractères, sans chiffre imposé).
-  - Retirer la connexion GitHub (`/api/auth/github`, bouton de connexion, variables `GITHUB_CLIENT_*`) : prévue pour la V2.
+  - Fait le 6 novembre : connexion GitHub retirée (routes `/api/auth/github`, bouton, variables `GITHUB_CLIENT_*`). Les colonnes `githubId` et `githubLogin` restent en base, pour ne rien perdre et la remettre en V2.
 
 ### Profil et socle (F0)
 
@@ -235,7 +235,7 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
   - Un membre bloqué ne peut plus écrire à celui qui l'a bloqué, même dans un groupe commun.
 
 - [ ] R23. Règles d'invitation.
-  - Délai de 30 j après un refus (le code applique encore 90 j : `REINVITE_AFTER_DAYS`), et expiration à 30 j (via R5).
+  - Fait : délai de 30 j après un refus (`REINVITE_AFTER_DAYS`, testé le 6 novembre) et expiration à 30 j (via R5).
   - 5 à 10 recommandations, aussi dans l'espace Conversations.
 
 ### Africa Rise-Up (F5)
