@@ -101,7 +101,6 @@
       "verifyNow": "Saisir mon code de confirmation",
       "resend": "Renvoyer le code",
       "resent": "Nouveau code envoyé.",
-      "github": "Compte GitHub lié : {login}",
       "changePassword": "Changer de mot de passe",
       "choosePassword": "Choisir un mot de passe",
       "current": "Mot de passe actuel",

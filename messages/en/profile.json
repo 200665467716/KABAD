@@ -101,7 +101,6 @@
       "verifyNow": "Type my confirmation code",
       "resend": "Send the code again",
       "resent": "New code sent.",
-      "github": "Linked GitHub account: {login}",
       "changePassword": "Change password",
       "choosePassword": "Choose a password",
       "current": "Current password",

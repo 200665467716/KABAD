@@ -8,14 +8,13 @@ import { AuthFrame } from "@/components/shell/AuthFrame";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Display";
 import { TextField } from "@/components/ui/Field";
-import { GithubMark } from "@/components/ui/Icon";
 import { Link } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
 import { hardNavigate } from "@/lib/hard-navigate";
 import { safeNext } from "@/lib/safe-next";
 
 /** Screen A7. */
-export function SignInForm({ github, demo }: { github: boolean; demo: boolean }) {
+export function SignInForm({ demo }: { demo: boolean }) {
   const t = useTranslations("auth.signIn");
   const params = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -61,23 +60,6 @@ export function SignInForm({ github, demo }: { github: boolean; demo: boolean })
         }
       >
         <div className="grid gap-4.5">
-          {params.get("erreur") === "github" && (
-            <Alert tone="danger" role="alert">
-              {t("githubError")}
-            </Alert>
-          )}
-          {github && (
-            <>
-              <a
-                href={`/api/auth/github?suite=${encodeURIComponent(next)}`}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-md border-2 border-line-strong bg-raised px-5 font-extrabold text-ink no-underline hover:bg-bg"
-              >
-                <GithubMark size={20} />
-                {t("github")}
-              </a>
-              <p className="text-center text-sm text-muted">{t("orEmail")}</p>
-            </>
-          )}
           <TextField id="email" name="email" type="email" label={t("email")} autoComplete="email" required />
           <PasswordField
             id="password"

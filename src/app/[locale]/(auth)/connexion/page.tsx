@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { githubConfig } from "@/server/github";
 import { SignInForm } from "./SignInForm";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -13,7 +12,7 @@ async function SignIn() {
   // Read at request time: the server's environment, not the one of the build.
   await connection();
   const demo = process.env.NODE_ENV !== "production" || process.env.SHOW_DEMO_ACCOUNTS === "1";
-  return <SignInForm github={githubConfig() !== null} demo={demo} />;
+  return <SignInForm demo={demo} />;
 }
 
 export default function SignInPage() {

@@ -24,7 +24,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 type Blocked = { id: string; name: string; city: string; since: string };
 
-export function AccountSettings({ email, hasPassword, github, verified, profileId, blocked }: { email: string; hasPassword: boolean; github: string | null; verified: boolean; profileId: string; blocked: Blocked[] }) {
+export function AccountSettings({ email, hasPassword, verified, profileId, blocked }: { email: string; hasPassword: boolean; verified: boolean; profileId: string; blocked: Blocked[] }) {
   const t = useTranslations("profile.account");
   const router = useRouter();
   const [msg, setMsg] = useState<{ key: string; tone: "success" | "danger"; text: string } | null>(null);
@@ -88,7 +88,6 @@ export function AccountSettings({ email, hasPassword, github, verified, profileI
           </div>
         )}
         {note("verify")}
-        {github && <p className="text-sm text-muted">{t("github", { login: github })}</p>}
       </Section>
 
       <Section title={hasPassword ? t("changePassword") : t("choosePassword")}>

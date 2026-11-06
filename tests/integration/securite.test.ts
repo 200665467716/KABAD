@@ -1,7 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { DomainError } from "@/server/errors";
 import { createGroup, addGroupMembers, answerInvitation, block, createReport, sendInvitation } from "@/server/messaging";
-import { signInWithGithub } from "@/server/github";
 import { resolveReport, suspendMember } from "@/server/admin";
 import { userFromToken, createSession } from "@/server/auth";
 import { rateLimit } from "@/server/rate-limit";
@@ -52,15 +51,6 @@ describe("invitations", () => {
 });
 
 describe("comptes", () => {
-  it("GitHub : un compte créé avec l’adresse d’autrui sans la confirmer perd son mot de passe et ses sessions à la liaison", async () => {
-    await prisma.user.update({ where: { id: "kossi" }, data: { passwordHash: "hash-de-l-attaquant", emailVerifiedAt: null } });
-    const { token } = await createSession("kossi", prisma);
-    const { user } = await signInWithGithub({ githubId: 42, login: "kossi", name: "Kossi", email: "kossi@test.kabad", profile: "github.com/kossi" }, prisma);
-    expect(user.passwordHash).toBeNull();
-    expect(user.emailVerifiedAt).not.toBeNull();
-    expect(await userFromToken(token, prisma)).toBeNull();
-  });
-
   it("un membre suspendu perd ses sessions et ne peut plus se reconnecter", async () => {
     const { token } = await createSession("moussa", prisma);
     await suspendMember("equipe", "moussa", "Harcèlement", prisma);

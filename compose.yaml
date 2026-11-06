@@ -37,8 +37,6 @@ services:
       APP_URL: ${APP_URL:?APP_URL manquant}
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       # Number of reverse proxies in front of the app; the visitor's IP is read from their headers.
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
       LIVEKIT_URL: http://livekit:7880
