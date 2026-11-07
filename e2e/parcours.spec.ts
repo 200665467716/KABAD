@@ -23,8 +23,8 @@ test("l’inscription enchaîne les cinq étapes ; sans e-mail confirmé, on ne 
   await page.getByLabel("Mot de passe", { exact: true }).fill("court");
   await page.getByRole("checkbox", { name: /J’accepte/ }).check();
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
-  await expect(page.getByText(/12 caractères/).first()).toBeVisible();
-  await page.getByLabel("Mot de passe", { exact: true }).fill("un-mot-de-passe-solide");
+  await expect(page.getByText(/8 caractères/).first()).toBeVisible();
+  await page.getByLabel("Mot de passe", { exact: true }).fill("un-mot-de-passe-solide-2026");
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
   // Step 2: the code sent by e-mail (checked in the integration tests). The member can come back to it later.
   await expect(page.getByRole("heading", { name: "Confirme ton e-mail" })).toBeVisible();

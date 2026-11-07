@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Display";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { passwordRules } from "@/lib/password";
 import { hardNavigate } from "@/lib/hard-navigate";
 
 /** Screen A9: the rules turn green as the member types. */
@@ -20,7 +21,8 @@ export function ResetPassword() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const rules = [
-    { label: t("ruleLength"), ok: p1.length >= 12 },
+    { label: t("ruleLength"), ok: passwordRules(p1).length },
+    { label: t("ruleDigit"), ok: passwordRules(p1).digit },
     { label: t("ruleSame"), ok: p1.length > 0 && p1 === p2 },
   ];
 

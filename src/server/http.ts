@@ -39,7 +39,7 @@ export function route<A extends unknown[]>(handler: (request: Request, ...rest: 
       unstable_rethrow(e);
       // In the language of the page that called (English under /en).
       const say = (message: string) => translateError(message, requestLocale(request));
-      if (e instanceof DomainError) return Response.json({ error: say(e.message), code: e.code, field: e.field }, { status: e.status });
+      if (e instanceof DomainError) return Response.json({ error: say(e.message), code: e.code, field: e.field, details: e.details }, { status: e.status });
       if (e instanceof ZodError) {
         const first = e.issues[0];
         return Response.json({ error: say(first?.message ?? "Données invalides."), code: "invalid", field: first?.path.join(".") }, { status: 400 });

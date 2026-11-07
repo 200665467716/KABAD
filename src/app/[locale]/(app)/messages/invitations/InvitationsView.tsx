@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { Button, ButtonLink } from "@/components/ui/Button";
+import { ConfirmSheet } from "@/components/ui/Controls";
 import { Alert, Avatar, Badge, Overline } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { Link } from "@/i18n/navigation";
@@ -21,6 +22,9 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
   const [answers, setAnswers] = useState<Record<string, Answered>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The invitation being declined: a refusal is confirmed in a sheet first (MS2).
+  const [declining, setDeclining] = useState<ReceivedInvitation | null>(null);
+  const [status, setStatus] = useState("");
 
   const refresh = async () => {
     try {
@@ -41,7 +45,11 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
       const { conversationId } = await api<{ conversationId: string | null }>(`/api/invitations/${id}`, { body: { accept } });
       setAnswers((a) => ({ ...a, [id]: { accepted: accept, conversationId } }));
       // A declined invitation simply leaves the list; the sender is not told.
-      if (!accept) setReceived((list) => list.filter((x) => x.id !== id));
+      if (!accept) {
+        setReceived((list) => list.filter((x) => x.id !== id));
+        setDeclining(null);
+      }
+      setStatus(accept ? t("accepted") : t("declined"));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("error"));
     } finally {
@@ -93,7 +101,7 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 gap-2">
-                        <Button variant="secondary" disabled={busy !== null} onClick={() => answer(i.id, false)}>
+                        <Button variant="secondary" disabled={busy !== null} onClick={() => setDeclining(i)}>
                           {t("decline")}
                         </Button>
                         <Button disabled={busy !== null} onClick={() => answer(i.id, true)}>
@@ -145,7 +153,19 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
             </ul>
           )}
         </section>
+        <p role="status" className="sr-only">
+          {status}
+        </p>
       </Page>
+      <ConfirmSheet
+        open={declining !== null}
+        onClose={() => setDeclining(null)}
+        title={t("declineTitle")}
+        text={declining ? t("declineText", { name: declining.from.name.split(" ")[0] }) : ""}
+        confirm={t("decline")}
+        busy={busy !== null}
+        onConfirm={() => declining && answer(declining.id, false)}
+      />
     </>
   );
 }

@@ -12,6 +12,7 @@ import { orNotFound } from "@/server/messaging";
 import { getBooking } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
 import { SessionActions } from "./SessionActions";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 /** Read once per request on the server: not a render-time clock. */
 const isFuture = (iso: string) => new Date(iso).getTime() > Date.now();
@@ -102,7 +103,7 @@ async function SessionData({ params }: { params: Promise<{ id: string }> }) {
       </Page>
       <ActionBar>
         {b.status === "PENDING" && mentor && future ? (
-          <AnswerRequest id={b.id} block />
+          <AnswerRequest id={b.id} name={b.mentee.name} block />
         ) : (
           <>
             {b.status === "ACCEPTED" && b.meetingUrl && (
@@ -132,7 +133,7 @@ export default async function SessionPage({ params }: PageProps<"/[locale]/mento
   return (
     <>
       <TopBar back="/mentorat" title={t("title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <SessionData params={params} />
       </Suspense>
     </>

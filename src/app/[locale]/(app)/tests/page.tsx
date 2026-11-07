@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { listTestApps } from "@/server/community-tests";
 import { pageUser } from "@/server/page";
 import { TestList } from "./TestList";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("tests");
@@ -19,9 +20,7 @@ async function TestsData() {
 async function Loading() {
   const t = await getTranslations("tests");
   return (
-    <p className="p-6 text-muted" role="status">
-      {t("loading")}
-    </p>
+    <ScreenSkeleton label={t("loading")} />
   );
 }
 

@@ -6,6 +6,7 @@ import { JuryForm } from "@/components/features/hackathons/JuryForm";
 import { DomainError } from "@/server/errors";
 import { nextForJury } from "@/server/hackathons";
 import { pageUser } from "@/server/page";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("hackathons.jury");
@@ -26,7 +27,7 @@ async function JuryData({ params }: { params: Promise<{ id: string }> }) {
 export default async function JuryPage({ params }: PageProps<"/[locale]/hackathons/[id]/jury">) {
   const t = await getTranslations("hackathons.jury");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <JuryData params={params} />
     </Suspense>
   );

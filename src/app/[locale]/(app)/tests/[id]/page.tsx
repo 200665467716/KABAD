@@ -9,6 +9,7 @@ import { getTestApp } from "@/server/community-tests";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 import { TestActions } from "./TestActions";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("tests.detail");
@@ -51,9 +52,7 @@ async function TestData({ params }: { params: Promise<{ id: string }> }) {
 async function Loading() {
   const t = await getTranslations("tests.detail");
   return (
-    <p className="p-6 text-muted" role="status">
-      {t("loading")}
-    </p>
+    <ScreenSkeleton label={t("loading")} />
   );
 }
 

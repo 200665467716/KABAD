@@ -43,7 +43,10 @@
       "findMembers": "Find members to invite",
       "read": "Read",
       "error": "Your answer wasn’t sent. Try again.",
-      "noMessage": "No message"
+      "noMessage": "No message",
+      "declineTitle": "Decline the invitation?",
+      "declineText": "{name} won’t be told. You can still invite them later.",
+      "declined": "Invitation declined."
     },
     "invitation": {
       "metaTitle": "Invitation",
@@ -59,7 +62,9 @@
       "accepting": "Opening…",
       "decline": "Decline",
       "declining": "Declining…",
-      "error": "Your answer wasn’t sent. Try again."
+      "error": "Your answer wasn’t sent. Try again.",
+      "declineTitle": "Decline the invitation?",
+      "declineText": "{name} won’t be told. You can still invite them later."
     },
     "conversation": {
       "metaTitle": "Conversation",

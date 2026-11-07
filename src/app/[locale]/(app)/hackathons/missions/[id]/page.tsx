@@ -11,6 +11,7 @@ import { formatFCFA, initials } from "@/lib/format";
 import { getMission } from "@/server/hackathons";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("hackathons.mission");
@@ -75,10 +76,10 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
       <ActionBar>
         {m.status === "PROPOSED" ? (
           <div className="grid grid-cols-2 gap-2">
-            <ActionButton url={`/api/missions/${m.id}`} body={{ accept: false }} size="lg" block>
+            <ActionButton url={`/api/missions/${m.id}`} body={{ accept: false }} size="lg" block then="/notifications" sheet={{ title: t("declineTitle"), text: t("declineText", { name: h.organizerName }), confirm: t("decline") }}>
               {t("decline")}
             </ActionButton>
-            <ActionButton url={`/api/missions/${m.id}`} body={{ accept: true }} variant="primary" size="lg" block>
+            <ActionButton url={`/api/missions/${m.id}`} body={{ accept: true }} variant="primary" size="lg" block then={`/hackathons/${h.id}`}>
               {t("accept")}
             </ActionButton>
           </div>
@@ -100,7 +101,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
 export default async function MissionPage({ params }: PageProps<"/[locale]/hackathons/missions/[id]">) {
   const t = await getTranslations("hackathons.mission");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <Data params={params} />
     </Suspense>
   );

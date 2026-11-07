@@ -8,6 +8,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Controls";
 import { CardLink, Meter, TagList } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
+import { EmptyState } from "@/components/ui/Skeleton";
 import { Link } from "@/i18n/navigation";
 import type { TestAppSummary } from "@/lib/domain-types";
 
@@ -54,7 +55,18 @@ export function TestList({ toTest, testing, mine }: { toTest: TestAppSummary[]; 
                 </CardLink>
               ))}
             </div>
-            {toTest.length === 0 && <p className="py-8 text-center text-muted">{t("noListings")}</p>}
+            {toTest.length === 0 && (
+              <EmptyState
+                icon={<Icon name="screen" size={24} className="size-7" />}
+                title={t("emptyTitle")}
+                text={t("emptyText")}
+                action={
+                  <ButtonLink href="/tests/nouveau" variant="ink" icon="plus">
+                    {t("emptyAction")}
+                  </ButtonLink>
+                }
+              />
+            )}
           </>
         ) : (
           <>

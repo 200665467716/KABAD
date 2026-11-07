@@ -14,6 +14,7 @@ import { myBookings } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
 import { listProjects } from "@/server/rise";
 import { SignOutButton } from "./SignOutButton";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("profile.me"))("title") };
@@ -102,7 +103,7 @@ export default async function MyProfilePage() {
   return (
     <>
       <TopBar back="/accueil" title={t("me.title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <MyProfile />
       </Suspense>
     </>

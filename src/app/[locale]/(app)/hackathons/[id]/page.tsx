@@ -16,6 +16,7 @@ import { badgedMentors } from "@/server/admin";
 import { getHackathon } from "@/server/hackathons";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("hackathons.detail");
@@ -198,7 +199,7 @@ export default async function HackathonPage({ params }: PageProps<"/[locale]/hac
   return (
     <>
       <TopBar back="/hackathons" title={t("title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <Data params={params} />
       </Suspense>
     </>

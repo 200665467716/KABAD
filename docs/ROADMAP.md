@@ -153,14 +153,22 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
 - [x] `docs/point-projet.md`, README et feuille de route à jour.
 - Tests : 32 unitaires, 45 d'intégration, 107 e2e.
 
+## Maquettes du 7 novembre (branche `dev/modifications`)
+
+Le canevas « KABAD — Refonte » a évolué : nouvelle landing page, écrans d'erreur (A2e, A3e, A7e, H5e), squelettes et états vides (P3, P4), profil du mentor (M2), groupe de testeurs (T4), corrections de l'audit. Les écarts écran par écran, les lots de travail et les questions à trancher sont dans **`docs/ecarts-maquettes.md`**.
+
+- [x] Landing page L1 (7 novembre).
+- [x] Lot 1, socle et règles : mot de passe, code e-mail à 10 min, focus, erreurs, désactivé, feuilles de confirmation, consentement, squelettes, notifications, A2e, A3e, A7e.
+- [ ] Lots 2 à 4 : écrans absents (M2, T4, discussion d'équipe, photo de groupe), parcours à reprendre, textes.
+
 ## P1 — Les « Must » manquants et Africa Rise-Up (objectif : 11 novembre)
 
 > **À réaligner sur `docs/point-projet.md`** avant de les prendre : R11 à R17 décrivent encore les défis (devenus hackathons, D8), R12 à R14 le binôme de mentorat (devenu des créneaux, D9), R24 à R26 l'ancien Africa'Raise-up. Une partie est déjà couverte par la refonte. Relire chaque tâche avec l'équipe, puis la réécrire ou la retirer.
 
 ### Socle
 
-- [ ] R48. Authentification alignée sur le point projet (D10).
-  - Mot de passe de 8 caractères dont au moins un chiffre (le code demande aujourd'hui 12 caractères, sans chiffre imposé).
+- [x] R48. Authentification alignée sur le point projet (D10).
+  - Fait le 7 novembre : mot de passe de 8 caractères dont au moins un chiffre (inscription, réinitialisation, changement) ; code e-mail valable 10 minutes.
   - Fait le 6 novembre : connexion GitHub retirée (routes `/api/auth/github`, bouton, variables `GITHUB_CLIENT_*`). Les colonnes `githubId` et `githubLogin` restent en base, pour ne rien perdre et la remettre en V2.
 
 ### Profil et socle (F0)

@@ -134,7 +134,8 @@ export type AlertTone = "info" | "success" | "danger" | "reward";
 const alertTones: Record<AlertTone, { box: string; icon: string; name: IconName }> = {
   info: { box: "bg-brand-wash", icon: "text-brand-text", name: "info" },
   success: { box: "bg-success-soft", icon: "text-success", name: "check" },
-  danger: { box: "bg-danger-soft", icon: "text-danger", name: "info" },
+  // Errors: white box with a clay border (charte, .kb-alert), so the message does not rely on a pale tint.
+  danger: { box: "border-2 border-danger bg-raised font-semibold [&_b]:text-danger", icon: "text-danger", name: "info" },
   reward: { box: "bg-accent-soft", icon: "text-accent-text", name: "clock" },
 };
 

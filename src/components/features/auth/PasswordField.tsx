@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState, type ComponentProps, type ReactNode } from "react";
+import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 
 /** A password input with a button that shows or hides what is typed (screens A2, A7, A9). */
@@ -16,11 +17,11 @@ export function PasswordField({ id, label, hint, error, labelAside, className, .
         </label>
         {labelAside}
       </div>
-      <div className={cn("flex items-center rounded-md border-2 bg-raised pr-0.5 focus-within:outline-2 focus-within:outline-focus", error ? "border-danger" : "border-line-strong")}>
+      <div className={cn("flex items-center rounded-md border-2 bg-raised pr-0.5 focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-focus", error ? "border-danger shadow-[inset_0_0_0_1px_var(--danger)]" : "border-line-strong")}>
         <input
           id={id}
           type={shown ? "text" : "password"}
-          className="h-11 min-w-0 flex-1 bg-transparent px-3.5 text-base font-medium text-ink outline-none"
+          className="h-11 min-w-0 flex-1 bg-transparent px-3.5 text-base font-medium text-ink outline-none placeholder:text-muted"
           aria-invalid={error ? true : undefined}
           aria-describedby={hint || error ? `${id}-msg` : undefined}
           {...rest}
@@ -34,7 +35,8 @@ export function PasswordField({ id, label, hint, error, labelAside, className, .
         </button>
       </div>
       {error ? (
-        <span id={`${id}-msg`} className="text-sm font-extrabold text-danger">
+        <span id={`${id}-msg`} className="flex items-start gap-1.5 text-[13px] leading-[18px] font-bold text-danger">
+          <Icon name="info" size={16} className="mt-px" />
           {error}
         </span>
       ) : hint ? (

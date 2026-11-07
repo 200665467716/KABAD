@@ -11,6 +11,7 @@ import { myBadgeRequest } from "@/server/badges";
 import { getMentor } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
 import { BadgeForm } from "./BadgeForm";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("mentoring.badge");
@@ -133,7 +134,7 @@ export default async function BadgePage({ searchParams }: PageProps<"/[locale]/m
   return (
     <>
       <TopBar back="/mentorat" title={t("badge.headingDone")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <BadgeData searchParams={searchParams as Promise<{ modifier?: string; nouvelle?: string }>} />
       </Suspense>
     </>

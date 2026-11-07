@@ -5,6 +5,7 @@ import { redirect } from "@/i18n/navigation";
 import { getCurrentUser } from "@/server/auth";
 import { listInvitations } from "@/server/messaging";
 import { InvitationsView } from "./InvitationsView";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("messaging.invitations");
@@ -22,9 +23,7 @@ async function InvitationsData() {
 async function Loading() {
   const t = await getTranslations("messaging.invitations");
   return (
-    <p className="p-6 text-muted" role="status">
-      {t("loading")}
-    </p>
+    <ScreenSkeleton label={t("loading")} />
   );
 }
 

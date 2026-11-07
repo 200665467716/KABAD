@@ -18,6 +18,8 @@ export function SignInForm({ demo }: { demo: boolean }) {
   const t = useTranslations("auth.signIn");
   const params = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  // Wrong password (A7e): attempts left before the 15-minute block, shown under the field.
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const next = safeNext(params.get("suite"));
 
@@ -26,6 +28,7 @@ export function SignInForm({ demo }: { demo: boolean }) {
     const data = new FormData(e.currentTarget);
     setBusy(true);
     setError(null);
+    setAttemptsLeft(null);
     try {
       const me = await api<{ locale: "fr" | "en" }>("/api/auth/login", { body: { email: String(data.get("email") ?? ""), password: String(data.get("password") ?? "") } });
       // The language chosen on the account wins over the page the member signed in from.
@@ -34,6 +37,7 @@ export function SignInForm({ demo }: { demo: boolean }) {
       hardNavigate(me.locale === "en" && !english ? `/en${next}` : next);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("failed"));
+      if (err instanceof ApiError && err.code === "bad_credentials" && err.details?.left !== undefined) setAttemptsLeft(err.details.left);
       setBusy(false);
     }
   }
@@ -67,6 +71,7 @@ export function SignInForm({ demo }: { demo: boolean }) {
             label={t("password")}
             autoComplete="current-password"
             required
+            error={attemptsLeft !== null ? (attemptsLeft > 0 ? t("wrongPassword", { count: attemptsLeft }) : t("wrongPasswordLast")) : undefined}
             labelAside={
               <Link href="/mot-de-passe-oublie" className="text-sm font-extrabold text-brand-text no-underline">
                 {t("forgot")}
@@ -75,7 +80,13 @@ export function SignInForm({ demo }: { demo: boolean }) {
           />
           {error && (
             <Alert tone="danger" role="alert">
-              {error}
+              {attemptsLeft !== null ? (
+                <>
+                  <b>{error}</b> {t("wrongHelp")}
+                </>
+              ) : (
+                error
+              )}
             </Alert>
           )}
           {demo && (

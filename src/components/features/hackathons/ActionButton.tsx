@@ -4,12 +4,14 @@ import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { Button, type ButtonVariant } from "@/components/ui/Button";
+import { ConfirmSheet } from "@/components/ui/Controls";
 import { Alert } from "@/components/ui/Display";
 import { api, ApiError } from "@/lib/api";
 
 /**
- * One API call behind a button, with an optional confirmation step. The page is refreshed
- * afterwards, or the member is sent to `then`.
+ * One API call behind a button, with an optional confirmation step: inline (`confirm`), or a
+ * confirmation sheet for an irreversible action (`sheet`: refuse a mission, leave a team).
+ * The page is refreshed afterwards, or the member is sent to `then`.
  */
 export function ActionButton({
   url,
@@ -17,6 +19,7 @@ export function ActionButton({
   body,
   children,
   confirm,
+  sheet,
   variant = "secondary",
   size = "md",
   block,
@@ -27,6 +30,7 @@ export function ActionButton({
   body?: unknown;
   children: ReactNode;
   confirm?: ReactNode;
+  sheet?: { title: string; text: ReactNode; confirm: string };
   variant?: ButtonVariant;
   size?: "sm" | "md" | "lg";
   block?: boolean;
@@ -55,7 +59,7 @@ export function ActionButton({
 
   return (
     <div className="grid gap-2">
-      {asking ? (
+      {asking && !sheet ? (
         <div className="grid gap-2 rounded-action border-2 border-line-strong bg-bg p-3 text-sm">
           <p>{confirm}</p>
           <div className="flex gap-2">
@@ -68,10 +72,11 @@ export function ActionButton({
           </div>
         </div>
       ) : (
-        <Button variant={variant} size={size} block={block} disabled={busy} onClick={() => (confirm ? setAsking(true) : run())}>
+        <Button variant={variant} size={size} block={block} disabled={busy} onClick={() => (confirm || sheet ? setAsking(true) : run())}>
           {busy ? "…" : children}
         </Button>
       )}
+      {sheet && <ConfirmSheet open={asking} onClose={() => setAsking(false)} title={sheet.title} text={sheet.text} confirm={sheet.confirm} busy={busy} onConfirm={run} />}
       {error && (
         <Alert tone="danger" role="alert">
           {error}

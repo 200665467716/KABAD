@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { recommendations } from "@/server/members";
 import { pageUser } from "@/server/page";
 import { Recommendations } from "./Recommendations";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("auth.meta"))("suggestions") };
@@ -18,7 +19,7 @@ async function RecommendationsData() {
 export default async function RecommendationsPage() {
   const t = await getTranslations("auth");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <RecommendationsData />
     </Suspense>
   );

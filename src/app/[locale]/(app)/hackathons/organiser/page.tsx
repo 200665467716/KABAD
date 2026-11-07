@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { OrganizeForm } from "@/components/features/hackathons/OrganizeForm";
 import { pageUser } from "@/server/page";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("hackathons.organize");
@@ -17,7 +18,7 @@ async function Data() {
 export default async function OrganizePage() {
   const t = await getTranslations("hackathons.organize");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <Data />
     </Suspense>
   );

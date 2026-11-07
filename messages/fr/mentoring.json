@@ -99,10 +99,13 @@
       "join": "Rejoindre la visio",
       "calendar": "Ajouter à mon calendrier",
       "cancel": "Annuler la séance",
-      "cancelConfirm": "Annuler vraiment cette séance ? L’autre personne sera prévenue.",
+      "cancelConfirm": "Annuler la séance",
       "otherMentors": "Voir d’autres mentors",
       "home": "Retour à l’accueil",
-      "calendarTitle": "Mentorat KABAD avec {name}"
+      "calendarTitle": "Mentorat KABAD avec {name}",
+      "cancelTitle": "Annuler la séance ?",
+      "cancelText": "L’autre personne sera prévenue. Le créneau redevient libre.",
+      "keep": "Garder la séance"
     },
     "requests": {
       "title": "Demandes reçues",
@@ -116,10 +119,11 @@
       "accept": "Accepter",
       "decline": "Refuser",
       "declineReason": "Motif du refus (envoyé au membre, facultatif)",
-      "confirmDecline": "Confirmer le refus",
-      "cancel": "Annuler",
       "open": "Voir la séance",
-      "range": "{day} · {start} – {end}"
+      "range": "{day} · {start} – {end}",
+      "declineTitle": "Refuser la demande de {name} ?",
+      "declineText": "{name} sera prévenu et pourra réserver un autre créneau ou un autre mentor.",
+      "declined": "Demande refusée · {name} est prévenu."
     },
     "availability": {
       "title": "Disponibilités",

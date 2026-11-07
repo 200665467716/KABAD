@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { getCurrentUser } from "@/server/auth";
 import { getInvitation, orNotFound } from "@/server/messaging";
 import { InvitationView } from "./InvitationView";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("messaging.invitation");
@@ -15,9 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 async function Loading() {
   const t = await getTranslations("messaging.invitation");
   return (
-    <p className="p-6 text-muted" role="status">
-      {t("loading")}
-    </p>
+    <ScreenSkeleton label={t("loading")} />
   );
 }
 

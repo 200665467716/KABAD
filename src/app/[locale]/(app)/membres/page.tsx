@@ -10,6 +10,7 @@ import { COUNTRIES } from "@/lib/schemas";
 import { popularStacks, searchMembers } from "@/server/members";
 import { pageUser } from "@/server/page";
 import { MemberList } from "./MemberList";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("profile.members"))("title") };
@@ -106,7 +107,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/[locale]
   return (
     <>
       <TopBar title={t("members.title")} subtitle={t("members.subtitle")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <MembersData searchParams={searchParams as Promise<Search>} />
       </Suspense>
     </>

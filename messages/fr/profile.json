@@ -30,7 +30,10 @@
       "accountText": "Mot de passe, langue, membres bloqués, données",
       "public": "Voir mon profil public",
       "admin": "Tableau de bord de l’équipe",
-      "signOut": "Se déconnecter"
+      "signOut": "Se déconnecter",
+      "signOutTitle": "Se déconnecter ?",
+      "signOutText": "Tu devras te reconnecter avec ton e-mail et ton mot de passe.",
+      "signOutStay": "Rester connecté"
     },
     "edit": {
       "title": "Modifier mon profil",
@@ -80,9 +83,6 @@
     },
     "notifications": {
       "title": "Notifications",
-      "filter": "Filtrer les notifications",
-      "all": "Toutes",
-      "unread": "Non lues",
       "markAll": "Tout marquer comme lu",
       "today": "Aujourd’hui",
       "week": "Cette semaine",
@@ -105,7 +105,7 @@
       "choosePassword": "Choisir un mot de passe",
       "current": "Mot de passe actuel",
       "next": "Nouveau mot de passe",
-      "nextHint": "12 caractères au moins.",
+      "nextHint": "8 caractères minimum, dont au moins un chiffre.",
       "save": "Enregistrer",
       "passwordChanged": "Mot de passe changé. Tes autres appareils sont déconnectés.",
       "sessions": "Sessions",

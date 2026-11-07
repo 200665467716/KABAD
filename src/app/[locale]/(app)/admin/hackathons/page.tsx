@@ -10,6 +10,7 @@ import { badgedMentors } from "@/server/admin";
 import { adminUser } from "@/server/admin-page";
 import { adminOverview, getHackathon } from "@/server/hackathons";
 import { AdminNav } from "../AdminNav";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("hackathons.admin");
@@ -67,7 +68,7 @@ export default async function AdminHackathonsPage() {
   return (
     <>
       <TopBar back="/admin" title={t("title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <Data />
       </Suspense>
     </>

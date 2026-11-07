@@ -12,7 +12,7 @@ export const POST = route(async (request) => {
   const { name, email, password } = await readJson(request, signupSchema);
   const normalized = email.trim().toLowerCase();
   if (await db.user.findUnique({ where: { email: normalized }, select: { id: true } })) {
-    throw new DomainError("email_taken", "Cette adresse a déjà un compte. Connecte-toi, ou utilise « Mot de passe oublié ».", 409, "email");
+    throw new DomainError("email_taken", "Un compte existe déjà avec cet e-mail.", 409, "email");
   }
   const user = await db.user.create({ data: { name, email: normalized, passwordHash: await hashPassword(password), locale: requestLocale(request) } });
   // The account works right away; contacting members waits for the e-mail check.

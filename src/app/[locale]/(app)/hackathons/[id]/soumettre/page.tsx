@@ -10,6 +10,7 @@ import { redirect } from "@/i18n/navigation";
 import { getHackathon } from "@/server/hackathons";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("hackathons.submit");
@@ -47,7 +48,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
 export default async function SubmitPage({ params }: PageProps<"/[locale]/hackathons/[id]/soumettre">) {
   const t = await getTranslations("hackathons.submit");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <Data params={params} />
     </Suspense>
   );

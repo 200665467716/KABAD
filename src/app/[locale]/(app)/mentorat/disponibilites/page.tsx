@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { getAvailability } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
 import { AvailabilityForm } from "./AvailabilityForm";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("mentoring.availability");
@@ -33,7 +34,7 @@ export default async function AvailabilityPage() {
   return (
     <>
       <TopBar back="/mentorat" title={t("availability.title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <AvailabilityData />
       </Suspense>
     </>

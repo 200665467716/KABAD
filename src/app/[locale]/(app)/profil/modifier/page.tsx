@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { TopBar } from "@/components/shell/TopBar";
 import { pageUser } from "@/server/page";
 import { ProfileEditor } from "./ProfileEditor";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("profile.edit"))("title") };
@@ -19,7 +20,7 @@ export default async function EditProfilePage() {
   return (
     <>
       <TopBar back="/profil" title={t("edit.title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <EditorData />
       </Suspense>
     </>

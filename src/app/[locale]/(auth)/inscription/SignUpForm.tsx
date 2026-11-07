@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { PasswordField } from "@/components/features/auth/PasswordField";
 import { AuthFrame } from "@/components/shell/AuthFrame";
 import { Button } from "@/components/ui/Button";
@@ -11,7 +11,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
 import { signupSchema } from "@/lib/schemas";
 
-type Errors = Partial<Record<"name" | "email" | "password" | "terms" | "form", string>>;
+type Errors = Partial<Record<"name" | "email" | "password" | "terms" | "form", ReactNode>>;
 
 /** Screen A2, step 1 of 5. */
 export function SignUpForm() {
@@ -19,6 +19,8 @@ export function SignUpForm() {
   const router = useRouter();
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
+  // Consent is never pre-ticked, and « Continuer » stays off until it is given.
+  const [accepted, setAccepted] = useState(false);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,7 +37,19 @@ export function SignUpForm() {
       await api("/api/auth/signup", { body: input });
       router.push("/verifier-email");
     } catch (err) {
-      if (err instanceof ApiError && err.field) setErrors({ [err.field]: err.message });
+      if (err instanceof ApiError && err.code === "email_taken") {
+        // A2e: the e-mail already has an account, with a direct way to sign in.
+        setErrors({
+          email: (
+            <>
+              {err.message}{" "}
+              <Link href="/connexion" className="text-danger underline">
+                {t("signIn")}
+              </Link>
+            </>
+          ),
+        });
+      } else if (err instanceof ApiError && err.field) setErrors({ [err.field]: err.message });
       else setErrors({ form: err instanceof ApiError ? err.message : t("failed") });
       setBusy(false);
     }
@@ -51,7 +65,7 @@ export function SignUpForm() {
         lead={t("lead")}
         footer={
           <>
-            <Button type="submit" size="lg" block disabled={busy}>
+            <Button type="submit" size="lg" block disabled={busy || !accepted}>
               {busy ? t("busy") : t("submit")}
             </Button>
             <p className="text-center text-sm">
@@ -68,7 +82,7 @@ export function SignUpForm() {
           <TextField id="email" name="email" type="email" label={t("email")} autoComplete="email" error={errors.email} />
           <PasswordField id="password" name="password" label={t("password")} autoComplete="new-password" hint={t("passwordHint")} error={errors.password} />
           <div className="grid gap-1">
-            <Checkbox name="terms">
+            <Checkbox name="terms" checked={accepted} onChange={(e) => setAccepted(e.target.checked)}>
               {t("termsBefore")}
               <Link href="/conditions" target="_blank" className="font-extrabold text-brand-text">
                 {t("termsLink")}

@@ -12,7 +12,6 @@
     "places": "{count, plural, =0 {complet} one {# place} other {# places}}",
     "minutes": "{count} min",
     "platform": { "WEB": "Web", "ANDROID": "Android", "IOS": "iOS" },
-    "noListings": "Aucune app à tester pour l’instant. Reviens bientôt !",
     "iTest": "Je teste",
     "stepsDone": "{done} sur {total} étapes faites",
     "noTesting": "Tu ne testes aucune app pour l’instant.",
@@ -126,6 +125,9 @@
       "validateLabel": "Valider le rapport de {name}",
       "error": "La réponse n’a pas été enregistrée. Réessaie.",
       "empty": "Aucun rapport pour l’instant. Les testeurs de la communauté vont arriver."
-    }
+    },
+    "emptyTitle": "Aucune annonce pour l’instant",
+    "emptyText": "Sois le premier : publie ton app et un groupe de testeurs se forme autour d’elle.",
+    "emptyAction": "Publier une annonce"
   }
 }

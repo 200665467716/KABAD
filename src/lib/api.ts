@@ -7,6 +7,7 @@ export class ApiError extends Error {
     public readonly code?: string,
     /** The form field the refusal is about, when the server knows it. */
     public readonly field?: string,
+    public readonly details?: Record<string, number>,
   ) {
     super(message);
   }
@@ -33,6 +34,6 @@ export async function api<T = unknown>(path: string, init: { method?: "GET" | "P
   }
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(data.error ?? (english ? "Something went wrong." : "Une erreur est survenue."), res.status, data.code, data.field);
+  if (!res.ok) throw new ApiError(data.error ?? (english ? "Something went wrong." : "Une erreur est survenue."), res.status, data.code, data.field, data.details);
   return data as T;
 }

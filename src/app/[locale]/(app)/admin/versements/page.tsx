@@ -6,6 +6,7 @@ import { adminUser } from "@/server/admin-page";
 import { adminOverview, CONTEST_HOURS } from "@/server/hackathons";
 import { AdminNav } from "../AdminNav";
 import { PayoutList } from "./PayoutList";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("hackathons.payouts");
@@ -29,7 +30,7 @@ export default async function PayoutsPage() {
   return (
     <>
       <TopBar back="/admin" title={t("title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <Data />
       </Suspense>
     </>

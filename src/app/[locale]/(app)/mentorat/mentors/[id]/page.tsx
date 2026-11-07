@@ -9,6 +9,7 @@ import { orNotFound } from "@/server/messaging";
 import { getMentor } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
 import { SlotPicker } from "./SlotPicker";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 /** "UTC+0", "UTC+1": the member's offset, shown next to the slots. */
 const zoneLabel = (timeZone: string) => new Intl.DateTimeFormat("fr", { timeZone, timeZoneName: "shortOffset" }).formatToParts(new Date()).find((p) => p.type === "timeZoneName")?.value ?? timeZone;
@@ -63,7 +64,7 @@ export default async function MentorPage({ params }: PageProps<"/[locale]/mentor
   return (
     <>
       <TopBar back="/mentorat" title={t("profile.title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <MentorData params={params} />
       </Suspense>
     </>

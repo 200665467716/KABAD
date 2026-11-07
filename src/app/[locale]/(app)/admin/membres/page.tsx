@@ -6,6 +6,7 @@ import { adminMembers } from "@/server/admin";
 import { adminUser } from "@/server/admin-page";
 import { AdminNav } from "../AdminNav";
 import { MemberAdmin } from "./MemberAdmin";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("admin.members");
@@ -42,7 +43,7 @@ export default async function AdminMembersPage({ searchParams }: PageProps<"/[lo
   return (
     <>
       <TopBar back="/admin" title={t("members.title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <MembersData searchParams={searchParams as Promise<Search>} />
       </Suspense>
     </>

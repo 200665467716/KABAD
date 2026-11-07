@@ -5,6 +5,7 @@ import { TopBar } from "@/components/shell/TopBar";
 import { listNotifications } from "@/server/notifications";
 import { pageUser } from "@/server/page";
 import { NotificationList } from "./NotificationList";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("profile.notifications"))("title") };
@@ -21,7 +22,7 @@ export default async function NotificationsPage() {
   return (
     <>
       <TopBar back="/accueil" title={t("notifications.title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <NotificationsData />
       </Suspense>
     </>

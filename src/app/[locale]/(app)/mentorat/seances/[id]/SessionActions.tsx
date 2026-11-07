@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { ConfirmSheet } from "@/components/ui/Controls";
 import { Alert } from "@/components/ui/Display";
 import { useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
@@ -44,13 +45,14 @@ export function SessionActions({ id, cancellable, calendar }: { id: string; canc
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   async function cancel() {
-    if (!window.confirm(t("session.cancelConfirm"))) return;
     setBusy(true);
     setError(null);
     try {
       await api(`/api/mentoring/bookings/${id}`, { method: "DELETE" });
+      setConfirming(false);
       router.refresh();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("error"));
@@ -67,10 +69,20 @@ export function SessionActions({ id, cancellable, calendar }: { id: string; canc
         </Button>
       )}
       {cancellable && (
-        <Button variant="ghost" block onClick={cancel} disabled={busy}>
+        <Button variant="ghost" block onClick={() => setConfirming(true)} disabled={busy}>
           {t("session.cancel")}
         </Button>
       )}
+      <ConfirmSheet
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={t("session.cancelTitle")}
+        text={t("session.cancelText")}
+        cancel={t("session.keep")}
+        confirm={t("session.cancelConfirm")}
+        busy={busy}
+        onConfirm={cancel}
+      />
       {error && (
         <Alert tone="danger" role="alert">
           {error}

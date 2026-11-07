@@ -1,5 +1,15 @@
 import { z } from "zod";
 import { INVITATION_MAX_LENGTH } from "./invitation";
+import { PASSWORD_NO_DIGIT, PASSWORD_TOO_SHORT, passwordRules } from "./password";
+
+/** A new password: 8 characters at least, with at least one digit (src/lib/password.ts). */
+function newPassword() {
+  return z
+    .string()
+    .max(200)
+    .refine((p) => passwordRules(p).length, PASSWORD_TOO_SHORT)
+    .refine((p) => passwordRules(p).digit, PASSWORD_NO_DIGIT);
+}
 
 /* Shared by the API (server-side validation) and the forms (same messages). */
 
@@ -22,7 +32,7 @@ export const loginSchema = z.object({
 export const signupSchema = z.object({
   name: trimmed(2, 80, "Indique ton nom complet.", "Ce nom est trop long."),
   email: z.email("Cette adresse e-mail n’est pas valide.").max(200),
-  password: z.string().min(12, "Le mot de passe doit faire au moins 12 caractères.").max(200),
+  password: newPassword(),
 });
 
 export const invitationSchema = z.object({
@@ -253,13 +263,12 @@ export const reviewReportSchema = z.discriminatedUnion("validate", [
 
 /* Account */
 
-const newPassword = z.string().min(12, "Le mot de passe doit faire au moins 12 caractères.").max(200);
 export const forgotPasswordSchema = z.object({ email: z.email("Cette adresse e-mail n’est pas valide.").max(200) });
-export const resetPasswordSchema = z.object({ token: z.string().min(20).max(100), password: newPassword });
+export const resetPasswordSchema = z.object({ token: z.string().min(20).max(100), password: newPassword() });
 export const verifyEmailSchema = z.object({ token: z.string().min(20).max(100) });
 export const verifyCodeSchema = z.object({ code: z.string().trim().regex(/^\d{6}$/, "Le code compte 6 chiffres.") });
 export const changeEmailSchema = z.object({ email: z.email("Cette adresse e-mail n’est pas valide.").max(200) });
-export const changePasswordSchema = z.object({ current: z.string().max(200).default(""), next: newPassword });
+export const changePasswordSchema = z.object({ current: z.string().max(200).default(""), next: newPassword() });
 export const deleteAccountSchema = z.object({ password: z.string().max(200).optional(), confirm: z.literal("SUPPRIMER", "Écris SUPPRIMER pour confirmer.") });
 
 /* Team tools */

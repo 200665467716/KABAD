@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
+import { Button } from "./Button";
 import { Icon } from "./Icon";
 
 /** Segmented tabs. `items` are [value, label, count?]. */
@@ -101,5 +102,55 @@ export function Sheet({ open, onClose, title, children, footer }: { open: boolea
         {footer}
       </div>
     </dialog>
+  );
+}
+
+/**
+ * Feuille de confirmation d'une action irréversible (se déconnecter, refuser, annuler) :
+ * un titre en question, une phrase sur la conséquence, « Annuler » et le bouton rouge.
+ * C'est un vrai <dialog> : le focus y reste, Échap ferme, et le focus revient au bouton d'origine.
+ */
+export function ConfirmSheet({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  text,
+  confirm,
+  cancel,
+  busy,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  text: ReactNode;
+  confirm: string;
+  /** Defaults to « Annuler ». */
+  cancel?: string;
+  busy?: boolean;
+  children?: ReactNode;
+}) {
+  const t = useTranslations("common");
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={title}
+      footer={
+        <div className="grid grid-cols-2 gap-2.5">
+          <Button variant="secondary" onClick={onClose} disabled={busy}>
+            {cancel ?? t("cancel")}
+          </Button>
+          <Button variant="danger" onClick={onConfirm} disabled={busy}>
+            {confirm}
+          </Button>
+        </div>
+      }
+    >
+      <p className="text-sm font-medium text-muted">{text}</p>
+      {children}
+    </Sheet>
   );
 }

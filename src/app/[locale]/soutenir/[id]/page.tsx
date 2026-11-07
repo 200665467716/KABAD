@@ -10,6 +10,7 @@ import { getHackathon, recentContributions } from "@/server/hackathons";
 import { orNotFound } from "@/server/messaging";
 import { ContributionForm } from "./ContributionForm";
 import { SponsorShell } from "./SponsorShell";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("hackathons.sponsor");
@@ -125,7 +126,7 @@ async function SponsorData({ params }: { params: Promise<{ id: string }> }) {
 export default async function SponsorPage({ params }: PageProps<"/[locale]/soutenir/[id]">) {
   const t = await getTranslations("hackathons.sponsor");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <SponsorData params={params} />
     </Suspense>
   );

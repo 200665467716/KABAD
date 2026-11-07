@@ -6,6 +6,7 @@ import { listReports } from "@/server/admin";
 import { adminUser } from "@/server/admin-page";
 import { AdminNav } from "../AdminNav";
 import { ReportQueue } from "./ReportQueue";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("admin.reports");
@@ -29,7 +30,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/[locale]
   return (
     <>
       <TopBar back="/admin" title={t("reports.title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <ReportsData searchParams={searchParams as Promise<{ vue?: string }>} />
       </Suspense>
     </>

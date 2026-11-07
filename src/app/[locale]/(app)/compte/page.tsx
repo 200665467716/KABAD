@@ -5,6 +5,7 @@ import { TopBar } from "@/components/shell/TopBar";
 import { listBlocked } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 import { AccountSettings } from "./AccountSettings";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("profile.account"))("title") };
@@ -20,7 +21,7 @@ export default async function AccountPage() {
   return (
     <>
       <TopBar back="/profil" title={t("account.title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <AccountData />
       </Suspense>
     </>

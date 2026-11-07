@@ -14,6 +14,8 @@ export function VerifyEmail({ token, email, verified }: { token: string; email: 
   const router = useRouter();
   const [state, setState] = useState<"idle" | "busy" | "done">(verified && !token ? "done" : "idle");
   const [error, setError] = useState<string | null>(null);
+  // A wrong or expired code is shown on the field itself (A3e), not in a banner.
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [address, setAddress] = useState(email);
   const [changing, setChanging] = useState(false);
@@ -21,12 +23,14 @@ export function VerifyEmail({ token, email, verified }: { token: string; email: 
   async function run(fn: () => Promise<unknown>, onDone?: () => void) {
     setState("busy");
     setError(null);
+    setCodeError(null);
     setNotice(null);
     try {
       await fn();
       onDone?.();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : t("failed"));
+      if (e instanceof ApiError && e.field === "code") setCodeError(e.message);
+      else setError(e instanceof ApiError ? e.message : t("failed"));
       setState("idle");
     }
   }
@@ -79,7 +83,7 @@ export function VerifyEmail({ token, email, verified }: { token: string; email: 
   function submitCode(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const code = String(new FormData(e.currentTarget).get("code") ?? "").replace(/\s/g, "");
-    if (!/^\d{6}$/.test(code)) return setError(t("codeFormat"));
+    if (!/^\d{6}$/.test(code)) return setCodeError(t("codeFormat"));
     run(() => api("/api/auth/verify/code", { body: { code } }), () => router.push("/inscription/profil"));
   }
 
@@ -136,10 +140,11 @@ export function VerifyEmail({ token, email, verified }: { token: string; email: 
             inputMode="numeric"
             autoComplete="one-time-code"
             maxLength={6}
+            error={codeError}
             inputClassName="h-16 text-center font-display text-3xl tracking-[0.4em]"
           />
-          <div className="grid gap-2 rounded-action border-2 border-line-strong bg-raised p-4">
-            <p className="font-extrabold">{t("nothing")}</p>
+          <div className={codeError ? "grid gap-2 rounded-action border-2 border-danger bg-raised p-4" : "grid gap-2 rounded-action border-2 border-dashed border-line-strong bg-raised p-4"}>
+            <p className="font-extrabold">{codeError ? t("newCode") : t("nothing")}</p>
             <p className="text-sm text-muted">{t("nothingHelp")}</p>
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" disabled={state === "busy"} onClick={() => run(() => api("/api/auth/verify/resend", { method: "POST" }), () => (setState("idle"), setNotice(t("resent"))))}>

@@ -196,4 +196,14 @@ describe("confirmation de l’e-mail par code", () => {
     }), "bad_code");
     await refused(verifyEmailCode("kossi", "123456", prisma), "locked");
   });
+
+  it("un code reste valable 10 minutes, pas plus", async () => {
+    await prisma.user.update({ where: { id: "kossi" }, data: { emailVerifiedAt: null } });
+    await sendVerificationEmail("kossi", prisma);
+    const token = await prisma.emailToken.findFirstOrThrow({ where: { userId: "kossi", purpose: "VERIFY" } });
+    const minutes = (token.expiresAt.getTime() - token.createdAt.getTime()) / 60_000;
+    expect(Math.round(minutes)).toBe(10);
+    await prisma.emailToken.update({ where: { id: token.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
+    await expect(verifyEmailCode("kossi", "000000", prisma)).rejects.toMatchObject({ code: "bad_code", message: "Ce code est incorrect ou a expiré. Un code reste valable 10 minutes." });
+  });
 });

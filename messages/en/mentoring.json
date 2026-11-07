@@ -99,10 +99,13 @@
       "join": "Join the call",
       "calendar": "Add to my calendar",
       "cancel": "Cancel the session",
-      "cancelConfirm": "Really cancel this session? The other person will be told.",
+      "cancelConfirm": "Cancel the session",
       "otherMentors": "See other mentors",
       "home": "Back to home",
-      "calendarTitle": "KABAD mentoring with {name}"
+      "calendarTitle": "KABAD mentoring with {name}",
+      "cancelTitle": "Cancel the session?",
+      "cancelText": "The other person will be told. The slot becomes free again.",
+      "keep": "Keep the session"
     },
     "requests": {
       "title": "Requests received",
@@ -116,10 +119,11 @@
       "accept": "Accept",
       "decline": "Decline",
       "declineReason": "Reason (sent to the member, optional)",
-      "confirmDecline": "Confirm",
-      "cancel": "Cancel",
       "open": "See the session",
-      "range": "{day} · {start} – {end}"
+      "range": "{day} · {start} – {end}",
+      "declineTitle": "Decline {name}’s request?",
+      "declineText": "{name} will be told and can book another slot or another mentor.",
+      "declined": "Request declined · {name} has been told."
     },
     "availability": {
       "title": "Availability",

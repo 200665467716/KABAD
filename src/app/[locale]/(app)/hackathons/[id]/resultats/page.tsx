@@ -12,6 +12,7 @@ import { formatFCFA, initials } from "@/lib/format";
 import { CONTEST_HOURS, getResults, myFeedback, myTeam } from "@/server/hackathons";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("hackathons.results");
@@ -130,7 +131,7 @@ async function ResultsData({ params }: { params: Promise<{ id: string }> }) {
 export default async function ResultsPage({ params }: PageProps<"/[locale]/hackathons/[id]/resultats">) {
   const t = await getTranslations("hackathons.results");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <ResultsData params={params} />
     </Suspense>
   );

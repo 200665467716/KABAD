@@ -7,6 +7,7 @@ import { MessageBubble } from "@/components/features/Thread";
 import { ReportSheet } from "@/components/features/ReportSheet";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { Button, IconButton } from "@/components/ui/Button";
+import { ConfirmSheet } from "@/components/ui/Controls";
 import { Alert, Avatar, Badge } from "@/components/ui/Display";
 import { api, ApiError } from "@/lib/api";
 import { initials } from "@/lib/format";
@@ -20,6 +21,7 @@ export function InvitationView({ invitation }: { invitation: InvitationDetail })
   const from = invitation.from;
   const first = from.name.split(" ")[0];
   const [busy, setBusy] = useState<"accept" | "decline" | null>(null);
+  const [confirmDecline, setConfirmDecline] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState(false);
   const answered = invitation.status !== "PENDING";
@@ -67,13 +69,24 @@ export function InvitationView({ invitation }: { invitation: InvitationDetail })
       </Page>
       {!answered && (
         <ActionBar className="grid-cols-2">
-          <Button variant="secondary" size="lg" onClick={() => answer(false)} disabled={busy !== null}>
+          <Button variant="secondary" size="lg" onClick={() => setConfirmDecline(true)} disabled={busy !== null}>
             {busy === "decline" ? t("declining") : t("decline")}
           </Button>
           <Button size="lg" onClick={() => answer(true)} disabled={busy !== null}>
             {busy === "accept" ? t("accepting") : t("accept")}
           </Button>
         </ActionBar>
+      )}
+      {!answered && (
+        <ConfirmSheet
+          open={confirmDecline}
+          onClose={() => setConfirmDecline(false)}
+          title={t("declineTitle")}
+          text={t("declineText", { name: first })}
+          confirm={t("decline")}
+          busy={busy !== null}
+          onConfirm={() => answer(false)}
+        />
       )}
       <ReportSheet
         open={report}

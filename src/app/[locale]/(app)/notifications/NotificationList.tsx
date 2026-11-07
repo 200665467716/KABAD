@@ -5,7 +5,6 @@ import { messageValues } from "@/lib/notification-text";
 import { useCallback, useState } from "react";
 import { Page } from "@/components/shell/TopBar";
 import { Button } from "@/components/ui/Button";
-import { Segmented } from "@/components/ui/Controls";
 import { Overline } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { Link } from "@/i18n/navigation";
@@ -15,11 +14,19 @@ import { useRealtime } from "@/lib/realtime-client";
 import { useMe } from "@/lib/use-me";
 import type { NotificationView } from "@/server/notifications";
 
-const tones: Record<NotificationView["tone"], string> = {
-  brand: "bg-header text-on-header",
-  success: "bg-success-soft text-success",
-  accent: "bg-accent text-on-accent",
-  neutral: "bg-bg text-ink shadow-[inset_0_0_0_2px_var(--border-strong)]",
+/*
+ * Each notification takes the colour of its feature (P2), read from the screen it opens:
+ * mentoring indigo, hackathons ink, Rise-Up maize (the only place for maize), tests palm, messages mist.
+ * A warning from the team keeps the clay tone.
+ */
+const featureTone = (n: NotificationView) => {
+  if (n.tone === "neutral" && n.href.startsWith("/compte")) return "bg-danger-soft text-danger";
+  if (n.href.startsWith("/mentorat")) return "bg-header text-on-header";
+  if (n.href.startsWith("/hackathons")) return "bg-ink text-raised";
+  if (n.href.startsWith("/rise-up")) return "bg-accent text-on-accent";
+  if (n.href.startsWith("/tests")) return "bg-success-soft text-success";
+  if (n.href.startsWith("/messages")) return "bg-[var(--mist)] text-brand-text";
+  return "bg-bg text-ink shadow-[inset_0_0_0_2px_var(--border-strong)]";
 };
 
 const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -34,9 +41,8 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
   const now = useNow();
   const { refresh: refreshMe } = useMe();
   const [items, setItems] = useState(initial);
-  const [filter, setFilter] = useState<"all" | "unread">("all");
   const unreadCount = items.filter((n) => n.unread).length;
-  const visible = items.filter((n) => filter === "all" || n.unread);
+  const visible = items;
 
   const reload = useCallback(() => {
     api<NotificationView[]>("/api/notifications")
@@ -66,16 +72,7 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
 
   return (
     <Page narrow>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Segmented
-          label={t("filter")}
-          value={filter}
-          onChange={setFilter}
-          items={[
-            { value: "all", label: t("all") },
-            { value: "unread", label: t("unread"), count: unreadCount },
-          ]}
-        />
+      <div className="flex justify-end">
         <Button variant="ghost" size="sm" disabled={unreadCount === 0} onClick={() => markRead()}>
           {t("markAll")}
         </Button>
@@ -89,19 +86,29 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
           <ul className="m-0 list-none divide-y-2 divide-line overflow-hidden rounded-lg border-2 border-line-strong bg-raised p-0">
             {g.items.map((n) => (
               <li key={n.id}>
-                <Link href={n.href} onClick={() => n.unread && markRead(n.id)} className="grid grid-cols-[40px_minmax(0,1fr)_auto] items-start gap-3 px-3.5 py-3 text-ink no-underline hover:bg-bg">
-                  <span className={cn("grid size-10 place-items-center rounded-full", tones[n.tone])}>
+                <Link
+                  href={n.href}
+                  onClick={() => n.unread && markRead(n.id)}
+                  className={cn("relative grid grid-cols-[40px_minmax(0,1fr)_auto] items-start gap-3 px-3.5 py-3 text-ink no-underline hover:bg-bg", n.unread && "bg-brand-soft")}
+                >
+                  {/* Unread: a tinted row, a dot and the word itself, never the colour alone. */}
+                  {n.unread && <span className="absolute top-1/2 left-1 size-2 -translate-y-1/2 rounded-full bg-danger" aria-hidden="true" />}
+                  <span className={cn("grid size-10 place-items-center rounded-md", featureTone(n))}>
                     <Icon name={n.icon} size={18} />
                   </span>
                   <span className="text-sm leading-5">
+                    {n.unread && <span className="sr-only">{t("unreadDot")} : </span>}
                     <b>{n.actor}</b>
                     {/^[\s:]/.test(textOf(n)) ? "" : " "}
                     {textOf(n)}
+                    {n.unread && (
+                      <span className="font-extrabold text-danger" aria-hidden="true">
+                        {" "}
+                        · {t("unreadDot")}
+                      </span>
+                    )}
                   </span>
-                  <span className="grid justify-items-end gap-1.5">
-                    <span className="text-xs text-muted tabular">{when(n)}</span>
-                    {n.unread && <span className="size-2 rounded-full bg-danger" aria-label={t("unreadDot")} />}
-                  </span>
+                  <span className="text-xs text-muted tabular">{when(n)}</span>
                 </Link>
               </li>
             ))}

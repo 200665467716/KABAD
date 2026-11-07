@@ -12,6 +12,7 @@ import { getHackathon } from "@/server/hackathons";
 import { eligibility } from "@/server/mentoring";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("hackathons.register");
@@ -63,7 +64,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
 export default async function RegisterPage({ params }: PageProps<"/[locale]/hackathons/[id]/participer">) {
   const t = await getTranslations("hackathons.register");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <Data params={params} />
     </Suspense>
   );

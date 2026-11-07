@@ -43,7 +43,10 @@
       "findMembers": "Trouver des membres à inviter",
       "read": "Lire",
       "error": "La réponse n’est pas partie. Réessaie.",
-      "noMessage": "Sans message"
+      "noMessage": "Sans message",
+      "declineTitle": "Refuser l’invitation ?",
+      "declineText": "{name} ne sera pas prévenu. Tu pourras toujours l’inviter plus tard.",
+      "declined": "Invitation refusée."
     },
     "invitation": {
       "metaTitle": "Invitation",
@@ -59,7 +62,9 @@
       "accepting": "Ouverture…",
       "decline": "Refuser",
       "declining": "Refus…",
-      "error": "La réponse n’est pas partie. Réessaie."
+      "error": "La réponse n’est pas partie. Réessaie.",
+      "declineTitle": "Refuser l’invitation ?",
+      "declineText": "{name} ne sera pas prévenu. Tu pourras toujours l’inviter plus tard."
     },
     "conversation": {
       "metaTitle": "Conversation",

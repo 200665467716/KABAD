@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { pageUser } from "@/server/page";
 import { ProfileStep } from "./ProfileStep";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("auth.meta"))("profile") };
@@ -17,7 +18,7 @@ async function ProfileStepData() {
 export default async function ProfileStepPage() {
   const t = await getTranslations("auth");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <ProfileStepData />
     </Suspense>
   );

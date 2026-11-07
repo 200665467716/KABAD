@@ -7,6 +7,7 @@ import { getTestApp } from "@/server/community-tests";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 import { ReportForm } from "./ReportForm";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("tests.report");
@@ -26,7 +27,7 @@ async function ReportData({ params }: { params: Promise<{ id: string }> }) {
 export default async function ReportPage({ params }: PageProps<"/[locale]/tests/[id]/rapport">) {
   const t = await getTranslations("tests.report");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <ReportData params={params} />
     </Suspense>
   );

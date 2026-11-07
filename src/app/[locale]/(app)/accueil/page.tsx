@@ -16,6 +16,7 @@ import { listInvitations } from "@/server/messaging";
 import { unreadNotifications } from "@/server/notifications";
 import { pageUser } from "@/server/page";
 import { listProjects } from "@/server/rise";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("home"))("title") };
@@ -262,7 +263,7 @@ async function HomeData() {
 export default async function HomePage() {
   const t = await getTranslations("home");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <HomeData />
     </Suspense>
   );

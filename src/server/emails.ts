@@ -16,11 +16,11 @@ export function verificationMail(locale: MailLocale, name: string, code: string,
   return locale === "en"
     ? {
         subject: `${code} is your KABAD confirmation code`,
-        text: `Hello ${firstName(name)},\n\nYour confirmation code: ${code}\n\nYou can also open this link:\n${link}\n\nThis code is valid for 48 hours. If you did not create an account, ignore this message.\n\nThe KABAD team`,
+        text: `Hello ${firstName(name)},\n\nYour confirmation code: ${code}\n\nYou can also open this link:\n${link}\n\nThis code is valid for 10 minutes. If you did not create an account, ignore this message.\n\nThe KABAD team`,
       }
     : {
         subject: `${code} : ton code de confirmation KABAD`,
-        text: `Bonjour ${firstName(name)},\n\nTon code de confirmation : ${code}\n\nTu peux aussi ouvrir ce lien :\n${link}\n\nCe code est valable 48 heures. Si tu n’as pas créé de compte, ignore ce message.\n\nL’équipe KABAD`,
+        text: `Bonjour ${firstName(name)},\n\nTon code de confirmation : ${code}\n\nTu peux aussi ouvrir ce lien :\n${link}\n\nCe code est valable 10 minutes. Si tu n’as pas créé de compte, ignore ce message.\n\nL’équipe KABAD`,
       };
 }
 

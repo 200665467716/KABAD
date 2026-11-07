@@ -12,6 +12,7 @@ import { initials } from "@/lib/format";
 import { getHackathon } from "@/server/hackathons";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("hackathons.team");
@@ -113,7 +114,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
 export default async function TeamPage({ params }: PageProps<"/[locale]/hackathons/[id]/equipe">) {
   const t = await getTranslations("hackathons.team");
   return (
-    <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+    <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
       <Data params={params} />
     </Suspense>
   );

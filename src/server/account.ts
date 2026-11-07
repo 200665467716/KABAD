@@ -11,13 +11,17 @@ import { sendMail } from "./mailer";
 
 const hash = (token: string) => createHash("sha256").update(token).digest("hex");
 
-async function issueToken(userId: string, purpose: EmailTokenPurpose, hours: number, prisma: Db, code?: string) {
+async function issueToken(userId: string, purpose: EmailTokenPurpose, minutes: number, prisma: Db, code?: string) {
   const token = randomBytes(32).toString("base64url");
   // A new link replaces the previous ones.
   await prisma.emailToken.deleteMany({ where: { userId, purpose, usedAt: null } });
-  await prisma.emailToken.create({ data: { id: hash(token), userId, purpose, expiresAt: new Date(Date.now() + hours * 3600_000), codeHash: code ? hash(code) : null } });
+  await prisma.emailToken.create({ data: { id: hash(token), userId, purpose, expiresAt: new Date(Date.now() + minutes * 60_000), codeHash: code ? hash(code) : null } });
   return token;
 }
+
+/** The confirmation code (and its link) stays valid 10 minutes (A3e). */
+export const CODE_MINUTES = 10;
+const BAD_CODE = `Ce code est incorrect ou a expiré. Un code reste valable ${CODE_MINUTES} minutes.`;
 
 /** Wrong codes allowed before the code is locked and a new one must be requested. */
 export const CODE_ATTEMPTS = 5;
@@ -37,7 +41,7 @@ export async function sendVerificationEmail(userId: string, prisma: Db = db) {
   const u = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true, name: true, locale: true, emailVerifiedAt: true } });
   if (u.emailVerifiedAt) return { alreadyVerified: true };
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-  const token = await issueToken(userId, "VERIFY", 48, prisma, code);
+  const token = await issueToken(userId, "VERIFY", CODE_MINUTES, prisma, code);
   const mail = verificationMail(mailLocale(u.locale), u.name, code, token);
   await sendMail(u.email, mail.subject, mail.text);
   return { alreadyVerified: false };
@@ -52,13 +56,12 @@ export async function verifyEmail(token: string, prisma: Db = db) {
 /** Checks the code typed by the signed-in member. After 5 wrong codes, a new one must be requested. */
 export async function verifyEmailCode(userId: string, code: string, prisma: Db = db) {
   const row = await prisma.emailToken.findFirst({ where: { userId, purpose: "VERIFY", usedAt: null, codeHash: { not: null } }, orderBy: { createdAt: "desc" } });
-  if (!row || row.expiresAt <= new Date()) throw new DomainError("bad_code", "Ce code n’est plus valable. Demande un nouveau code.", 400, "code");
+  if (!row || row.expiresAt <= new Date()) throw new DomainError("bad_code", BAD_CODE, 400, "code");
   if (row.attempts >= CODE_ATTEMPTS) throw new DomainError("locked", "Trop d’essais. Demande un nouveau code.", 429, "code");
   const ok = timingSafeEqual(Buffer.from(hash(code.trim())), Buffer.from(row.codeHash!));
   if (!ok) {
     await prisma.emailToken.update({ where: { id: row.id }, data: { attempts: { increment: 1 } } });
-    const left = CODE_ATTEMPTS - row.attempts - 1;
-    throw new DomainError("bad_code", left > 0 ? `Code incorrect. Encore ${left} essai${left > 1 ? "s" : ""}.` : "Code incorrect. Demande un nouveau code.", 400, "code");
+    throw new DomainError("bad_code", BAD_CODE, 400, "code");
   }
   await prisma.$transaction([
     prisma.emailToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
@@ -86,7 +89,7 @@ export async function setLocale(userId: string, locale: "fr" | "en", prisma: Db 
 export async function requestPasswordReset(email: string, prisma: Db = db) {
   const u = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() }, select: { id: true, name: true, email: true, locale: true, suspendedAt: true } });
   if (!u || u.suspendedAt) return;
-  const token = await issueToken(u.id, "RESET_PASSWORD", 1, prisma);
+  const token = await issueToken(u.id, "RESET_PASSWORD", 60, prisma);
   const mail = passwordResetMail(mailLocale(u.locale), u.name, token);
   await sendMail(u.email, mail.subject, mail.text);
 }

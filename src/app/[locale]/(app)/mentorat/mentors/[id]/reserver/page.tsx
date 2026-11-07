@@ -10,6 +10,7 @@ import { orNotFound } from "@/server/messaging";
 import { getMentor } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
 import { BookingForm } from "./BookingForm";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("mentoring.book");
@@ -64,9 +65,7 @@ export default async function BookPage({ params, searchParams }: PageProps<"/[lo
       fallback={
         <>
           <TopBar back="/mentorat" title={t("book.title")} />
-          <p className="p-6 text-muted" role="status">
-            {t("loading")}
-          </p>
+          <ScreenSkeleton label={t("loading")} />
         </>
       }
     >

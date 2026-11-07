@@ -11,6 +11,7 @@ import { cn } from "@/lib/cn";
 import { BADGE_DOMAINS, myBadgeRequest } from "@/server/badges";
 import { listMentors, myBookings } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 /** A session still to come or running. */
 const notOver = (iso: string, minutes: number) => new Date(iso).getTime() + minutes * 60_000 > Date.now();
@@ -140,7 +141,7 @@ export default async function MentoringPage({ searchParams }: PageProps<"/[local
   return (
     <>
       <TopBar title={t("title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <MentoringData searchParams={searchParams as Promise<Search>} />
       </Suspense>
     </>

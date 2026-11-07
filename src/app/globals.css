@@ -73,7 +73,7 @@
   --on-danger: var(--white);
   --danger-soft: var(--clay-100);
   --live: var(--clay-light);
-  --focus: var(--indigo-500);
+  --focus: var(--indigo);
   /* En-tête indigo et son bandeau : identiques dans les deux thèmes. */
   --header: var(--indigo);
   --on-header: var(--white);
@@ -242,9 +242,16 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
+  /* Focus visible everywhere (WCAG 2.4.7): 3 px indigo; maize on the indigo and ink grounds. */
   :focus-visible {
-    outline: 2px solid var(--focus);
+    outline: 3px solid var(--focus);
     outline-offset: 2px;
+  }
+  .bg-header :focus-visible,
+  .bg-ink :focus-visible,
+  .bg-brand:focus-visible,
+  .bg-header:focus-visible {
+    outline-color: var(--maize);
   }
   h1,
   h2,
@@ -285,5 +292,30 @@
   *::after {
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;
+  }
+}
+
+/* Squelettes de chargement (P3) : bloc brume avec un reflet qui passe ; immobile si l'on réduit les animations. */
+.kb-skel {
+  position: relative;
+  overflow: hidden;
+  background: var(--brand-wash);
+}
+.kb-skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.7), transparent);
+  animation: kb-shimmer 1.4s infinite;
+}
+@keyframes kb-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kb-skel::after {
+    animation: none;
   }
 }

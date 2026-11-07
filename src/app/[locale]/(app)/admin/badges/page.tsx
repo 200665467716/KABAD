@@ -11,6 +11,7 @@ import type { BadgeStatus } from "@/lib/domain-types";
 import { listBadgeRequests } from "@/server/badges";
 import { adminUser } from "@/server/admin-page";
 import { AdminNav } from "../AdminNav";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("admin.badges");
@@ -78,7 +79,7 @@ export default async function AdminBadgesPage({ searchParams }: PageProps<"/[loc
   return (
     <>
       <TopBar back="/admin" title={t("title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <BadgesData searchParams={searchParams as Promise<{ onglet?: string }>} />
       </Suspense>
     </>

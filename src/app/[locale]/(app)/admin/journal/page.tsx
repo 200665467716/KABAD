@@ -5,6 +5,7 @@ import { Page, TopBar } from "@/components/shell/TopBar";
 import { auditLog } from "@/server/admin";
 import { adminUser } from "@/server/admin-page";
 import { AdminNav } from "../AdminNav";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("admin.journal");
@@ -65,7 +66,7 @@ export default async function JournalPage() {
   return (
     <>
       <TopBar back="/admin" title={t("journal.title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <Data />
       </Suspense>
     </>

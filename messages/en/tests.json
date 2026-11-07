@@ -12,7 +12,6 @@
     "places": "{count, plural, =0 {full} one {# spot left} other {# spots left}}",
     "minutes": "{count} min",
     "platform": { "WEB": "Web", "ANDROID": "Android", "IOS": "iOS" },
-    "noListings": "No app to test right now. Come back soon!",
     "iTest": "I’m testing",
     "stepsDone": "{done} of {total} steps done",
     "noTesting": "You aren’t testing any app yet.",
@@ -126,6 +125,9 @@
       "validateLabel": "Validate {name}’s report",
       "error": "Your answer wasn’t saved. Try again.",
       "empty": "No reports yet. Testers from the community are on their way."
-    }
+    },
+    "emptyTitle": "No listings yet",
+    "emptyText": "Be the first: publish your app and a group of testers forms around it.",
+    "emptyAction": "Post a listing"
   }
 }

@@ -1,8 +1,9 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { Icon } from "./Icon";
 
 const control =
-  "w-full rounded-md border-2 border-line-strong bg-raised px-3.5 text-base font-medium text-ink placeholder:text-subtle focus:border-focus focus:outline-2 focus:outline-offset-0 focus:outline-focus aria-[invalid=true]:border-danger";
+  "w-full rounded-md border-2 border-line-strong bg-raised px-3.5 text-base font-medium text-ink placeholder:text-muted focus:outline-3 focus:outline-offset-2 focus:outline-focus aria-[invalid=true]:border-danger aria-[invalid=true]:shadow-[inset_0_0_0_1px_var(--danger)]";
 
 type Meta = { label: ReactNode; hint?: ReactNode; error?: ReactNode; counter?: ReactNode; className?: string };
 
@@ -16,7 +17,8 @@ function Wrapper({ id, label, hint, error, counter, className, children }: Meta 
       {(hint || error || counter) && (
         <div className="flex items-start justify-between gap-3">
           {error ? (
-            <span id={`${id}-msg`} className="text-sm font-extrabold text-danger">
+            <span id={`${id}-msg`} className="flex items-start gap-1.5 text-[13px] leading-[18px] font-bold text-danger">
+              <Icon name="info" size={16} className="mt-px" />
               {error}
             </span>
           ) : hint ? (
@@ -62,10 +64,14 @@ export function TextArea({ id, label, hint, error, counter, className, rows = 4,
   );
 }
 
-export function Select({ id, label, hint, className, children, ...rest }: Meta & { id: string } & ComponentProps<"select">) {
+export function Select({ id, label, hint, error, className, children, ...rest }: Meta & { id: string } & ComponentProps<"select">) {
   return (
-    <Wrapper id={id} label={label} hint={hint} className={className}>
-      <select id={id} className={cn(control, "h-12 appearance-none bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-9")} style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230d1020' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }} {...rest}>
+    <Wrapper id={id} label={label} hint={hint} error={error} className={className}>
+      <select
+        id={id}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={hint || error ? `${id}-msg` : undefined}
+        className={cn(control, "h-12 appearance-none bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-9")} style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230d1020' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }} {...rest}>
         {children}
       </select>
     </Wrapper>

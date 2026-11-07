@@ -5,7 +5,8 @@ import { DomainError } from "./errors";
  * Fixed-window limiter stored in PostgreSQL, so every web instance shares the same counters.
  * One atomic statement: a new window starts at 1, an open window counts up.
  */
-export async function rateLimit(key: string, max: number, windowMs: number, message: string, prisma: Db = db) {
+/** Counts one more attempt and refuses past `max`. Returns how many attempts are left in the window. */
+export async function rateLimit(key: string, max: number, windowMs: number, message: string, prisma: Db = db): Promise<{ left: number }> {
   // Now and then, clear expired counters and sessions so the tables stay small.
   if (Math.random() < 0.01) void purgeRateLimits(prisma).catch(() => {});
   const resetAt = new Date(Date.now() + windowMs);
@@ -19,6 +20,7 @@ export async function rateLimit(key: string, max: number, windowMs: number, mess
     const minutes = Math.max(1, Math.ceil((row.resetAt.getTime() - Date.now()) / 60_000));
     throw new DomainError("rate_limited", `${message} Réessaie dans ${minutes} min.`, 429);
   }
+  return { left: max - row.count };
 }
 
 export async function resetRateLimit(key: string, prisma: Db = db) {

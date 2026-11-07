@@ -274,7 +274,9 @@
       "decline": "Refuser",
       "accepted": "Mission acceptée",
       "declined": "Mission refusée",
-      "see": "Voir le hackathon"
+      "see": "Voir le hackathon",
+      "declineTitle": "Refuser la mission ?",
+      "declineText": "{name} sera prévenu. Tu pourras recevoir d’autres propositions."
     },
     "jury": {
       "title": "Évaluation du jury",

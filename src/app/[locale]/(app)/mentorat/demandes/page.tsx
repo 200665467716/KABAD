@@ -10,6 +10,7 @@ import { initials } from "@/lib/format";
 import type { BookingView } from "@/lib/domain-types";
 import { myBookings } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("mentoring.requests");
@@ -66,7 +67,7 @@ async function RequestsData({ searchParams }: { searchParams: Promise<{ onglet?:
                 {t("open")}
               </Link>
             ) : (
-              <AnswerRequest id={r.id} />
+              <AnswerRequest id={r.id} name={r.mentee.name} />
             )}
           </Card>
         ))
@@ -80,7 +81,7 @@ export default async function RequestsPage({ searchParams }: PageProps<"/[locale
   return (
     <>
       <TopBar back="/mentorat" title={t("requests.title")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <RequestsData searchParams={searchParams as Promise<{ onglet?: string }>} />
       </Suspense>
     </>

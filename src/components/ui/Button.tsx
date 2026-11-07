@@ -7,7 +7,9 @@ export type ButtonVariant = "primary" | "ink" | "secondary" | "ghost" | "accent"
 export type ButtonSize = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap border-2 font-extrabold transition-[background-color,border-color,box-shadow,transform] duration-150 ease-[cubic-bezier(.2,0,0,1)] active:translate-y-px disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 select-none";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap border-2 font-extrabold transition-[background-color,border-color,box-shadow,transform] duration-150 ease-[cubic-bezier(.2,0,0,1)] active:translate-y-px disabled:pointer-events-none aria-disabled:pointer-events-none select-none " +
+  // Disabled: slate text in weight 400 on a neutral ground, never a faded colour (charte, audit).
+  "disabled:border-line disabled:bg-sunken disabled:font-normal disabled:text-muted disabled:shadow-none aria-disabled:border-line aria-disabled:bg-sunken aria-disabled:font-normal aria-disabled:text-muted";
 
 /*
  * Charte « Motif » : principal en indigo (un seul par écran), secondaire en encre,
@@ -15,11 +17,11 @@ const base =
  */
 const variants: Record<ButtonVariant, string> = {
   primary: "border-transparent bg-brand text-on-brand hover:bg-brand-hover",
-  ink: "border-transparent bg-ink text-raised hover:opacity-90",
+  ink: "border-transparent bg-ink text-raised hover:bg-[var(--ink-800)]",
   secondary: "bg-raised text-ink border-line-strong hover:bg-bg",
   ghost: "border-transparent bg-transparent text-brand-text hover:bg-brand-soft",
   accent: "border-line-strong bg-accent text-on-accent hover:shadow-pop",
-  danger: "border-transparent bg-danger text-on-danger hover:opacity-90",
+  danger: "border-transparent bg-danger text-on-danger hover:bg-[#7f1e13]",
   success: "border-transparent bg-success text-on-success hover:opacity-90",
   onBrand: "bg-transparent text-on-brand border-on-brand/60 hover:bg-on-brand/10",
 };

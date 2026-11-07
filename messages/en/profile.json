@@ -30,7 +30,10 @@
       "accountText": "Password, language, blocked members, data",
       "public": "See my public profile",
       "admin": "Team dashboard",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "signOutTitle": "Sign out?",
+      "signOutText": "You will have to sign in again with your e-mail and your password.",
+      "signOutStay": "Stay signed in"
     },
     "edit": {
       "title": "Edit my profile",
@@ -80,9 +83,6 @@
     },
     "notifications": {
       "title": "Notifications",
-      "filter": "Filter notifications",
-      "all": "All",
-      "unread": "Unread",
       "markAll": "Mark all as read",
       "today": "Today",
       "week": "This week",
@@ -105,7 +105,7 @@
       "choosePassword": "Choose a password",
       "current": "Current password",
       "next": "New password",
-      "nextHint": "At least 12 characters.",
+      "nextHint": "At least 8 characters, including a digit.",
       "save": "Save",
       "passwordChanged": "Password changed. Your other devices are signed out.",
       "sessions": "Sessions",

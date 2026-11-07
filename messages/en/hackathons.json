@@ -274,7 +274,9 @@
       "decline": "Decline",
       "accepted": "Mission accepted",
       "declined": "Mission declined",
-      "see": "See the hackathon"
+      "see": "See the hackathon",
+      "declineTitle": "Decline the mission?",
+      "declineText": "{name} will be told. You can receive other offers."
     },
     "jury": {
       "title": "Jury scoring",

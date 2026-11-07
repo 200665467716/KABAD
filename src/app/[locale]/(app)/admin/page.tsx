@@ -8,6 +8,7 @@ import { formatFCFA } from "@/lib/format";
 import { dashboard } from "@/server/admin";
 import { adminUser } from "@/server/admin-page";
 import { AdminNav } from "./AdminNav";
+import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("admin");
@@ -75,7 +76,7 @@ export default async function AdminPage() {
   return (
     <>
       <TopBar title={t("title")} subtitle={t("subtitle")} />
-      <Suspense fallback={<p className="p-6 text-muted" role="status">{t("loading")}</p>}>
+      <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <DashboardData />
       </Suspense>
     </>
