@@ -2,21 +2,217 @@
   "landing": {
     "meta": {
       "title": "KABAD · The exchange platform for African devs",
-      "description": "Free mentoring, hackathons, app testing, messaging and Africa Rise-Up projects: the exchange platform for devs in Africa and the diaspora. By devs, for devs."
+      "description": "Free mentoring, hackathons, app testing, messaging and Africa Rise-Up projects: KABAD brings together devs in Africa and the diaspora. By devs, for devs."
     },
+    "skip": "Skip to content",
     "nav": {
-      "label": "Main navigation",
+      "label": "Sections",
+      "home": "KABAD, home",
+      "why": "Why KABAD",
+      "features": "Features",
+      "how": "How it works",
+      "organize": "Organise",
+      "faq": "FAQ",
       "signIn": "Sign in",
-      "join": "Join"
+      "signUp": "Create my account",
+      "signUpShort": "Sign up"
     },
     "hero": {
-      "kicker": "The exchange platform for African devs",
-      "titleStart": "Let’s create the next generation of ",
-      "titleHighlight": "African devs",
-      "subtitle": "More productive and more skilled in the age of AI.",
-      "join": "Join the community",
-      "watch": "Watch the presentation",
-      "motto": "By devs, for devs."
+      "eyebrow": "A platform open to devs in Africa and the diaspora",
+      "l1": "This is where",
+      "l2": "the generation",
+      "l3": "of African devs",
+      "l4": "is made, to impact",
+      "l5": "<em>Africa and the world</em>.",
+      "lead": "KABAD brings together African and diaspora developers to deliver <b>practical solutions to the continent’s challenges</b>: mentoring to pass on experience, hackathons to energise the community, Rise-Up projects to act on the ground.",
+      "cta": "Create my account",
+      "discover": "Discover the platform",
+      "note": "Free. Sign up in seconds, with your e-mail.",
+      "preview": "Preview of the app",
+      "mentoringKicker": "Your mentoring session",
+      "confirmed": "Confirmed",
+      "mentoringTitle": "Connecting mobile money APIs",
+      "mentoringMeta": "with {name} · Thursday, 3 pm · 30 min",
+      "joinCall": "Join the call",
+      "riseKicker": "Africa Rise-Up",
+      "live": "Live",
+      "riseTitle": "Tracking drinking-water boreholes in the Sahel",
+      "riseMeta": "{devs} devs · {countries} countries",
+      "joinRoom": "Join the room",
+      "hackKicker": "Hackathon · hybrid · Cotonou",
+      "hackTitle": "Fintech for inclusion",
+      "hackMeta": "48 h · teams of 2 to 5 · KABAD instructors",
+      "in": "IN",
+      "days": "DAYS"
+    },
+    "band": {
+      "label": "An initiative born at the African Developers Cup",
+      "pause": "Pause the scrolling",
+      "resume": "Resume the scrolling",
+      "s1": "An initiative born at the African Developers Cup",
+      "s2": "By devs, for devs",
+      "s3": "Mentoring · Hackathons · App testing · Africa Rise-Up"
+    },
+    "why": {
+      "kicker": "Why join KABAD",
+      "title": "A community that connects, passes on and acts.",
+      "lead": "Three things you won’t find together anywhere else: peers like you, verified mentors who save you months, and real projects that change real people’s lives.",
+      "peersTitle": "Peers, from Abidjan to Montreal",
+      "peersText": "KABAD brings together developers on the continent and in the diaspora. You meet devs who share your constraints, your tech and your ambitions, and you build your network from sign-up.",
+      "hub": "Africa + diaspora",
+      "hubText": "One network, on both sides of the ocean",
+      "city1": "Lomé · Cotonou",
+      "city1Text": "Hybrid hackathons",
+      "city2": "Dakar · Abidjan",
+      "city2Text": "Fintech and mobile mentors",
+      "city3": "Lagos · Nairobi",
+      "city3Text": "Backend, data, AI",
+      "city4": "Paris · Montreal",
+      "city4Text": "The diaspora passing it on",
+      "mentorTitle": "Mentoring that gets to the point",
+      "mentorText": "Stuck on a precise problem? Pick a mentor verified by KABAD, a slot in their calendar, and describe your problem. Thirty minutes on video, free, to get unstuck.",
+      "step1": "Pick a verified mentor in your field",
+      "step2": "Book a free slot, directly",
+      "step3": "Describe your problem, the mentor accepts",
+      "step4": "Free 30-min session, video link sent",
+      "riseTitle": "Impact, at the heart of Africa",
+      "riseText": "With Africa Rise-Up, devs from several countries unite around a real challenge: water, health, farming, education. Together they build a practical tech solution that serves here first and can be showcased worldwide.",
+      "project1": "Tracking drinking-water boreholes in the Sahel",
+      "project2": "Shared medical records for clinics",
+      "project3": "Real-time crop prices by SMS",
+      "project4": "Launch your own project channel"
+    },
+    "features": {
+      "kicker": "Features",
+      "title": "Everything you need to grow, in one app.",
+      "lead": "A web app you can install on your phone, designed mobile first. Pick a feature to see it.",
+      "label": "Features",
+      "screen": "Screen · {name}",
+      "installable": "Installable on your phone",
+      "mobileFirst": "Designed mobile first",
+      "mentoring": "Mentoring",
+      "mentoringText": "Free 30-min sessions with verified mentors. You book a slot like in a calendar, the mentor accepts, the call is ready.",
+      "hackathons": "Hackathons",
+      "hackathonsText": "Online, on site or hybrid. Take part solo or as a team, join a team looking for your profile, and KABAD instructors prepare the teams.",
+      "tests": "App testing",
+      "testsText": "Post a listing, say what to test, and a group of testers sends back structured feedback, with screenshots.",
+      "messaging": "Messages",
+      "messagingText": "Invitations, conversations and themed groups. Text, audio, images and files, to move forward together between sessions.",
+      "rise": "Africa Rise-Up",
+      "riseText": "Project channels by African challenge, live rooms and events, to build solutions that matter."
+    },
+    "phone": {
+      "mentoringTitle": "Pick a slot",
+      "mentorName": "{name} · Payments",
+      "month": "November",
+      "days": "M,T,W,T,F,S,S",
+      "slotsOf": "Slots on Thursday 12",
+      "timeZone": "Dakar time (GMT)",
+      "book": "Book 15:00",
+      "hackTitle": "Hackathons",
+      "all": "All",
+      "online": "Online",
+      "onsite": "On site",
+      "hybrid": "Hybrid",
+      "hack1": "Fintech for inclusion",
+      "hack1Meta": "Hybrid · Cotonou · 48 h",
+      "hack2": "Agritech Sahel",
+      "hack2Meta": "Online · 72 h · solo or team",
+      "inDays": "In {count} days",
+      "join": "Take part",
+      "testsTitle": "App testing",
+      "listings": "Listings",
+      "myTests": "My tests",
+      "app1": "Marché Vert",
+      "app1Meta": "Android · 15 min · 7 places",
+      "app2": "TontineApp",
+      "app2Meta": "Web · 20 min · 3 places",
+      "testIt": "Join the group",
+      "msgTitle": "Yao Agbeko",
+      "bubble1": "Have you seen the Cotonou hackathon challenge?",
+      "bubble2": "Yes! Shall we build a team? We need a data profile.",
+      "bubble3": "I’ll ask Fatou, she does Python.",
+      "voice": "Voice note · 0:12",
+      "riseTitle": "Africa Rise-Up",
+      "water": "Water",
+      "health": "Health",
+      "farming": "Farming",
+      "rise1": "Tracking drinking-water boreholes in the Sahel",
+      "rise1Meta": "{devs} devs · {countries} countries · live",
+      "rise2": "Real-time crop prices by SMS",
+      "rise2Meta": "Mobile, data · looking for devs",
+      "openChannel": "Open the channel"
+    },
+    "how": {
+      "kicker": "How it works",
+      "title": "Three steps, and you’re in.",
+      "lead": "No application, no waiting list. An account, a profile, and the community opens up.",
+      "s1Title": "Create your account",
+      "s1Text": "An e-mail, a password, and you confirm your address. Thirty seconds, timed.",
+      "free": "Free",
+      "noCard": "No card",
+      "s2Title": "Tell us where you are",
+      "s2Text": "Your country, your level, your tech, and what you’re here for: a mentor, hackathons, testers, Rise-Up projects.",
+      "aspirant": "Aspiring",
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "senior": "Senior",
+      "s3Title": "Join devs like you",
+      "s3Text": "We suggest devs to meet as soon as you sign up. And if you have experience, ask for your mentor badge: KABAD validates it.",
+      "africa": "Africa",
+      "diaspora": "Diaspora",
+      "cta": "Create my account",
+      "ctaNote": "Free · no card · 30 seconds"
+    },
+    "vision": {
+      "kicker": "Our vision",
+      "quote": "Create the next generation of African developers, <em>more productive and more skilled</em> in the age of AI.",
+      "text": "And through them, solve real problems in Africa, then showcase these solutions worldwide. A project born at the African Developers Cup, built by devs, for devs.",
+      "illustration": "An African developer raises a trophy, as a winner",
+      "p1Title": "Help devs grow",
+      "p1Text": "Mentoring, hackathons, mutual help and community feedback on their apps.",
+      "p2Title": "Solve real problems",
+      "p2Text": "Water, health, farming, education, energy, finance: African challenges, local solutions.",
+      "p3Title": "Shine worldwide",
+      "p3Text": "Solutions born on KABAD are made to be shown, carried and reused elsewhere."
+    },
+    "organize": {
+      "kicker": "Organise a hackathon",
+      "title": "Running a hackathon? Launch it on KABAD.",
+      "text": "For your company, your incubator, your community or your school: create your hackathon from your KABAD account, online, on site or hybrid, and recruit KABAD mentors as instructors to prepare the teams.",
+      "cta": "Create my account",
+      "p1": "A challenge, rules, prizes: you set the frame",
+      "p2": "Verified KABAD instructors, paid per mission",
+      "p3": "Registrations, teams and submissions handled in the app",
+      "p4": "Participants from the whole continent and the diaspora"
+    },
+    "faq": {
+      "kicker": "Frequently asked questions",
+      "title": "What we’re asked the most.",
+      "q1": "Is KABAD really free?",
+      "a1": "Yes. The account, mentoring, taking part in hackathons, app testing and Rise-Up projects are free for devs. Only the dev who runs a hackathon and recruits instructors pays for their mission.",
+      "q2": "Who can become a mentor?",
+      "a2": "A dev with at least three years of experience, who describes their expertise and shares a link to their work (GitHub, LinkedIn or portfolio). The KABAD team reviews every request and grants the badge, or explains why it declines.",
+      "q3": "How does a mentoring session work?",
+      "a3": "You pick a 30-minute slot in the mentor’s calendar and describe your problem. The mentor accepts, and you both get a video call link. No messages to exchange before, no commitment after.",
+      "q4": "Do I need to install an app?",
+      "a4": "KABAD is a web app: it opens in your browser and installs on your phone in one gesture, without going through an app store. It also works on tablet and computer.",
+      "q5": "I live in the diaspora, is it for me?",
+      "a5": "Yes, it’s even one of the starting points of the project: connecting devs on the continent with those living elsewhere, so experience flows both ways."
+    },
+    "final": {
+      "title": "Join the first devs on KABAD.",
+      "text": "An account, an e-mail, and you get mentoring, hackathons and Rise-Up projects. Have experience to share? Ask for your mentor badge, KABAD validates it.",
+      "cta": "Create my account",
+      "signIn": "Sign in"
+    },
+    "footer": {
+      "tagline": "By devs, for devs. An initiative born at the African Developers Cup.",
+      "label": "Footer",
+      "contact": "Contact",
+      "privacy": "Privacy",
+      "conditions": "Terms of use",
+      "question": "A question? Write to us at [contact e-mail]"
     },
     "video": {
       "overline": "Presentation",
@@ -36,8 +232,14 @@
       "metaTitle": "Presentation"
     },
     "scenes": {
-      "intro": { "title": "KABAD", "text": "By devs, for devs." },
-      "vision": { "title": "Let’s create the next generation of African devs", "text": "More productive and more skilled in the age of AI." },
+      "intro": {
+        "title": "KABAD",
+        "text": "By devs, for devs."
+      },
+      "vision": {
+        "title": "Let’s create the next generation of African devs",
+        "text": "More productive and more skilled in the age of AI."
+      },
       "mentoring": {
         "overline": "Mentoring",
         "title": "A verified mentor, 30 minutes, one precise problem.",
@@ -71,49 +273,10 @@
         "title": "Projects for Africa: water, health, farming…",
         "tags": "Water · Health · Farming · Education · Energy"
       },
-      "outro": { "title": "Join the community", "text": "By devs, for devs." }
-    },
-    "mission": {
-      "overline": "Our mission",
-      "title": "Three steps, one ambition",
-      "grow": { "title": "Help devs grow", "text": "Free mentoring, hackathons, mutual help and community feedback on your apps." },
-      "solve": { "title": "Solve real problems in Africa", "text": "Water, health, farming, education, energy, finance: solutions built here, for here." },
-      "showcase": { "title": "Showcase these solutions worldwide", "text": "Projects born on KABAD deserve to be seen beyond the continent." }
-    },
-    "features": {
-      "overline": "On KABAD",
-      "title": "Five spaces to move forward together",
-      "mentoring": { "name": "Mentoring", "text": "Book a free 30-minute session with a mentor badged by KABAD, on a precise problem. The Google Meet link arrives as soon as they accept." },
-      "hackathons": { "name": "Hackathons", "text": "Real hackathons created by organisations: online, on site or hybrid. Solo or as a team." },
-      "tests": { "name": "App testing", "text": "Publish your app, gather a group of testers and get precise feedback, with screenshots." },
-      "messaging": { "name": "Messages", "text": "Invite devs, exchange text, audio, images and files, create your groups." },
-      "rise": { "name": "Africa Rise-Up", "text": "Bring devs from several countries together around projects that answer real African challenges." }
-    },
-    "audience": {
-      "overline": "Who is it for?",
-      "title": "For every dev, and for those who help them grow",
-      "devsTitle": "Devs in Africa and the diaspora",
-      "devsText": "From the aspiring dev discovering code to the senior who designs systems and leads.",
-      "levels": "Aspiring · Beginner · Intermediate · Senior",
-      "orgsTitle": "Organisations",
-      "orgsText": "Companies, incubators and communities that run hackathons and want to meet talent."
-    },
-    "steps": {
-      "overline": "How it works",
-      "title": "Ready in a few minutes",
-      "one": "Create your account with your e-mail.",
-      "two": "Tell us your level and what you are looking for.",
-      "three": "Invite devs, book a mentor or join a hackathon."
-    },
-    "final": {
-      "title": "Join the community",
-      "text": "Mentoring, hackathons, app testing, messages and Africa Rise-Up, in one place.",
-      "join": "Join the community"
-    },
-    "footer": {
-      "conditions": "Terms of use",
-      "presentation": "Presentation",
-      "cadev": "Project presented at the 2026 African Developers Cup."
+      "outro": {
+        "title": "Join the community",
+        "text": "By devs, for devs."
+      }
     }
   }
 }

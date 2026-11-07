@@ -2,21 +2,217 @@
   "landing": {
     "meta": {
       "title": "KABAD · La plateforme d’échange des devs africains",
-      "description": "Mentorat gratuit, hackathons, tests d’apps, messagerie et projets Africa Rise-Up : la plateforme d’échange des devs d’Afrique et de la diaspora. Par les devs, pour les devs."
+      "description": "Mentorat gratuit, hackathons, tests d’apps, messagerie et projets Africa Rise-Up : KABAD rassemble les devs d’Afrique et de la diaspora. Par les devs, pour les devs."
     },
+    "skip": "Aller au contenu",
     "nav": {
-      "label": "Navigation principale",
+      "label": "Sections",
+      "home": "KABAD, accueil",
+      "why": "Pourquoi KABAD",
+      "features": "Fonctionnalités",
+      "how": "Comment ça marche",
+      "organize": "Organiser",
+      "faq": "FAQ",
       "signIn": "Se connecter",
-      "join": "Rejoindre"
+      "signUp": "Créer mon compte",
+      "signUpShort": "S’inscrire"
     },
     "hero": {
-      "kicker": "La plateforme d’échange des devs africains",
-      "titleStart": "Créons la prochaine génération de ",
-      "titleHighlight": "devs africains",
-      "subtitle": "Plus productifs et plus compétents à l’ère de l’IA.",
-      "join": "Rejoindre la communauté",
-      "watch": "Voir la présentation",
-      "motto": "Par les devs, pour les devs."
+      "eyebrow": "Plateforme ouverte aux devs d’Afrique et de la diaspora",
+      "l1": "Ici se crée",
+      "l2": "la génération",
+      "l3": "de devs africains",
+      "l4": "qui impactent",
+      "l5": "<em>l’Afrique et le monde</em>.",
+      "lead": "KABAD rassemble les développeurs africains et de la diaspora pour apporter des <b>solutions concrètes aux défis du continent</b> : du mentorat pour transmettre l’expérience, des hackathons pour dynamiser la communauté, des projets Rise-Up pour agir sur le terrain.",
+      "cta": "Créer mon compte",
+      "discover": "Découvrir la plateforme",
+      "note": "Gratuit. Inscription en quelques secondes, avec ton e-mail.",
+      "preview": "Aperçu de l’application",
+      "mentoringKicker": "Ta séance de mentorat",
+      "confirmed": "Confirmée",
+      "mentoringTitle": "Interconnecter des API de mobile money",
+      "mentoringMeta": "avec {name} · jeudi, 15 h · 30 min",
+      "joinCall": "Rejoindre la visio",
+      "riseKicker": "Africa Rise-Up",
+      "live": "En direct",
+      "riseTitle": "Suivre les forages d’eau potable au Sahel",
+      "riseMeta": "{devs} devs · {countries} pays",
+      "joinRoom": "Rejoindre le salon",
+      "hackKicker": "Hackathon · hybride · Cotonou",
+      "hackTitle": "Fintech pour l’inclusion",
+      "hackMeta": "48 h · équipes de 2 à 5 · instructeurs KABAD",
+      "in": "DANS",
+      "days": "JOURS"
+    },
+    "band": {
+      "label": "Une initiative issue de la Coupe d’Afrique des développeurs",
+      "pause": "Mettre en pause le défilement",
+      "resume": "Reprendre le défilement",
+      "s1": "Une initiative issue de la Coupe d’Afrique des développeurs",
+      "s2": "Par les devs, pour les devs",
+      "s3": "Mentorat · Hackathons · Tests d’apps · Africa Rise-Up"
+    },
+    "why": {
+      "kicker": "Pourquoi rejoindre KABAD",
+      "title": "Une communauté qui connecte, transmet et agit.",
+      "lead": "Trois choses que tu ne trouves pas réunies ailleurs : des pairs qui te ressemblent, des mentors vérifiés qui te font gagner des mois, et des projets réels qui changent la vie de vrais gens.",
+      "peersTitle": "Des pairs, d’Abidjan à Montréal",
+      "peersText": "KABAD regroupe les développeurs du continent et ceux de la diaspora. Tu rencontres des devs qui partagent tes contraintes, tes technos et tes ambitions, et tu construis ton réseau dès l’inscription.",
+      "hub": "Afrique + diaspora",
+      "hubText": "Un seul réseau, des deux côtés de l’océan",
+      "city1": "Lomé · Cotonou",
+      "city1Text": "Hackathons hybrides",
+      "city2": "Dakar · Abidjan",
+      "city2Text": "Mentors fintech et mobile",
+      "city3": "Lagos · Nairobi",
+      "city3Text": "Backend, data, IA",
+      "city4": "Paris · Montréal",
+      "city4Text": "La diaspora qui transmet",
+      "mentorTitle": "Du mentorat qui va droit au but",
+      "mentorText": "Tu bloques sur un problème précis ? Tu choisis un mentor vérifié par KABAD, un créneau dans son calendrier, et tu décris ton problème. Trente minutes en visio, gratuites, pour repartir débloqué.",
+      "step1": "Choisis un mentor vérifié dans ton domaine",
+      "step2": "Réserve un créneau libre, directement",
+      "step3": "Décris ton problème, le mentor accepte",
+      "step4": "Séance gratuite de 30 min, lien visio envoyé",
+      "riseTitle": "De l’impact, au cœur de l’Afrique",
+      "riseText": "Avec Africa Rise-Up, des devs de plusieurs pays s’unissent autour d’un défi réel : l’eau, la santé, l’agriculture, l’éducation. Ensemble, ils construisent une solution technologique, pratique, qui sert d’abord ici et qui peut être valorisée dans le monde.",
+      "project1": "Suivre les forages d’eau potable au Sahel",
+      "project2": "Dossier médical partagé pour les dispensaires",
+      "project3": "Prix des récoltes en temps réel par SMS",
+      "project4": "Lance ton propre canal de projet"
+    },
+    "features": {
+      "kicker": "Les fonctionnalités",
+      "title": "Tout ce qu’il faut pour progresser, dans une seule app.",
+      "lead": "Une application web installable sur ton téléphone, pensée d’abord pour le mobile. Sélectionne une fonctionnalité pour la voir.",
+      "label": "Fonctionnalités",
+      "screen": "Écran · {name}",
+      "installable": "Installable sur ton téléphone",
+      "mobileFirst": "Pensée mobile d’abord",
+      "mentoring": "Mentorat",
+      "mentoringText": "Des séances gratuites de 30 min avec des mentors vérifiés. Tu réserves un créneau comme sur un agenda, le mentor accepte, la visio est prête.",
+      "hackathons": "Hackathons",
+      "hackathonsText": "En ligne, en présentiel ou hybride. Tu participes seul ou en équipe, tu rejoins une équipe qui cherche ton profil, et des instructeurs KABAD préparent les équipes.",
+      "tests": "Tests d’apps",
+      "testsText": "Publie une annonce, précise ce qu’il faut tester, et un groupe de testeurs te renvoie des retours structurés, captures à l’appui.",
+      "messaging": "Messagerie",
+      "messagingText": "Invitations, conversations et groupes à thème. Texte, audio, images et fichiers, pour avancer ensemble entre deux séances.",
+      "rise": "Africa Rise-Up",
+      "riseText": "Des canaux de projets par défi africain, des salons en direct et des événements, pour construire des solutions qui comptent."
+    },
+    "phone": {
+      "mentoringTitle": "Choisir un créneau",
+      "mentorName": "{name} · Paiements",
+      "month": "Novembre",
+      "days": "L,M,M,J,V,S,D",
+      "slotsOf": "Créneaux du jeudi 12",
+      "timeZone": "Heure de Dakar (GMT)",
+      "book": "Réserver 15:00",
+      "hackTitle": "Hackathons",
+      "all": "Tous",
+      "online": "En ligne",
+      "onsite": "Présentiel",
+      "hybrid": "Hybride",
+      "hack1": "Fintech pour l’inclusion",
+      "hack1Meta": "Hybride · Cotonou · 48 h",
+      "hack2": "Agritech Sahel",
+      "hack2Meta": "En ligne · 72 h · solo ou équipe",
+      "inDays": "Dans {count} jours",
+      "join": "Participer",
+      "testsTitle": "Tests d’apps",
+      "listings": "Annonces",
+      "myTests": "Mes tests",
+      "app1": "Marché Vert",
+      "app1Meta": "Android · 15 min · 7 places",
+      "app2": "TontineApp",
+      "app2Meta": "Web · 20 min · 3 places",
+      "testIt": "Rejoindre le groupe",
+      "msgTitle": "Yao Agbeko",
+      "bubble1": "Tu as vu le défi du hackathon de Cotonou ?",
+      "bubble2": "Oui ! On monte une équipe ? Il nous manque un profil data.",
+      "bubble3": "Je demande à Fatou, elle fait du Python.",
+      "voice": "Note vocale · 0:12",
+      "riseTitle": "Africa Rise-Up",
+      "water": "Eau",
+      "health": "Santé",
+      "farming": "Agriculture",
+      "rise1": "Suivre les forages d’eau potable au Sahel",
+      "rise1Meta": "{devs} devs · {countries} pays · en direct",
+      "rise2": "Prix des récoltes en temps réel par SMS",
+      "rise2Meta": "Mobile, data · recherche des devs",
+      "openChannel": "Ouvrir le canal"
+    },
+    "how": {
+      "kicker": "Comment ça marche",
+      "title": "Trois étapes, et tu es dedans.",
+      "lead": "Pas de candidature, pas de file d’attente. Un compte, un profil, et la communauté s’ouvre.",
+      "s1Title": "Crée ton compte",
+      "s1Text": "Un e-mail, un mot de passe, et tu confirmes ton adresse. Trente secondes, montre en main.",
+      "free": "Gratuit",
+      "noCard": "Sans carte",
+      "s2Title": "Dis-nous où tu en es",
+      "s2Text": "Ton pays, ton niveau, tes technos, et ce que tu viens chercher : un mentor, des hackathons, des testeurs, des projets Rise-Up.",
+      "aspirant": "Aspirant",
+      "beginner": "Débutant",
+      "intermediate": "Intermédiaire",
+      "senior": "Senior",
+      "s3Title": "Rejoins des devs qui te ressemblent",
+      "s3Text": "On te propose des devs à rencontrer dès l’inscription. Et si tu as de l’expérience, demande ton badge mentor : KABAD le valide.",
+      "africa": "Afrique",
+      "diaspora": "Diaspora",
+      "cta": "Créer mon compte",
+      "ctaNote": "Gratuit · sans carte · 30 secondes"
+    },
+    "vision": {
+      "kicker": "Notre vision",
+      "quote": "Créer la prochaine génération de développeurs africains, <em>plus productifs et plus compétents</em> à l’ère de l’IA.",
+      "text": "Et à travers eux, résoudre de vrais problèmes de l’Afrique, puis valoriser ces solutions à l’international. Un projet né de la Coupe d’Afrique des développeurs, construit par des devs, pour des devs.",
+      "illustration": "Un développeur africain lève un trophée, en vainqueur",
+      "p1Title": "Faire grandir les devs",
+      "p1Text": "Mentorat, hackathons, entraide et retours de la communauté sur leurs apps.",
+      "p2Title": "Résoudre de vrais problèmes",
+      "p2Text": "Eau, santé, agriculture, éducation, énergie, finance : des défis africains, des solutions d’ici.",
+      "p3Title": "Rayonner à l’international",
+      "p3Text": "Les solutions nées sur KABAD sont faites pour être montrées, portées et reprises ailleurs."
+    },
+    "organize": {
+      "kicker": "Organiser un hackathon",
+      "title": "Tu organises un hackathon ? Lance-le sur KABAD.",
+      "text": "Pour ton entreprise, ton incubateur, ta communauté ou ton école : crée ton hackathon depuis ton compte KABAD, en ligne, en présentiel ou hybride, et recrute des mentors KABAD comme instructeurs pour préparer les équipes.",
+      "cta": "Créer mon compte",
+      "p1": "Un défi, un règlement, des prix : c’est toi qui fixes le cadre",
+      "p2": "Des instructeurs KABAD vérifiés, rémunérés par mission",
+      "p3": "Inscriptions, équipes et soumissions gérées dans l’app",
+      "p4": "Des participants de tout le continent et de la diaspora"
+    },
+    "faq": {
+      "kicker": "Questions fréquentes",
+      "title": "Ce qu’on nous demande le plus.",
+      "q1": "KABAD est-il vraiment gratuit ?",
+      "a1": "Oui. Le compte, le mentorat, la participation aux hackathons, les tests d’apps et les projets Rise-Up sont gratuits pour les devs. Seul le dev qui organise un hackathon et recrute des instructeurs rémunère leur mission.",
+      "q2": "Qui peut devenir mentor ?",
+      "a2": "Un dev avec au moins trois ans d’expérience, qui décrit son expertise et partage un lien vers son travail (GitHub, LinkedIn ou portfolio). L’équipe KABAD examine chaque demande et accorde le badge, ou explique pourquoi elle le refuse.",
+      "q3": "Comment se passe une séance de mentorat ?",
+      "a3": "Tu choisis un créneau de 30 minutes dans le calendrier du mentor et tu décris ton problème. Le mentor accepte, et vous recevez tous les deux un lien de visioconférence. Pas de messages à échanger avant, pas d’engagement après.",
+      "q4": "Faut-il installer une application ?",
+      "a4": "KABAD est une application web : elle s’ouvre dans ton navigateur et s’installe sur ton téléphone en un geste, sans passer par une boutique d’applications. Elle fonctionne aussi sur tablette et ordinateur.",
+      "q5": "Je suis dans la diaspora, est-ce pour moi ?",
+      "a5": "Oui, c’est même l’un des points de départ du projet : connecter les devs du continent et ceux qui vivent ailleurs, pour que l’expérience circule dans les deux sens."
+    },
+    "final": {
+      "title": "Rejoins les premiers devs de KABAD.",
+      "text": "Un compte, un e-mail, et tu accèdes au mentorat, aux hackathons et aux projets Rise-Up. Tu as de l’expérience à partager ? Demande ton badge mentor, KABAD le valide.",
+      "cta": "Créer mon compte",
+      "signIn": "Se connecter"
+    },
+    "footer": {
+      "tagline": "Par les devs, pour les devs. Une initiative issue de la Coupe d’Afrique des développeurs.",
+      "label": "Pied de page",
+      "contact": "Contact",
+      "privacy": "Confidentialité",
+      "conditions": "Conditions d’utilisation",
+      "question": "Une question ? Écris-nous à [e-mail de contact]"
     },
     "video": {
       "overline": "Présentation",
@@ -36,8 +232,14 @@
       "metaTitle": "Présentation"
     },
     "scenes": {
-      "intro": { "title": "KABAD", "text": "Par les devs, pour les devs." },
-      "vision": { "title": "Créons la prochaine génération de devs africains", "text": "Plus productifs et plus compétents à l’ère de l’IA." },
+      "intro": {
+        "title": "KABAD",
+        "text": "Par les devs, pour les devs."
+      },
+      "vision": {
+        "title": "Créons la prochaine génération de devs africains",
+        "text": "Plus productifs et plus compétents à l’ère de l’IA."
+      },
       "mentoring": {
         "overline": "Mentorat",
         "title": "Un mentor vérifié, 30 minutes, un problème précis.",
@@ -71,49 +273,10 @@
         "title": "Des projets pour l’Afrique : eau, santé, agriculture…",
         "tags": "Eau · Santé · Agriculture · Éducation · Énergie"
       },
-      "outro": { "title": "Rejoins la communauté", "text": "Par les devs, pour les devs." }
-    },
-    "mission": {
-      "overline": "Notre mission",
-      "title": "Trois temps, une même ambition",
-      "grow": { "title": "Faire grandir les devs", "text": "Mentorat gratuit, hackathons, entraide et retours de la communauté sur tes apps." },
-      "solve": { "title": "Résoudre de vrais problèmes de l’Afrique", "text": "Eau, santé, agriculture, éducation, énergie, finance : des solutions construites ici, pour ici." },
-      "showcase": { "title": "Valoriser ces solutions à l’international", "text": "Les projets nés sur KABAD méritent d’être vus au-delà du continent." }
-    },
-    "features": {
-      "overline": "Sur KABAD",
-      "title": "Cinq espaces pour avancer ensemble",
-      "mentoring": { "name": "Mentorat", "text": "Réserve une séance gratuite de 30 minutes avec un mentor badgé par KABAD, sur un problème précis. Le lien Google Meet arrive dès qu’il accepte." },
-      "hackathons": { "name": "Hackathons", "text": "De vrais hackathons créés par des organisations : en ligne, en présentiel ou hybrides. Seul ou en équipe." },
-      "tests": { "name": "Tests d’apps", "text": "Publie ton app, réunis un groupe de testeurs et reçois des retours précis, captures à l’appui." },
-      "messaging": { "name": "Messagerie", "text": "Invite des devs, échange en texte, en audio, en images et en fichiers, crée tes groupes." },
-      "rise": { "name": "Africa Rise-Up", "text": "Unis des devs de plusieurs pays autour de projets qui répondent à de vrais défis africains." }
-    },
-    "audience": {
-      "overline": "Pour qui ?",
-      "title": "Pour tous les devs, et pour ceux qui les font grandir",
-      "devsTitle": "Les devs d’Afrique et de la diaspora",
-      "devsText": "De l’aspirant qui découvre le code au senior qui conçoit des systèmes et encadre.",
-      "levels": "Aspirant · Débutant · Intermédiaire · Senior",
-      "orgsTitle": "Les organisations",
-      "orgsText": "Entreprises, incubateurs et communautés qui montent des hackathons et veulent rencontrer des talents."
-    },
-    "steps": {
-      "overline": "Comment ça marche",
-      "title": "Prêt en quelques minutes",
-      "one": "Crée ton compte avec ton e-mail.",
-      "two": "Dis-nous ton niveau et ce que tu viens chercher.",
-      "three": "Invite des devs, réserve un mentor ou rejoins un hackathon."
-    },
-    "final": {
-      "title": "Rejoins la communauté",
-      "text": "Mentorat, hackathons, tests d’apps, messagerie et Africa Rise-Up, au même endroit.",
-      "join": "Rejoindre la communauté"
-    },
-    "footer": {
-      "conditions": "Conditions d’utilisation",
-      "presentation": "Présentation",
-      "cadev": "Projet présenté à la Coupe d’Afrique des Développeurs 2026."
+      "outro": {
+        "title": "Rejoins la communauté",
+        "text": "Par les devs, pour les devs."
+      }
     }
   }
 }

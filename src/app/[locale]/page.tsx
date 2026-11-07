@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { PresentationLauncher } from "@/components/features/landing/PresentationLauncher";
+import type { ReactNode } from "react";
+import { Champion } from "@/components/features/landing/Champion";
+import { CodeBars } from "@/components/features/landing/CodeBars";
+import { landingSample } from "@/components/features/landing/content";
+import { FeatureTabs } from "@/components/features/landing/FeatureTabs";
+import { LandingEffects } from "@/components/features/landing/LandingEffects";
+import { LpIcon, LpLogo, type LpIconName } from "@/components/features/landing/LpIcon";
+import { Marquee } from "@/components/features/landing/Marquee";
 import { LanguageSwitcher } from "@/components/shell/LanguageSwitcher";
-import { Band } from "@/components/ui/Band";
-import { Icon, type IconName } from "@/components/ui/Icon";
-import { LogoMark } from "@/components/ui/Logo";
 import { Link } from "@/i18n/navigation";
-import { cn } from "@/lib/cn";
+import "@/components/features/landing/landing.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("landing.meta");
@@ -17,164 +21,421 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/** White action with the offset ink shadow, the one action that stands out on the indigo bands. */
-const joinButton =
-  "inline-flex min-h-13.5 items-center justify-center gap-2 rounded-action border-2 border-[var(--ink)] bg-white px-6 font-extrabold text-[var(--indigo)] no-underline shadow-[4px_4px_0_var(--ink)]";
-
-const features: Array<{ key: "mentoring" | "hackathons" | "tests" | "messaging" | "rise"; icon: IconName; tone: string }> = [
-  { key: "mentoring", icon: "users", tone: "bg-[var(--indigo)] text-white" },
-  { key: "hackathons", icon: "trophy", tone: "bg-[var(--ink)] text-white" },
-  { key: "tests", icon: "screen", tone: "bg-brand-soft text-brand-text" },
-  { key: "messaging", icon: "message", tone: "bg-brand-soft text-brand-text" },
-  { key: "rise", icon: "rise", tone: "bg-[var(--maize)] text-[var(--maize-deep)]" },
-];
+const Arrow = () => <LpIcon name="arrow" className="ar" strokeWidth={2.4} />;
 
 /**
- * The public landing page of KABAD: the vision, the mission, the five spaces and the presentation.
- * « Rejoindre la communauté » leads to the welcome screen (A1), where one signs up or signs in.
- * Server-rendered and indexable; only the presentation's play button runs in the browser.
+ * Landing page publique de KABAD (maquette L1). Rendue sur le serveur, statique et indexable ;
+ * seuls les effets (barres animées, apparitions, onglets, bande défilante) tournent dans le navigateur.
+ * Un membre déjà connecté va directement à son accueil (src/proxy.ts).
  */
 export default async function Landing() {
   const t = await getTranslations("landing");
+  const s = landingSample;
+  const em = (c: ReactNode) => <em>{c}</em>;
   return (
-    <div className="flex min-h-dvh flex-col bg-bg text-ink">
-      <header className="relative overflow-hidden bg-header text-on-header">
-        <nav aria-label={t("nav.label")} className="relative mx-auto flex w-full max-w-[1100px] items-center gap-2.5 px-4 pt-[max(16px,env(safe-area-inset-top,0px))] lg:px-10">
-          <LogoMark size={34} inverse />
-          <span className="flex-1 font-display text-lg font-extrabold tracking-[0.02em]">KABAD</span>
-          <LanguageSwitcher compact />
-          <Link href="/connexion" className="inline-flex min-h-11 items-center px-2 text-sm font-extrabold text-on-header no-underline">
-            {t("nav.signIn")}
-          </Link>
-        </nav>
-
-        <div className="relative mx-auto grid w-full max-w-[1100px] gap-5 px-4 pt-12 pb-14 lg:px-10 lg:pt-20 lg:pb-24">
-          <p className="text-xs font-extrabold tracking-[0.1em] text-on-header-muted uppercase">{t("hero.kicker")}</p>
-          <h1 className="max-w-[18ch] font-display text-[30px] leading-[36px] font-extrabold uppercase lg:text-6xl lg:leading-[68px]">
-            {t("hero.titleStart")}
-            <span className="shadow-[inset_0_-10px_0_var(--maize)]">{t("hero.titleHighlight")}</span>
-          </h1>
-          <p className="max-w-[34ch] text-[17px] leading-[25px] font-bold lg:text-xl">{t("hero.subtitle")}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <Link href="/bienvenue" className={joinButton}>
-              {t("hero.join")}
-              <Icon name="chevron" size={18} />
+    <div className="lp" id="lp">
+      <LandingEffects />
+      <a className="skip" href="#pourquoi">
+        {t("skip")}
+      </a>
+      <header className="nav">
+        <div className="wrap">
+          <a className="logo" href="#top" aria-label={t("nav.home")}>
+            <LpLogo />
+            KABAD
+          </a>
+          <nav className="nav-links" aria-label={t("nav.label")}>
+            <a href="#pourquoi">{t("nav.why")}</a>
+            <a href="#fonctionnalites">{t("nav.features")}</a>
+            <a href="#comment">{t("nav.how")}</a>
+            <a href="#organiser">{t("nav.organize")}</a>
+          </nav>
+          <div className="nav-cta">
+            <span className="nav-lang">
+              <LanguageSwitcher compact />
+            </span>
+            <Link className="btn btn--ghost" href="/connexion">
+              {t("nav.signIn")}
             </Link>
-            <a href="#presentation" className="inline-flex min-h-13.5 items-center gap-2 px-3 font-extrabold text-on-header underline-offset-4 hover:underline">
-              <Icon name="play" size={18} />
-              {t("hero.watch")}
-            </a>
+            <Link className="btn btn--sun" href="/inscription">
+              <span className="l-long">{t("nav.signUp")}</span>
+              <span className="l-short">{t("nav.signUpShort")}</span>
+            </Link>
           </div>
-          <p className="text-sm font-bold text-on-header-muted">{t("hero.motto")}</p>
         </div>
-        <Band className="h-4" />
       </header>
 
-      <main className="mx-auto grid w-full max-w-[1100px] gap-16 px-4 py-14 lg:gap-24 lg:px-10 lg:py-20">
-        <section id="presentation" aria-labelledby="presentation-title" className="grid scroll-mt-6 gap-5 lg:grid-cols-[1fr_1.6fr] lg:items-center lg:gap-12">
-          <Heading id="presentation-title" overline={t("video.overline")} title={t("video.title")}>
-            <p className="text-muted">{t("video.lead")}</p>
-            <Link href="/presentation" className="justify-self-start text-sm font-extrabold text-brand-text">
-              {t("video.fullScreen")}
-            </Link>
-          </Heading>
-          <PresentationLauncher />
-        </section>
-
-        <section aria-labelledby="mission-title" className="grid gap-6">
-          <Heading id="mission-title" overline={t("mission.overline")} title={t("mission.title")} />
-          <ol className="m-0 grid list-none gap-4 p-0 md:grid-cols-3">
-            {(["grow", "solve", "showcase"] as const).map((k, i) => (
-              <li key={k} className="grid content-start gap-2 rounded-lg border-2 border-line-strong bg-raised p-4">
-                <span className="font-display text-3xl font-extrabold text-brand-text tabular">{i + 1}</span>
-                <h3 className="font-display text-md font-extrabold uppercase">{t(`mission.${k}.title`)}</h3>
-                <p className="text-sm text-muted">{t(`mission.${k}.text`)}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section aria-labelledby="features-title" className="grid gap-6">
-          <Heading id="features-title" overline={t("features.overline")} title={t("features.title")} />
-          <ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => (
-              <li key={f.key} className={cn("grid content-start gap-3 rounded-lg border-2 border-line-strong bg-raised p-4", f.key === "rise" && "sm:col-span-2 lg:col-span-1")}>
-                <span className={cn("grid size-11 place-items-center rounded-md", f.tone)} aria-hidden="true">
-                  <Icon name={f.icon} />
+      <main id="top">
+        <section className="hero" id="hero" aria-labelledby="titre">
+          <CodeBars />
+          <div className="wrap">
+            <div>
+              <p className="eyebrow">
+                <i />
+                {t("hero.eyebrow")}
+              </p>
+              <h1 className="h1" id="titre">
+                {(["l1", "l2", "l3", "l4"] as const).map((k) => (
+                  <span key={k} className="ln">
+                    <span>{t(`hero.${k}`)}</span>
+                  </span>
+                ))}
+                <span className="ln">
+                  <span>{t.rich("hero.l5", { em })}</span>
                 </span>
-                <h3 className="font-display text-md font-extrabold uppercase">{t(`features.${f.key}.name`)}</h3>
-                <p className="text-sm text-muted">{t(`features.${f.key}.text`)}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
+              </h1>
+              <p className="lead">{t.rich("hero.lead", { b: (c) => <b>{c}</b> })}</p>
+              <div className="hero-cta">
+                <Link className="btn btn--sun" id="cta-main" href="/inscription">
+                  {t("hero.cta")}
+                  <Arrow />
+                </Link>
+                <a className="btn btn--ghost" href="#fonctionnalites">
+                  {t("hero.discover")}
+                </a>
+              </div>
+              <p className="hero-note">
+                <LpIcon name="check" />
+                {t("hero.note")}
+              </p>
+            </div>
 
-        <section aria-labelledby="audience-title" className="grid gap-6">
-          <Heading id="audience-title" overline={t("audience.overline")} title={t("audience.title")} />
-          <div className="grid gap-4 md:grid-cols-2">
-            <article className="grid content-start gap-2 rounded-lg border-2 border-line-strong bg-raised p-4">
-              <h3 className="font-display text-md font-extrabold uppercase">{t("audience.devsTitle")}</h3>
-              <p className="text-sm text-muted">{t("audience.devsText")}</p>
-              <p className="text-sm font-extrabold text-brand-text">{t("audience.levels")}</p>
-            </article>
-            <article className="grid content-start gap-2 rounded-lg border-2 border-line-strong bg-raised p-4">
-              <h3 className="font-display text-md font-extrabold uppercase">{t("audience.orgsTitle")}</h3>
-              <p className="text-sm text-muted">{t("audience.orgsText")}</p>
-            </article>
+            <div className="stack" role="group" aria-label={t("hero.preview")}>
+              <article className="card c1" data-depth="18">
+                <div className="k">
+                  {t("hero.mentoringKicker")} <span className="pill ok">{t("hero.confirmed")}</span>
+                </div>
+                <h3>{t("hero.mentoringTitle")}</h3>
+                <p className="m">
+                  <span className="av">{s.mentor.initials}</span>
+                  {t("hero.mentoringMeta", { name: s.mentor.name })}
+                </p>
+                <span className="cta">
+                  {t("hero.joinCall")}
+                  <LpIcon name="arrow" strokeWidth={2.4} />
+                </span>
+              </article>
+              <article className="card c2 rise-card" data-depth="30">
+                <div className="k rise">
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <LpIcon name="sprout" className="sprout" />
+                    {t("hero.riseKicker")}
+                  </span>
+                  <span className="pill live">
+                    <i />
+                    {t("hero.live")}
+                  </span>
+                </div>
+                <h3>{t("hero.riseTitle")}</h3>
+                <p className="m">
+                  {s.rise.members.map((m, i) => (
+                    <span key={m} className="av" style={[{ background: "#0D1020", color: "#fff" }, { background: "#283588", color: "#fff" }, { background: "#fff", color: "#0D1020" }][i]}>
+                      {m}
+                    </span>
+                  ))}
+                  {t("hero.riseMeta", { devs: s.rise.devs, countries: s.rise.countries })}
+                </p>
+                <span className="cta" style={{ color: "#2E2203" }}>
+                  {t("hero.joinRoom")}
+                  <LpIcon name="arrow" strokeWidth={2.4} />
+                </span>
+              </article>
+              <article className="card c3 hack-card" data-depth="12">
+                <div className="k hack" style={{ color: "#B6BACD" }}>
+                  {t("hero.hackKicker")}
+                </div>
+                <h3>{t("hero.hackTitle")}</h3>
+                <p className="m">{t("hero.hackMeta")}</p>
+                <p className="m" style={{ marginTop: 12 }}>
+                  <span className="big">
+                    <small>{t("hero.in")}</small>
+                    {s.hackathon.days}
+                    <small>{t("hero.days")}</small>
+                  </span>
+                </p>
+              </article>
+            </div>
           </div>
         </section>
 
-        <section aria-labelledby="steps-title" className="grid gap-6">
-          <Heading id="steps-title" overline={t("steps.overline")} title={t("steps.title")} />
-          <ol className="m-0 grid list-none gap-3 p-0 md:grid-cols-3">
-            {(["one", "two", "three"] as const).map((k, i) => (
-              <li key={k} className="flex items-center gap-3 rounded-lg border-2 border-line-strong bg-raised p-4">
-                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-sm font-extrabold text-raised">{i + 1}</span>
-                <span className="font-bold">{t(`steps.${k}`)}</span>
-              </li>
-            ))}
-          </ol>
+        <Marquee />
+
+        <section className="sec" id="pourquoi" aria-labelledby="t-pourquoi">
+          <div className="wrap">
+            <SectionHead id="t-pourquoi" kicker={t("why.kicker")} title={t("why.title")} lead={t("why.lead")} />
+            <div className="why">
+              <div className="why-row rv">
+                <div>
+                  <div className="ico peers">
+                    <LpIcon name="people" />
+                  </div>
+                  <h3>{t("why.peersTitle")}</h3>
+                  <p>{t("why.peersText")}</p>
+                </div>
+                <div className="map rv-stagger">
+                  <div className="city hub">
+                    <b>{t("why.hub")}</b>
+                    <span>{t("why.hubText")}</span>
+                  </div>
+                  {([1, 2, 3, 4] as const).map((n) => (
+                    <div key={n} className="city">
+                      <b>{t(`why.city${n}`)}</b>
+                      <span>{t(`why.city${n}Text`)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="why-row rv">
+                <div>
+                  <div className="ico mentor">
+                    <LpIcon name="cap" />
+                  </div>
+                  <h3>{t("why.mentorTitle")}</h3>
+                  <p>{t("why.mentorText")}</p>
+                </div>
+                <div className="side rv-stagger">
+                  {([1, 2, 3] as const).map((n) => (
+                    <div key={n} className="chip">
+                      <b>{n}</b>
+                      {t(`why.step${n}`)}
+                    </div>
+                  ))}
+                  <div className="chip palm">
+                    <b>
+                      <LpIcon name="check" />
+                    </b>
+                    {t("why.step4")}
+                  </div>
+                </div>
+              </div>
+
+              <div className="why-row rv">
+                <div>
+                  <div className="ico rise">
+                    <LpIcon name="sprout" />
+                  </div>
+                  <h3>{t("why.riseTitle")}</h3>
+                  <p>{t("why.riseText")}</p>
+                </div>
+                <div className="side rv-stagger">
+                  {(
+                    [
+                      ["project1", "water", "#DFE3F7", "#283588"],
+                      ["project2", "health", "#F7D9D4", "#A3281B"],
+                      ["project3", "crop", "#DDF2E7", "#13724B"],
+                      ["project4", "plus", "#0D1020", "#F2B705"],
+                    ] as Array<["project1" | "project2" | "project3" | "project4", LpIconName, string, string]>
+                  ).map(([k, icon, bg, fg]) => (
+                    <div key={k} className="chip">
+                      <b style={{ background: bg, color: fg }}>
+                        <LpIcon name={icon} />
+                      </b>
+                      {t(`why.${k}`)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="sec feat" id="fonctionnalites" aria-labelledby="t-feat">
+          <div className="motif" aria-hidden="true">
+            <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <pattern id="pm" width="240" height="68" patternUnits="userSpaceOnUse">
+                  <g fill="#283588" opacity=".16">
+                    <rect x="0" y="12" width="46" height="8" rx="4" />
+                    <rect x="60" y="12" width="90" height="8" rx="4" />
+                    <rect x="164" y="12" width="40" height="8" rx="4" />
+                    <rect x="24" y="46" width="70" height="8" rx="4" />
+                    <rect x="110" y="46" width="30" height="8" rx="4" />
+                    <rect x="156" y="46" width="76" height="8" rx="4" />
+                  </g>
+                  <g fill="#F2B705" opacity=".35">
+                    <rect x="214" y="12" width="20" height="8" rx="4" />
+                    <rect x="0" y="46" width="14" height="8" rx="4" />
+                  </g>
+                </pattern>
+              </defs>
+              <rect width="1440" height="900" fill="url(#pm)" />
+            </svg>
+          </div>
+          <div className="wrap">
+            <SectionHead id="t-feat" kicker={t("features.kicker")} title={t("features.title")} lead={t("features.lead")} />
+            <FeatureTabs />
+          </div>
+        </section>
+
+        <section className="sec" id="comment" aria-labelledby="t-how" style={{ paddingBlock: 88 }}>
+          <div className="wrap">
+            <SectionHead id="t-how" kicker={t("how.kicker")} title={t("how.title")} lead={t("how.lead")} />
+            <div className="how rv-stagger">
+              <Step n={1} title={t("how.s1Title")} text={t("how.s1Text")} tags={[t("how.free"), t("how.noCard")]} />
+              <Step n={2} title={t("how.s2Title")} text={t("how.s2Text")} tags={[t("how.aspirant"), t("how.beginner"), t("how.intermediate"), t("how.senior")]} />
+              <Step n={3} title={t("how.s3Title")} text={t("how.s3Text")} tags={[t("how.africa"), t("how.diaspora")]} last />
+            </div>
+            <div className="how-cta rv">
+              <Link className="btn btn--indigo" href="/inscription">
+                {t("how.cta")}
+                <Arrow />
+              </Link>
+              <span>{t("how.ctaNote")}</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="sec vision" id="vision" aria-labelledby="t-vision">
+          <div className="wrap">
+            <div className="rv">
+              <p className="kick">{t("vision.kicker")}</p>
+              <h2 className="sr">{t("vision.kicker")}</h2>
+              <blockquote id="t-vision">{t.rich("vision.quote", { em })}</blockquote>
+              <p>{t("vision.text")}</p>
+            </div>
+            <Champion label={t("vision.illustration")} />
+          </div>
+          <div className="wrap">
+            <div className="pillars rv-stagger">
+              {([1, 2, 3] as const).map((n) => (
+                <div key={n} className="pillar">
+                  <span className="n" />
+                  <b>{t(`vision.p${n}Title`)}</b>
+                  <span>{t(`vision.p${n}Text`)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="sec" id="organiser" aria-labelledby="t-org" style={{ paddingBlock: "40px 96px" }}>
+          <div className="wrap">
+            <div className="org rv">
+              <CodeBars />
+              <div>
+                <p className="kick" style={{ color: "var(--mais)" }}>
+                  {t("organize.kicker")}
+                </p>
+                <h2 id="t-org">{t("organize.title")}</h2>
+                <p>{t("organize.text")}</p>
+                <div className="hero-cta">
+                  <Link className="btn btn--sun" href="/inscription">
+                    {t("organize.cta")}
+                    <Arrow />
+                  </Link>
+                </div>
+              </div>
+              <div className="pts rv-stagger">
+                {(
+                  [
+                    ["p1", "trophy"],
+                    ["p2", "people"],
+                    ["p3", "calendar"],
+                    ["p4", "globe"],
+                  ] as const
+                ).map(([k, icon]) => (
+                  <div key={k} className="pt">
+                    <b>
+                      <LpIcon name={icon} />
+                    </b>
+                    {t(`organize.${k}`)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="sec" id="faq" aria-labelledby="t-faq" style={{ paddingBlock: "0 96px" }}>
+          <div className="wrap">
+            <SectionHead id="t-faq" kicker={t("faq.kicker")} title={t("faq.title")} />
+            <div className="faq rv-stagger">
+              {([1, 2, 3, 4, 5] as const).map((n) => (
+                <details key={n} open={n === 1}>
+                  <summary>
+                    {t(`faq.q${n}`)}
+                    <i aria-hidden="true" />
+                  </summary>
+                  <div>{t(`faq.a${n}`)}</div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="final" id="rejoindre" aria-labelledby="t-final">
+          <CodeBars />
+          <div className="wrap">
+            <h2 className="rv" id="t-final">
+              {t("final.title")}
+            </h2>
+            <p className="rv">{t("final.text")}</p>
+            <div className="hero-cta rv" style={{ marginTop: 4 }}>
+              <Link className="btn btn--sun" href="/inscription">
+                {t("final.cta")}
+                <Arrow />
+              </Link>
+              <Link className="btn btn--ghost" href="/connexion">
+                {t("final.signIn")}
+              </Link>
+            </div>
+          </div>
         </section>
       </main>
 
-      <section aria-labelledby="final-title" className="relative bg-header text-on-header">
-        <Band className="h-4" />
-        <div className="mx-auto grid w-full max-w-[1100px] justify-items-start gap-4 px-4 py-14 lg:px-10">
-          <h2 id="final-title" className="font-display text-2xl font-extrabold uppercase lg:text-4xl">
-            {t("final.title")}
-          </h2>
-          <p className="max-w-[46ch] font-bold text-on-header-muted">{t("final.text")}</p>
-          <Link href="/bienvenue" className={joinButton}>
-            {t("final.join")}
-            <Icon name="chevron" size={18} />
-          </Link>
-        </div>
-      </section>
-
-      <footer className="bg-[var(--ink)] text-[var(--grey-light)]">
-        <div className="mx-auto flex w-full max-w-[1100px] flex-wrap items-center gap-x-5 gap-y-2 px-4 py-6 pb-[max(24px,env(safe-area-inset-bottom,0px))] text-sm lg:px-10">
-          <span className="font-display font-extrabold text-white">KABAD</span>
-          <span className="flex-1">{t("footer.cadev")}</span>
-          <Link href="/presentation" className="font-bold text-white">
-            {t("footer.presentation")}
-          </Link>
-          <Link href="/conditions" className="font-bold text-white">
-            {t("footer.conditions")}
-          </Link>
+      <footer>
+        <div className="wrap">
+          <a className="logo" href="#top">
+            <LpLogo />
+            KABAD
+          </a>
+          <span>{t("footer.tagline")}</span>
+          <nav aria-label={t("footer.label")}>
+            <a href="#pourquoi">{t("nav.why")}</a>
+            <a href="#fonctionnalites">{t("nav.features")}</a>
+            <a href="#comment">{t("nav.how")}</a>
+            <a href="#organiser">{t("nav.organize")}</a>
+            <a href="#faq">{t("nav.faq")}</a>
+          </nav>
+          <div className="legal">
+            {/* Contact and privacy pages: contents to come from the team (placeholders kept on purpose). */}
+            <a href="#">{t("footer.contact")}</a>
+            <a href="#">{t("footer.privacy")}</a>
+            <Link href="/conditions">{t("footer.conditions")}</Link>
+            <span>{t("footer.question")}</span>
+            <span className="foot-lang">
+              <LanguageSwitcher compact />
+            </span>
+          </div>
         </div>
       </footer>
     </div>
   );
 }
 
-function Heading({ id, overline, title, children }: { id: string; overline: string; title: string; children?: React.ReactNode }) {
+function SectionHead({ id, kicker, title, lead }: { id: string; kicker: string; title: string; lead?: string }) {
   return (
-    <div className="grid content-start gap-2">
-      <p className="text-xs font-extrabold tracking-[0.1em] text-brand-text uppercase">{overline}</p>
-      <h2 id={id} className="font-display text-2xl font-extrabold uppercase lg:text-3xl">
-        {title}
-      </h2>
-      {children}
+    <div className="sec-head rv">
+      <p className="kick">{kicker}</p>
+      <h2 id={id}>{title}</h2>
+      {lead && <p>{lead}</p>}
+    </div>
+  );
+}
+
+function Step({ n, title, text, tags, last }: { n: number; title: string; text: string; tags: string[]; last?: boolean }) {
+  return (
+    <div className="step">
+      <span className="num">{n}</span>
+      <h3>{title}</h3>
+      <p>{text}</p>
+      <div className="mini">
+        {tags.map((tag) => (
+          <span key={tag}>{tag}</span>
+        ))}
+      </div>
+      {!last && <LpIcon name="arrow" className="arrow" strokeWidth={2.4} />}
     </div>
   );
 }

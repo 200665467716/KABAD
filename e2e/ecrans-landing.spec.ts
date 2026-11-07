@@ -1,26 +1,33 @@
 import { expect, test } from "@playwright/test";
 
-/* The landing page: its call to action leads to the welcome screen, and the presentation loads only on demand. */
+/* The landing page: its buttons lead to sign-up and sign-in, the feature tabs and the scrolling band work. */
 test.use({ storageState: { cookies: [], origins: [] } });
 
-test("« Rejoindre la communauté » mène à l’écran où l’on s’inscrit ou se connecte", async ({ page }) => {
+test("« Créer mon compte » mène à l’inscription et « Se connecter » à la connexion", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("devs africains");
-  await page.getByRole("link", { name: "Rejoindre la communauté" }).first().click();
-  await expect(page).toHaveURL(/\/bienvenue$/);
-  await expect(page.getByRole("link", { name: /Créer mon compte/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Se connecter" })).toBeVisible();
+  await page.locator("#cta-main").click();
+  await expect(page).toHaveURL(/\/inscription$/);
+  await page.goto("/");
+  await page.getByRole("link", { name: "Se connecter" }).first().click();
+  await expect(page).toHaveURL(/\/connexion$/);
 });
 
-test("la présentation ne se charge qu’au clic, puis s’enchaîne et se met en pause", async ({ page }) => {
+test("les onglets des fonctionnalités changent l’écran du téléphone, au clic et au clavier", async ({ page }) => {
   await page.goto("/");
-  const player = page.locator("#presentation");
-  // Before the click, only the poster: no player, no scene.
-  await expect(player.getByRole("button", { name: "Aller à la scène 1" })).toHaveCount(0);
-  await page.getByRole("button", { name: /Lancer la présentation/ }).click();
-  await expect(player.getByRole("button", { name: "Aller à la scène 1" })).toHaveAttribute("aria-current", "step");
-  // The first scene lasts 4 s, then the second one starts on its own.
-  await expect(player.getByRole("button", { name: "Aller à la scène 2" })).toHaveAttribute("aria-current", "step", { timeout: 8_000 });
-  await player.getByRole("button", { name: "Mettre en pause" }).click();
-  await expect(player.getByRole("button", { name: "Reprendre" })).toBeVisible();
+  const tabs = page.getByRole("tablist", { name: "Fonctionnalités" });
+  await expect(tabs.getByRole("tab", { name: /Mentorat/ })).toHaveAttribute("aria-selected", "true");
+  await tabs.getByRole("tab", { name: /Hackathons/ }).click();
+  await expect(tabs.getByRole("tab", { name: /Hackathons/ })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#scr-hack")).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  await expect(tabs.getByRole("tab", { name: /Tests d’apps/ })).toBeFocused();
+  await expect(page.locator("#scr-test")).toBeVisible();
+});
+
+test("la bande défilante se met en pause avec son bouton", async ({ page }) => {
+  await page.goto("/");
+  const pause = page.getByRole("button", { name: "Mettre en pause le défilement" });
+  await pause.click();
+  await expect(page.getByRole("button", { name: "Reprendre le défilement" })).toHaveAttribute("aria-pressed", "true");
 });

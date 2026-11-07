@@ -13,8 +13,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Screen A1: where a visitor chooses to create an account or to sign in. The landing page (/) leads here
- * with « Rejoindre la communauté ». The three cards illustrate the three spaces of KABAD.
+ * Screen A1: where a visitor chooses to create an account or to sign in (the landing page links to both directly).
+ * The three cards illustrate the three spaces of KABAD.
  */
 export default async function Welcome() {
   const t = await getTranslations("auth.welcome");

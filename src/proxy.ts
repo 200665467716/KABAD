@@ -5,7 +5,7 @@ import { routing } from "@/i18n/routing";
 
 const intl = createIntlMiddleware(routing);
 
-/** Screens of the signed-in app. Public: the welcome page, sign-up step 1, sign-in, sponsor pages. */
+/** Screens of the signed-in app. Public: the landing page, the welcome page, sign-up step 1, sign-in, sponsor pages. */
 const privatePaths = [
   /^\/(accueil|membres|compte|notifications)$/,
   /^\/(salons|admin|profil|mentorat|hackathons|rise-up|tests|messages)(\/.*)?$/,
@@ -27,6 +27,8 @@ export function proxy(request: NextRequest) {
   }
   const english = /^\/en(\/|$)/.test(pathname);
   const path = english ? pathname.slice(3) || "/" : pathname;
+  // The landing page is for visitors: a member with a session goes straight to their home.
+  if (path === "/" && request.cookies.has("kabad_session")) return NextResponse.redirect(new URL(english ? "/en/accueil" : "/accueil", request.url));
   if (!request.cookies.has("kabad_session") && privatePaths.some((re) => re.test(path))) {
     const url = new URL(english ? "/en/connexion" : "/connexion", request.url);
     // Always without the language: the sign-in form adds it back.
