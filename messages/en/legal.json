@@ -10,7 +10,7 @@
         "respect": "We treat others with respect, whatever their country, language or level.",
         "abuse": "No harassment, hate speech, scams or spam, in messages or in voice rooms.",
         "code": "In a challenge, the code you submit is your own. The mentor helps you learn, not with the solution.",
-        "honesty": "Senior status and mentoring hours must be declared honestly: they unlock rewards."
+        "honesty": "Level and experience must be declared honestly: the mentor badge depends on them."
       },
       "moderation": {
         "title": "What we do when there is a problem",
@@ -25,7 +25,7 @@
       },
       "prizes": {
         "title": "Challenges and prize pools",
-        "text": "A prize pool is shared between the winner (60%), their mentor (30%) and KABAD (10%), after the results are published and a 48-hour dispute period. The jury is made up of three verified seniors; a juror never scores someone they mentor."
+        "text": "A prize pool is shared between the winning team (90%) and KABAD (10%), after the results are published and a 48-hour dispute period. The jury is made up of three verified seniors; a juror never scores someone they mentor."
       },
       "backToSignup": "Back to sign-up"
     }

@@ -191,13 +191,13 @@ async function main() {
         prizeKind: "SPONSORISE", sponsorName: "FinLab Cotonou", sponsorAmount: 500_000, prizes: ["1er prix : 500 000 F CFA", "2e prix : six mois d’incubation"],
         missionText: "Préparer les équipes la veille, en visio. Répondre aux questions techniques pendant l’événement. Aider sur les paiements et les API.", instructorFee: 75_000, instructorCount: 3, publishedAt: at(-6) },
       { id: "agritech-sahel", title: "Agritech Sahel", organizerName: "Réseau Agritech Sahel", createdById: "ibrahim", format: "ONLINE", startsAt: at(30, 8, 0), endsAt: at(33, 8, 0), closesAt: at(28, 23, 59), teamMin: 1, teamMax: 4, level: "Intermédiaire", stack: "Au choix",
-        description: "Donner aux producteurs le prix de leurs récoltes et la météo de la semaine, même sur un téléphone simple.", prizeKind: "CAGNOTTE", mentoringMinutes: 60, publishedAt: at(-3) },
+        description: "Donner aux producteurs le prix de leurs récoltes et la météo de la semaine, même sur un téléphone simple.", prizeKind: "CAGNOTTE", publishedAt: at(-3) },
       { id: "sante-connectee", title: "Santé connectée", organizerName: "Collectif Santé Dakar", createdById: "nadia", format: "ONSITE", city: "Dakar", startsAt: at(45, 8, 0), endsAt: at(46, 20, 0), closesAt: at(40, 23, 59), teamMin: 3, teamMax: 4, level: "Avancé", stack: "Web et données",
         description: "Un outil qui aide les dispensaires à suivre leurs stocks de médicaments et à prévenir les ruptures.", prizeKind: "LOT", prizes: ["Un ordinateur portable par membre de l’équipe gagnante"], publishedAt: at(-1) },
       { id: "raccourcisseur", title: "Raccourcisseur de liens avec statistiques", organizerName: "KABAD", format: "ONLINE", startsAt: at(-10, 8, 0), endsAt: at(-3, 8, 0), closesAt: at(-10, 8, 0), teamMin: 1, teamMax: 1, status: "JURY", level: "Intermédiaire", stack: "Au choix",
         description: "Un service qui raccourcit les liens et compte les visites par pays.", prizeKind: "CAGNOTTE", resultsAt: at(4, 18, 0), publishedAt: at(-20) },
       { id: "inscription-accessible", title: "Page d’inscription accessible", organizerName: "KABAD", format: "ONLINE", startsAt: at(-20, 8, 0), endsAt: at(-12, 8, 0), closesAt: at(-20, 8, 0), teamMin: 1, teamMax: 1, status: "DONE", level: "Débutant", stack: "HTML, CSS et JavaScript",
-        description: "Une page d’inscription utilisable au clavier et par un lecteur d’écran.", prizeKind: "CAGNOTTE", mentoringMinutes: 60, resultsAt: at(-8, 12, 0), publishedAt: at(-30) },
+        description: "Une page d’inscription utilisable au clavier et par un lecteur d’écran.", prizeKind: "CAGNOTTE", resultsAt: at(-8, 12, 0), publishedAt: at(-30) },
     ],
   });
   const juries: Record<string, string[]> = {
@@ -252,11 +252,10 @@ async function main() {
       score("sub-short-chidi", "ibrahim", [5, 4, 3, 4]),
     ],
   });
-  // Level 3 (mentoring required): 60 / 30 / 10, Awa is Kossi's mentor.
+  // The pot is shared 90 / 10 (D6).
   await db.payout.createMany({
     data: [
-      { hackathonId: "inscription-accessible", role: "WINNER", beneficiaryId: "kossi", amount: 18_000, operator: "Moov Money", phone: "+228 96 12 34 56", reference: "PO-2610-0482", status: "SENT", sentAt: at(-5, 10) },
-      { hackathonId: "inscription-accessible", role: "MENTOR", beneficiaryId: "awa", amount: 9_000, operator: "Wave", phone: "+221 77 000 00 00", reference: "PO-2610-0483", status: "SENT", sentAt: at(-5, 10, 5) },
+      { hackathonId: "inscription-accessible", role: "WINNER", beneficiaryId: "kossi", amount: 27_000, operator: "Moov Money", phone: "+228 96 12 34 56", reference: "PO-2610-0482", status: "SENT", sentAt: at(-5, 10) },
       { hackathonId: "inscription-accessible", role: "PLATFORM", amount: 3_000, reference: "PO-2610-0484", status: "SENT", sentAt: at(-5, 10, 10) },
     ],
   });

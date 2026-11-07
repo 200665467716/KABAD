@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { DomainError } from "@/server/errors";
-import { answerBooking, bookSlot, eligibility, getMentor, saveAvailability } from "@/server/mentoring";
+import { answerBooking, bookSlot, getMentor, saveAvailability } from "@/server/mentoring";
 import { requestBadge, reviewBadge } from "@/server/badges";
 import { answerJoinRequest, getHackathon, publishResults, register, scoreSubmission, submitSolution } from "@/server/hackathons";
 import { createTestApp, joinTest, leaveTest, setStep } from "@/server/community-tests";
@@ -49,14 +49,11 @@ describe("mentorat par créneaux", () => {
     await refused(bookSlot("awa", booking(night.toISOString()), prisma), "self");
   });
 
-  it("une séance acceptée donne un lien de visio et compte une fois passée", async () => {
+  it("une séance acceptée donne un lien de visio et ne s'accepte qu'une fois", async () => {
     const [slot] = await awaOpensEveryDay();
     const { id } = await bookSlot("kossi", booking(slot), prisma);
     const { meetingUrl } = await answerBooking("awa", id, { accept: true }, prisma);
     expect(meetingUrl).toMatch(/^https:\/\/meet\.jit\.si\//);
-    expect((await eligibility("kossi", 30, prisma)).eligible).toBe(false);
-    await prisma.mentoringBooking.update({ where: { id }, data: { startsAt: new Date(Date.now() - DAY) } });
-    expect((await eligibility("kossi", 30, prisma)).eligible).toBe(true);
     await refused(answerBooking("awa", id, { accept: false }, prisma), "answered");
   });
 });
@@ -117,9 +114,9 @@ describe("hackathons", () => {
     await refused(scoreSubmission("awa", "h", { submissionId: sub.id, works: 4, code: 4, tests: 4, explain: 4 }, prisma), "forbidden");
   });
 
-  it("partage le gain 90/10 sans mentorat exigé, 60/30/10 avec, et une seule fois", async () => {
-    await hackathon({ prizeKind: "SPONSORISE", sponsorAmount: 100_000, mentoringMinutes: 30, jurors: { create: [{ userId: "nadia" }, { userId: "ibrahim" }, { userId: "aicha" }] } });
-    await prisma.mentoringBooking.create({ data: { mentorId: "awa", menteeId: "kossi", startsAt: new Date(Date.now() - 3 * DAY), topic: "API", problem: "…", status: "ACCEPTED" } });
+  it("inscription sans mentorat exigé ; le gain se partage 90/10, une seule fois", async () => {
+    await hackathon({ prizeKind: "SPONSORISE", sponsorAmount: 100_000, jurors: { create: [{ userId: "nadia" }, { userId: "ibrahim" }, { userId: "aicha" }] } });
+    // Kossi has never had a mentoring session: hackathons and mentoring are independent.
     await register("kossi", "h", { mode: "solo" }, prisma);
     await submitSolution("kossi", "h", { projectName: "Momo", repoUrl: "https://github.com/k/r", explanation: "x".repeat(40), payoutOperator: "Wave", payoutPhone: "+22890000000" }, prisma);
     await prisma.hackathon.update({ where: { id: "h" }, data: { status: "JURY" } });
@@ -128,7 +125,7 @@ describe("hackathons", () => {
     const results = await Promise.allSettled([publishResults("equipe", "h", prisma), publishResults("equipe", "h", prisma)]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     const payouts = Object.fromEntries((await prisma.payout.findMany()).map((p) => [p.role, p.amount]));
-    expect(payouts).toEqual({ WINNER: 60_000, MENTOR: 30_000, PLATFORM: 10_000 });
+    expect(payouts).toEqual({ WINNER: 90_000, PLATFORM: 10_000 });
   });
 });
 

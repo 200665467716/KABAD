@@ -30,8 +30,6 @@ async function ResultsData({ params }: { params: Promise<{ id: string }> }) {
   const top = h.ranking[0];
   const iWon = team !== null && top?.teamId === team.id;
   const winnerPayout = h.payouts.find((p) => p.role === "WINNER");
-  const mentorPayout = h.payouts.find((p) => p.role === "MENTOR");
-  const withMentor = h.mentoringMinutes > 0;
   const published = h.publishedAt ?? h.endsAt;
   const contestEnds = new Date(new Date(published).getTime() + CONTEST_HOURS * 3600_000).toISOString();
   const steps = [
@@ -104,8 +102,8 @@ async function ResultsData({ params }: { params: Promise<{ id: string }> }) {
               {t("payout", { pot: formatFCFA(h.pot) })}
             </Overline>
             <Card className="gap-4">
-              <PotSplit total={h.pot} withMentor={withMentor} labels={{ winner: iWon ? t("yourTeam") : t("winner"), mentor: mentorPayout?.beneficiary ?? t("mentor"), platform: "KABAD" }} />
-              <p className="text-xs text-muted">{withMentor ? t("level3") : t("level2")}</p>
+              <PotSplit total={h.pot} labels={{ winner: iWon ? t("yourTeam") : t("winner"), platform: "KABAD" }} />
+              <p className="text-xs text-muted">{t("level2")}</p>
               <ol className="m-0 grid list-none p-0">
                 {steps.map((s, i) => (
                   <li key={s.label} className="relative grid grid-cols-[20px_minmax(0,1fr)] gap-3 pb-3.5 last:pb-0">

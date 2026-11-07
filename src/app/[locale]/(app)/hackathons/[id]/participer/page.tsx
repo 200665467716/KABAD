@@ -7,9 +7,7 @@ import { Page, TopBar } from "@/components/shell/TopBar";
 import { Alert } from "@/components/ui/Display";
 import { RegisterForm } from "@/components/features/hackathons/RegisterForm";
 import { redirect } from "@/i18n/navigation";
-import { formatDuration } from "@/lib/format";
 import { getHackathon } from "@/server/hackathons";
-import { eligibility } from "@/server/mentoring";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 import { ScreenSkeleton } from "@/components/ui/Skeleton";
@@ -37,21 +35,6 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
         </Page>
       </>
     );
-  }
-  if (h.mentoringMinutes > 0) {
-    const e = await eligibility(user.id, h.mentoringMinutes);
-    if (!e.eligible) {
-      return (
-        <>
-          {top}
-          <Page narrow>
-            <Alert tone="info" title={t("mentoringTitle", { duration: formatDuration(h.mentoringMinutes) })}>
-              {t("mentoringMissing", { missing: formatDuration(e.missing) })}
-            </Alert>
-          </Page>
-        </>
-      );
-    }
   }
   return (
     <>

@@ -1,8 +1,6 @@
 /* Shapes exchanged between the server and the screens. Dates are ISO strings. */
 import type { WeeklyRange } from "./slots";
-import type { Eligibility } from "./mentoring";
 
-export type { Eligibility };
 
 export type Level = "ASPIRANT" | "DEBUTANT" | "INTERMEDIAIRE" | "SENIOR";
 
@@ -122,7 +120,6 @@ export type HackathonSummary = {
   prizeKind: PrizeKind | null;
   prizes: string[];
   sponsorName: string | null;
-  mentoringMinutes: number;
   instructors: number;
   /** Instructors the organizer wants to recruit. */
   instructorCount: number;

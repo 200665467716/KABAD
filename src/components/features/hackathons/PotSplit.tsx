@@ -2,13 +2,12 @@ import { useFormatter } from "next-intl";
 import { cn } from "@/lib/cn";
 import { splitPrize } from "@/lib/prize";
 
-/** How a pot is shared (D6): 60/30/10 with a mentor (level 3), 90/10 without (level 2). */
-export function PotSplit({ total, withMentor, labels, className }: { total: number; withMentor: boolean; labels: { winner: string; mentor: string; platform: string }; className?: string }) {
+/** How a pot is shared (D6): 90 % to the winning team, 10 % to KABAD. */
+export function PotSplit({ total, labels, className }: { total: number; labels: { winner: string; platform: string }; className?: string }) {
   const format = useFormatter();
-  const s = splitPrize(total, withMentor);
+  const s = splitPrize(total);
   const items = [
-    { label: labels.winner, value: s.winner, share: withMentor ? 60 : 90, dot: "bg-brand" },
-    ...(withMentor ? [{ label: labels.mentor, value: s.mentor, share: 30, dot: "bg-accent" }] : []),
+    { label: labels.winner, value: s.winner, share: 90, dot: "bg-brand" },
     { label: labels.platform, value: s.platform, share: 10, dot: "bg-subtle" },
   ];
   return (
@@ -18,7 +17,7 @@ export function PotSplit({ total, withMentor, labels, className }: { total: numb
           <span key={it.label} className={it.dot} style={{ flex: it.share }} />
         ))}
       </div>
-      <dl className={cn("grid gap-2", withMentor ? "grid-cols-3" : "grid-cols-2")}>
+      <dl className="grid grid-cols-2 gap-2">
         {items.map((it) => (
           <div key={it.label} className="grid gap-0.5">
             <dt className="flex items-center gap-1 text-xs font-bold tracking-[0.06em] text-muted uppercase">

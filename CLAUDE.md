@@ -30,7 +30,7 @@ KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora
   - `src/server/*.ts` porte les règles métier, vérifiées côté serveur ;
   - `src/app/api/**` contient des routes fines qui valident l'entrée (Zod, `src/lib/schemas.ts`) puis appellent `src/server` ;
   - `src/lib` regroupe les règles partagées et pures (testées unitairement).
-- **Argent** (cagnottes, répartition 60/30/10, versements, remboursements) : uniquement dans la couche serveur, dans une transaction PostgreSQL, avec une clé d'idempotence. Le paiement réel reste en **sandbox**.
+- **Argent** (cagnottes, répartition 90/10, versements, remboursements) : uniquement dans la couche serveur, dans une transaction PostgreSQL, avec une clé d'idempotence. Le paiement réel reste en **sandbox**.
 - **Tâches différées** (relances, rappels, expirations, passage au jury, versements à 48 h) : jamais pendant une requête web. Elles vivent dans `src/server/jobs.ts`, idempotentes, et le worker (`worker/index.ts`, pg-boss) les planifie.
 - **Langue** : interface, messages de commit, commentaires et documentation en **français**, dans le style déjà présent (phrases courtes, termes simples). Respecter la densité de commentaires du fichier modifié.
 - **Ton** : l'interface, les e-mails et les erreurs tutoient le membre ; seules les conditions d'utilisation vouvoient. Un message d'erreur français est aussi la clé de sa traduction dans `src/server/error-messages.en.json` : changer l'un, c'est changer l'autre.

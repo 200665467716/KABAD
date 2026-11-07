@@ -63,7 +63,7 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
 - [x] D6. Défis en 3 niveaux (27 octobre). Le mentor reçoit 30 % au plus, KABAD 10 % au plus.
   - Niveau 1 : défi sans récompense en argent, évalué par un jury. À valider en premier ; on n'étend aux niveaux 2 et 3 que si les autres fonctionnalités sont prêtes.
   - Niveau 2 : récompense par cagnotte communautaire ou sponsor, sans mentor. 90 % au gagnant, 10 % à KABAD.
-  - Niveau 3 : récompense par cagnotte communautaire ou sponsor, avec mentor. 60 % au gagnant, 30 % à son mentor, 10 % à KABAD.
+  - ~~Niveau 3 : récompense avec mentor, 60/30/10.~~ Retiré le 7 novembre (D11) : hackathons et mentorat sont indépendants.
   - Aux niveaux 2 et 3, la moitié de la part de KABAD (5 % du total) est mise en réserve pour abonder de futures cagnottes.
 
 - [x] D7. Salons de réflexion d'Africa Rise-Up : lien visio externe (31 octobre).
@@ -88,6 +88,11 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
   - Authentification par e-mail et mot de passe uniquement (mot de passe de 8 caractères dont un chiffre) ; pas de GitHub ni de Google en V1 (R48).
   - Visio par Google Meet en V1 ; une landing page publique présente KABAD.
   - Questions encore ouvertes : partie 8 du point projet (visio à long terme, salon vocal Rise-Up, rémunération des instructeurs, jury des hackathons, organisations autorisées, durée des séances).
+
+- [x] D11. Hackathons et mentorat indépendants (7 novembre).
+  - Plus aucun temps de mentorat exigé pour participer à un hackathon ; le niveau 3 de D6 disparaît, une cagnotte se partage 90/10.
+  - Les hackathons restent relus et publiés par l'équipe KABAD.
+  - Migration `hackathons_sans_mentorat` : la colonne `mentoringMinutes` disparaît ; les anciens versements « MENTOR » restent dans l'historique.
 
 ## P0 — Recevable, en ligne, stable (objectif : 2 novembre)
 
@@ -212,9 +217,8 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
   - Calculer une moyenne pondérée selon la grille du défi.
 
 - [ ] R17. Répartition, contestation et éligibilité (D6, F2.8, F2.11).
-  - Répartition selon le niveau : 90/10 (niveau 2) ou 60/30/10 (niveau 3), avec 5 % du total mis en réserve KABAD. Un test unitaire par niveau, sans perte d'un franc à l'arrondi.
+  - Répartition 90/10 (D11), avec 5 % du total mis en réserve KABAD. Testée, sans perte d'un franc à l'arrondi.
   - Contestation possible pendant 48 h, arbitrée par un modérateur.
-  - Niveau 3 : heures de mentorat filtrées par thème, attestation de mentorat hors KABAD, et les 30 % vont au mentor attestant.
 
 ### Tests communautaires (F3)
 

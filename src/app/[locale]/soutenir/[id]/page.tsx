@@ -24,17 +24,10 @@ async function SponsorData({ params }: { params: Promise<{ id: string }> }) {
   if (!h || h.prizeKind !== "CAGNOTTE") notFound();
   const [t, format, recent] = await Promise.all([getTranslations("hackathons.sponsor"), getFormatter(), recentContributions(h.id)]);
   const open = h.status === "OPEN";
-  const withMentor = h.mentoringMinutes > 0;
-  const shares = withMentor
-    ? [
-        { title: t("share.winner3"), text: t("share.winnerText") },
-        { title: t("share.mentor"), text: t("share.mentorText") },
-        { title: t("share.platform"), text: t("share.platformText") },
-      ]
-    : [
-        { title: t("share.winner2"), text: t("share.winnerText") },
-        { title: t("share.platform"), text: t("share.platformText") },
-      ];
+  const shares = [
+    { title: t("share.winner2"), text: t("share.winnerText") },
+    { title: t("share.platform"), text: t("share.platformText") },
+  ];
 
   return (
     <SponsorShell>
@@ -48,7 +41,7 @@ async function SponsorData({ params }: { params: Promise<{ id: string }> }) {
             <h1 className="font-display text-[32px] leading-[38px] font-extrabold uppercase lg:text-[52px] lg:leading-[58px]">{h.title}</h1>
             <p className="text-sm font-extrabold text-brand-text">{t("by", { organizer: h.organizerName })}</p>
             <p className="max-w-[60ch] text-lg text-muted">
-              {h.description} {withMentor ? t("introMentor") : t("intro")}
+              {h.description} {t("intro")}
             </p>
             <dl className="flex flex-wrap gap-x-8 gap-y-3">
               {[
@@ -83,11 +76,11 @@ async function SponsorData({ params }: { params: Promise<{ id: string }> }) {
             <div className="grid max-w-[680px] gap-2">
               <p className="text-xs font-extrabold tracking-[0.1em] text-brand-text uppercase">{t("moneyKicker")}</p>
               <h2 id="money" className="font-display text-2xl font-extrabold uppercase lg:text-3xl">
-                {withMentor ? t("moneyTitleMentor") : t("moneyTitle")}
+                {t("moneyTitle")}
               </h2>
             </div>
-            <PotSplit total={Math.max(h.pot, 100)} withMentor={withMentor} labels={{ winner: t("winner"), mentor: t("mentor"), platform: "KABAD" }} className="[&_dd]:hidden" />
-            <div className={withMentor ? "grid gap-5 md:grid-cols-3" : "grid gap-5 md:grid-cols-2"}>
+            <PotSplit total={Math.max(h.pot, 100)} labels={{ winner: t("winner"), platform: "KABAD" }} className="[&_dd]:hidden" />
+            <div className="grid gap-5 md:grid-cols-2">
               {shares.map((s) => (
                 <div key={s.title} className="grid gap-1">
                   <span className="text-xs font-extrabold tracking-[0.06em] uppercase">{s.title}</span>

@@ -40,11 +40,6 @@
     "fr": "Français",
     "en": "English"
   },
-  "prize": {
-    "winner": "Winner",
-    "mentor": "Their mentor",
-    "platform": "KABAD"
-  },
   "errors": {
     "notFoundTitle": "Page not found",
     "notFoundText": "This page doesn’t exist, or you don’t have access to it. The link may be incomplete.",

@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 import { AdminActions } from "@/components/features/hackathons/AdminActions";
 import { useCountdown, useWhere } from "@/components/features/hackathons/HackathonTicket";
 import { Link } from "@/i18n/navigation";
-import { formatDuration, formatFCFA, initials } from "@/lib/format";
+import { formatFCFA, initials } from "@/lib/format";
 import type { HackathonDetail } from "@/lib/domain-types";
 import { badgedMentors } from "@/server/admin";
 import { getHackathon } from "@/server/hackathons";
@@ -119,18 +119,13 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
             <Card className="gap-1.5">
               <span className="text-xs font-extrabold tracking-[0.08em] text-brand-text uppercase">{h.prizeKind === "CAGNOTTE" ? t("pot") : t("sponsored", { sponsor: h.sponsorName ?? "" })}</span>
               <span className="font-display text-2xl font-extrabold tabular">{formatFCFA(h.pot)}</span>
-              <span className="text-[13px] text-muted">{h.mentoringMinutes > 0 ? t("split3") : t("split2")}</span>
+              <span className="text-[13px] text-muted">{t("split2")}</span>
               {h.prizeKind === "CAGNOTTE" && h.status === "OPEN" && (
                 <Link href={`/soutenir/${h.id}`} className="text-sm font-extrabold">
                   {t("support")}
                 </Link>
               )}
             </Card>
-          )}
-          {h.mentoringMinutes > 0 && (
-            <Alert tone="info" title={t("mentoringTitle", { duration: formatDuration(h.mentoringMinutes) })}>
-              {t("mentoringText")}
-            </Alert>
           )}
         </section>
 

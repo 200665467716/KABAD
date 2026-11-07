@@ -5,9 +5,9 @@
  *   joining a team goes through a request the captain accepts;
  * - each team sends one solution, editable until the end of the hackathon, which then goes to the jury
  *   (the worker records the change, src/server/jobs.ts);
- * - hackathons that require mentoring accept only members who held that much mentoring time (level 3 of D6);
  * - three badged mentors score each solution anonymously on 4 criteria; the mark is the average of their totals;
- * - publishing the results splits the pot: 60/30/10 with a mentor (level 3), 90/10 without (level 2);
+ * - hackathons and mentoring are independent: anyone may enter, without any mentoring required;
+ * - publishing the results splits the pot 90/10 between the winning team and KABAD (D6);
  *   transfers are sent by Mobile Money after a 48 h contest period, then marked as sent with their reference;
  * - organizers offer paid instructor missions to badged mentors; KABAD records them, the organizer pays.
  */
@@ -15,11 +15,10 @@ import { randomBytes } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
-import { eligibility, mainMentor, mentoredBy } from "./mentoring";
+import { mentoredBy } from "./mentoring";
 import { pushNotifications, type NotificationInput } from "./notifications";
 import { averageMark, totalScore } from "@/lib/jury";
 import { splitPrize } from "@/lib/prize";
-import { formatDuration } from "@/lib/format";
 import type { ContributionView, HackathonDetail, HackathonResults, HackathonSummary, JuryItem, MissionView, PayoutView, RankingRow, TeamView } from "@/lib/domain-types";
 
 export const CONTEST_HOURS = 48;
@@ -77,7 +76,6 @@ const summarySelect = {
   prizeKind: true,
   prizes: true,
   sponsorName: true,
-  mentoringMinutes: true,
   instructorCount: true,
   publishedAt: true,
   resultsAt: true,
@@ -217,7 +215,6 @@ export type HackathonInput = {
   prizes: string[];
   sponsorName?: string;
   sponsorAmount?: number;
-  mentoringMinutes?: number;
   missionText?: string;
   instructorFee?: number;
   instructorCount?: number;
@@ -271,7 +268,6 @@ export async function createHackathon(userId: string, input: HackathonInput, pri
         prizes: input.prizes,
         sponsorName: input.sponsorName || null,
         sponsorAmount: input.sponsorAmount ?? 0,
-        mentoringMinutes: input.mentoringMinutes ?? 0,
         missionText: input.missionText || null,
         instructorFee: input.instructorFee ?? null,
         instructorCount: input.instructorCount ?? 0,
@@ -304,10 +300,6 @@ async function openForEntries(prisma: Tx, hackathonId: string, userId: string) {
   if (!h || !h.publishedAt) throw notFound("Hackathon introuvable.");
   if (h.status !== "OPEN" || h.closesAt.getTime() <= Date.now()) throw new DomainError("closed", "Les inscriptions à ce hackathon sont closes.", 409);
   if (h.jurors.some((j) => j.userId === userId)) throw forbidden("Tu fais partie du jury de ce hackathon : tu ne peux pas y participer.");
-  if (h.mentoringMinutes > 0) {
-    const e = await eligibility(userId, h.mentoringMinutes, prisma);
-    if (!e.eligible) throw forbidden(`Ce hackathon demande ${formatDuration(h.mentoringMinutes)} de mentorat. Il te manque ${formatDuration(e.missing)}.`);
-  }
   return h;
 }
 
@@ -579,21 +571,15 @@ export async function publishResults(adminId: string, hackathonId: string, prism
     const notes: NotificationInput[] = everyone.filter((e) => !e.won).map((e) => ({ userId: e.userId, actor, key: "resultsPublished", href, icon: "trophy", tone: "accent" }));
     const winners = everyone.filter((e) => e.won);
     if (hasCash(h) && pot > 0) {
-      const withMentor = h.mentoringMinutes > 0;
       const captain = rank[0].captainId;
-      const mentorId = withMentor ? await mainMentor(captain, tx) : null;
-      const split = splitPrize(pot, withMentor);
-      // Level 3 without any mentor found: the mentor's share goes to the winners.
-      const winnerAmount = split.winner + (mentorId ? 0 : split.mentor);
+      const split = splitPrize(pot);
       await tx.payout.createMany({
         data: [
-          { hackathonId, role: "WINNER", beneficiaryId: captain, amount: winnerAmount, operator: winner.payoutOperator, phone: winner.payoutPhone },
-          ...(mentorId ? [{ hackathonId, role: "MENTOR" as const, beneficiaryId: mentorId, amount: split.mentor }] : []),
+          { hackathonId, role: "WINNER", beneficiaryId: captain, amount: split.winner, operator: winner.payoutOperator, phone: winner.payoutPhone },
           { hackathonId, role: "PLATFORM", amount: split.platform },
         ],
       });
-      for (const w of winners) notes.push({ userId: w.userId, actor, key: "teamWonMoney", params: { amount: winnerAmount, hours: CONTEST_HOURS }, href, icon: "trophy", tone: "accent" });
-      if (mentorId) notes.push({ userId: mentorId, actor, key: "mentorShare", params: { amount: split.mentor }, href, icon: "trophy", tone: "accent" });
+      for (const w of winners) notes.push({ userId: w.userId, actor, key: "teamWonMoney", params: { amount: split.winner, hours: CONTEST_HOURS }, href, icon: "trophy", tone: "accent" });
     } else {
       for (const w of winners) notes.push({ userId: w.userId, actor, key: "teamWonPrize", href, icon: "trophy", tone: "accent" });
     }

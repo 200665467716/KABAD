@@ -7,7 +7,7 @@ import { AuthFrame } from "@/components/shell/AuthFrame";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Display";
 import { ToggleChip } from "@/components/ui/Controls";
-import { Checkbox, Select, TextArea, TextField } from "@/components/ui/Field";
+import { Select, TextArea, TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
 
 type Format = "ONLINE" | "ONSITE" | "HYBRID";
@@ -41,7 +41,6 @@ export function OrganizeForm({ defaultOrganizer }: { defaultOrganizer: string })
     sponsorName: "",
     sponsorAmount: "",
     rulesUrl: "",
-    mentoring: false,
     missionText: "",
     instructorFee: "",
     instructorCount: "2",
@@ -76,7 +75,6 @@ export function OrganizeForm({ defaultOrganizer }: { defaultOrganizer: string })
           prizes: f.prize === "NONE" ? [] : f.prizes.map((p) => p.trim()).filter(Boolean),
           sponsorName: f.prize === "SPONSORISE" ? f.sponsorName : undefined,
           sponsorAmount: f.prize === "SPONSORISE" ? Number(f.sponsorAmount || 0) : undefined,
-          mentoringMinutes: f.mentoring ? 60 : 0,
           missionText: f.missionText || undefined,
           instructorFee: f.instructorFee ? Number(f.instructorFee) : undefined,
           instructorCount: f.instructorFee ? Number(f.instructorCount || 0) : 0,
@@ -178,11 +176,6 @@ export function OrganizeForm({ defaultOrganizer }: { defaultOrganizer: string })
               <TextField id="sponsorName" label={t("sponsor")} value={f.sponsorName} maxLength={120} onChange={(e) => set("sponsorName", e.target.value)} />
               <TextField id="sponsorAmount" type="number" min={0} label={t("sponsorAmount")} value={f.sponsorAmount} onChange={(e) => set("sponsorAmount", e.target.value)} />
             </div>
-          )}
-          {(f.prize === "SPONSORISE" || f.prize === "CAGNOTTE") && (
-            <Checkbox checked={f.mentoring} onChange={(e) => set("mentoring", e.target.checked)}>
-              {t("mentoring")}
-            </Checkbox>
           )}
           <TextField id="rulesUrl" type="url" label={t("rules")} hint={t("optional")} placeholder="https://" value={f.rulesUrl} onChange={(e) => set("rulesUrl", e.target.value)} error={err("rulesUrl")} />
           <div className="grid gap-3 rounded-lg border-2 border-dashed border-line-strong p-4">

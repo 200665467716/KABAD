@@ -1,9 +1,6 @@
 import { Link } from "@/i18n/navigation";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { formatNumber } from "@/lib/format";
-import { splitPrize } from "@/lib/prize";
-import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "./Icon";
 
 /* Badge : toujours un mot avec la couleur d'état (« Confirmée », « En direct »). */
@@ -160,39 +157,6 @@ export function Meter({ value, tone = "brand", label, className, height = "h-2" 
   return (
     <div role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className={cn("overflow-hidden rounded-full bg-brand-wash", height, className)}>
       <span className={cn("block h-full rounded-full", fill)} style={{ width: `${pct}%` }} />
-    </div>
-  );
-}
-
-/* Prize split: 60 / 30 / 10 */
-
-export function PrizeSplit({ total, labels, className, barHeight = "h-3" }: { total: number; labels?: [string, string, string]; className?: string; barHeight?: string }) {
-  const t = useTranslations("prize");
-  labels ??= [t("winner"), t("mentor"), t("platform")];
-  const s = splitPrize(total);
-  const items = [
-    { label: labels[0], value: s.winner, dot: "bg-brand" },
-    { label: labels[1], value: s.mentor, dot: "bg-accent" },
-    { label: labels[2], value: s.platform, dot: "bg-subtle" },
-  ];
-  return (
-    <div className={cn("grid gap-3", className)}>
-      <div className={cn("flex gap-0.5 overflow-hidden rounded-xs", barHeight)} aria-hidden="true">
-        <span className="bg-brand" style={{ flex: 60 }} />
-        <span className="bg-accent" style={{ flex: 30 }} />
-        <span className="bg-subtle" style={{ flex: 10 }} />
-      </div>
-      <dl className="grid grid-cols-3 gap-2">
-        {items.map((it) => (
-          <div key={it.label} className="grid gap-0.5">
-            <dt className="flex items-center gap-1 text-xs font-bold tracking-[0.06em] text-muted uppercase">
-              <span className={cn("size-2 rounded-xs", it.dot)} />
-              {it.label}
-            </dt>
-            <dd className="m-0 font-bold tabular">{formatNumber(it.value)}</dd>
-          </div>
-        ))}
-      </dl>
     </div>
   );
 }

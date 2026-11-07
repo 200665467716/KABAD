@@ -197,7 +197,6 @@ export const hackathonSchema = z.object({
   prizes: z.array(trimmed(2, 120, "Prix vide.", "120 caractères au plus.")).max(5, "5 prix au plus.").default([]),
   sponsorName: z.string().trim().max(120).optional(),
   sponsorAmount: z.number().int().min(0).max(100_000_000).optional(),
-  mentoringMinutes: z.number().int().min(0).max(20 * 60).optional(),
   missionText: z.string().trim().max(600).optional(),
   instructorFee: z.number().int().min(0).max(10_000_000).optional(),
   instructorCount: z.number().int().min(0).max(20).optional(),

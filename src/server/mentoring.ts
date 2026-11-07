@@ -11,7 +11,7 @@ import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
 import { pushNotifications } from "./notifications";
 import { freeSlots, isOfferedSlot, rangesProblem, type WeeklyRange } from "@/lib/slots";
-import { heldMinutes, jitsiRoom, MAX_PENDING_BOOKINGS, mentoringEligibility, SESSION_MINUTES, type Eligibility } from "@/lib/mentoring";
+import { jitsiRoom, MAX_PENDING_BOOKINGS, SESSION_MINUTES } from "@/lib/mentoring";
 import type { AvailabilityView, BookingView, MentorCard, MentorDetail } from "@/lib/domain-types";
 
 /** How far ahead slots are offered. */
@@ -269,19 +269,6 @@ export async function saveAvailability(
 }
 
 /* Hackathon rules */
-
-/** Mentoring actually held by a member, compared with what a hackathon requires. */
-export async function eligibility(userId: string, required: number, prisma: Tx = db): Promise<Eligibility> {
-  const rows = await prisma.mentoringBooking.findMany({ where: { menteeId: userId, status: "ACCEPTED", startsAt: { lt: new Date() } }, select: { status: true, startsAt: true, minutes: true } });
-  return mentoringEligibility(heldMinutes(rows, new Date()), required);
-}
-
-/** The winner's mentor (level 3 of D6): the mentor with whom they held the most mentoring time. */
-export async function mainMentor(userId: string, prisma: Tx = db): Promise<string | null> {
-  const rows = await prisma.mentoringBooking.groupBy({ by: ["mentorId"], where: { menteeId: userId, status: "ACCEPTED", startsAt: { lt: new Date() } }, _sum: { minutes: true } });
-  rows.sort((a, b) => (b._sum.minutes ?? 0) - (a._sum.minutes ?? 0));
-  return rows[0]?.mentorId ?? null;
-}
 
 /** Mentors who held a session with a member: a juror never scores a solution of someone they mentored. */
 export async function mentoredBy(userIds: string[], prisma: Tx = db): Promise<Map<string, Set<string>>> {

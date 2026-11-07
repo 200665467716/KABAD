@@ -425,8 +425,6 @@ model Hackathon {
   rulesUrl         String?         @db.VarChar(200)
   status           HackathonStatus @default(OPEN)
   resultsAt        DateTime?
-  /// Members must have held this many minutes of mentoring to enter (level 3 of D6).
-  mentoringMinutes Int             @default(0)
   prizeKind        PrizeKind?
   /// Prizes in order: ["Un ordinateur portable", "Un an d’hébergement"]. For LOT and to announce money prizes.
   prizes           String[]        @default([])

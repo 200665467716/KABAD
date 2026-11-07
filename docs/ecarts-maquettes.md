@@ -49,8 +49,8 @@ Reprise mot pour mot des textes (messagerie : « Écrire un message… », « me
 ## Questions à trancher par l'équipe
 
 1. **Visio** : la maquette dit Google Meet. Aujourd'hui, si le mentor n'a pas de lien, KABAD crée une salle Jitsi (D7). Garder ce repli, ou exiger un lien Meet du mentor ?
-2. **Publication des hackathons** : la maquette publie directement (H8 « Publier le hackathon ») ; le code fait relire par l'équipe KABAD. Lequel garder ?
-3. **Hackathons et mentorat indépendants** : le code peut encore exiger du mentorat pour s'inscrire (niveau 3 de D6, cagnotte 60/30/10). Le retirer ?
+2. ~~Publication des hackathons~~ : **tranché le 7 novembre**, l'équipe KABAD relit et publie. Le bouton de H8 dira « Proposer le hackathon ».
+3. ~~Mentorat exigé pour un hackathon~~ : **tranché le 7 novembre**, plus aucune exigence ; partage 90/10 (fait).
 4. **Champs en plus** de T3 (présentation, objectif, questions de contrôle), H6 (clôture, niveau, technos), R3 (le projet en une phrase) : les garder ?
 5. **Technologies** : 12 dans le point projet, 15 dans la maquette A5 (avec PostgreSQL, Docker, AWS).
 6. **Salon Rise-Up** : « Rejoindre le salon » ou « Rejoindre la visio » en V1 ?
