@@ -159,7 +159,7 @@
 .lp .stage{min-height:auto;padding:28px 0 56px}
 .lp .stage .ftag.t1{left:8px;top:12px}
 .lp .stage .ftag.t2{right:8px;bottom:12px}
-.lp .stage .scr-name{bottom:auto;top:-9999px}}
+.lp .stage .scr-name{display:none}}
 @keyframes lp-bob{from{transform:translateY(0)}to{transform:translateY(-10px)}}
 .lp .stage .scr-name{position:absolute;z-index:2;left:50%;bottom:16px;transform:translateX(-50%);color:var(--brume);font:800 12px/1 var(--text);letter-spacing:.08em;text-transform:uppercase}
 .lp .tabs{display:grid;gap:10px}
@@ -325,3 +325,6 @@
 .lp .nav-lang{display:flex}
 .lp .foot-lang{display:none}
 @media (max-width:480px){.lp .nav-lang{display:none}.lp .foot-lang{display:flex}}
+
+/* L'étiquette « Écran · … » est décorative : elle ne doit jamais capter un clic. */
+.lp .stage .scr-name,.lp .stage .ftag{pointer-events:none}

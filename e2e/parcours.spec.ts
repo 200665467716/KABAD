@@ -64,7 +64,9 @@ test("mentorat : Kossi réserve un créneau d’Aïcha, Aïcha accepte, la séan
   const aicha = await signIn(browser, "aicha.kouassi@exemple.ci", "/mentorat/demandes");
   await expect(aicha.getByText("Rendre mon app Flutter utilisable en 3G")).toBeVisible();
   await aicha.getByRole("button", { name: "Accepter" }).first().click();
-  await expect(aicha.getByText("Rendre mon app Flutter utilisable en 3G")).toHaveCount(0);
+  // M6 → M7: once accepted, the mentor lands on the confirmed session.
+  await expect(aicha).toHaveURL(/\/mentorat\/seances\//);
+  await expect(aicha.getByRole("heading", { name: "Séance confirmée" }).first()).toBeVisible();
 
   await kossi.goto(sessionUrl);
   await expect(kossi.getByRole("heading", { name: "Séance confirmée" }).first()).toBeVisible();
