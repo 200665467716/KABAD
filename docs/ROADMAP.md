@@ -160,7 +160,7 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
 
 ## Maquettes du 7 novembre (branche `dev/modifications`)
 
-Le canevas « KABAD — Refonte » a évolué : nouvelle landing page, écrans d'erreur (A2e, A3e, A7e, H5e), squelettes et états vides (P3, P4), profil du mentor (M2), groupe de testeurs (T4), corrections de l'audit. Les écarts écran par écran, les lots de travail et les questions à trancher sont dans **`docs/ecarts-maquettes.md`**.
+Le canevas « KABAD — Refonte » a évolué : nouvelle landing page, écrans d'erreur (A2e, A3e, A7e, H5e), squelettes et états vides (P3, P4), profil du mentor (M2), groupe de testeurs (T4), corrections de l'audit. Les écarts écran par écran, les lots de travail et les questions à trancher sont dans **`docs/ecarts-maquettes.md`**. La note de chaque fonctionnalité et le plan de test manuel sont dans **`docs/etat-et-plan-de-test.md`** (9 novembre).
 
 - [x] Landing page L1 (7 novembre).
 - [x] Lot 1, socle et règles : mot de passe, code e-mail à 10 min, focus, erreurs, désactivé, feuilles de confirmation, consentement, squelettes, notifications, A2e, A3e, A7e.
