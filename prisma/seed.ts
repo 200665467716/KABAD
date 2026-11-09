@@ -188,16 +188,16 @@ async function main() {
     data: [
       { id: "fintech-inclusion", title: "Fintech pour l’inclusion", organizerName: "FinLab Cotonou", createdById: "finlab", format: "HYBRID", city: "Cotonou", startsAt: fintechStart, endsAt: new Date(fintechStart.getTime() + 2 * DAY), closesAt: at(10, 23, 59), teamMin: 2, teamMax: 5, level: "Tous niveaux", stack: "Web ou mobile",
         description: "Imaginer un service qui aide les commerçants sans compte bancaire à encaisser, épargner et suivre leurs ventes.", rulesUrl: "https://finlab.exemple.bj/reglement",
-        prizeKind: "SPONSORISE", sponsorName: "FinLab Cotonou", sponsorAmount: 500_000, prizes: ["1er prix : 500 000 F CFA", "2e prix : six mois d’incubation"],
+        prizes: ["1er prix : 500 000 F CFA", "2e prix : six mois d’incubation"],
         missionText: "Préparer les équipes la veille, en visio. Répondre aux questions techniques pendant l’événement. Aider sur les paiements et les API.", instructorFee: 75_000, instructorCount: 3, publishedAt: at(-6) },
       { id: "agritech-sahel", title: "Agritech Sahel", organizerName: "Réseau Agritech Sahel", createdById: "ibrahim", format: "ONLINE", startsAt: at(30, 8, 0), endsAt: at(33, 8, 0), closesAt: at(28, 23, 59), teamMin: 1, teamMax: 4, level: "Intermédiaire", stack: "Au choix",
-        description: "Donner aux producteurs le prix de leurs récoltes et la météo de la semaine, même sur un téléphone simple.", prizeKind: "CAGNOTTE", publishedAt: at(-3) },
+        description: "Donner aux producteurs le prix de leurs récoltes et la météo de la semaine, même sur un téléphone simple.", prizes: ["1er prix : 300 000 F CFA", "2e prix : 100 000 F CFA"], publishedAt: at(-3) },
       { id: "sante-connectee", title: "Santé connectée", organizerName: "Collectif Santé Dakar", createdById: "nadia", format: "ONSITE", city: "Dakar", startsAt: at(45, 8, 0), endsAt: at(46, 20, 0), closesAt: at(40, 23, 59), teamMin: 3, teamMax: 4, level: "Avancé", stack: "Web et données",
-        description: "Un outil qui aide les dispensaires à suivre leurs stocks de médicaments et à prévenir les ruptures.", prizeKind: "LOT", prizes: ["Un ordinateur portable par membre de l’équipe gagnante"], publishedAt: at(-1) },
+        description: "Un outil qui aide les dispensaires à suivre leurs stocks de médicaments et à prévenir les ruptures.", prizes: ["Un ordinateur portable par membre de l’équipe gagnante"], publishedAt: at(-1) },
       { id: "raccourcisseur", title: "Raccourcisseur de liens avec statistiques", organizerName: "KABAD", format: "ONLINE", startsAt: at(-10, 8, 0), endsAt: at(-3, 8, 0), closesAt: at(-10, 8, 0), teamMin: 1, teamMax: 1, status: "JURY", level: "Intermédiaire", stack: "Au choix",
-        description: "Un service qui raccourcit les liens et compte les visites par pays.", prizeKind: "CAGNOTTE", resultsAt: at(4, 18, 0), publishedAt: at(-20) },
+        description: "Un service qui raccourcit les liens et compte les visites par pays.", prizes: ["Un an d’hébergement offert"], resultsAt: at(4, 18, 0), publishedAt: at(-20) },
       { id: "inscription-accessible", title: "Page d’inscription accessible", organizerName: "KABAD", format: "ONLINE", startsAt: at(-20, 8, 0), endsAt: at(-12, 8, 0), closesAt: at(-20, 8, 0), teamMin: 1, teamMax: 1, status: "DONE", level: "Débutant", stack: "HTML, CSS et JavaScript",
-        description: "Une page d’inscription utilisable au clavier et par un lecteur d’écran.", prizeKind: "CAGNOTTE", resultsAt: at(-8, 12, 0), publishedAt: at(-30) },
+        description: "Une page d’inscription utilisable au clavier et par un lecteur d’écran.", prizes: ["1er prix : un clavier mécanique", "2e prix : un livre sur l’accessibilité"], resultsAt: at(-8, 12, 0), publishedAt: at(-30) },
     ],
   });
   const juries: Record<string, string[]> = {
@@ -230,7 +230,7 @@ async function main() {
   for (const [hackathonId, list] of Object.entries({ raccourcisseur: ["chidi", "fatou", "yao"], "inscription-accessible": ["kossi", "fatou", "chidi"] })) {
     for (const userId of list) await team(`${hackathonId}-${userId}`, hackathonId, users.find((u) => u.id === userId)!.name, userId, [[userId, ""]], { solo: true });
   }
-  const solution = (who: string, repo: string, projectName: string) => ({ projectName, repoUrl: `https://github.com/${who}/${repo}`, explanation: "Chaque cas est couvert par un test. J’explique mes choix dans le README : structure, validation des entrées, gestion des erreurs.", payoutOperator: "Moov Money", payoutPhone: "+228 96 12 34 56" });
+  const solution = (who: string, repo: string, projectName: string) => ({ projectName, repoUrl: `https://github.com/${who}/${repo}`, explanation: "Chaque cas est couvert par un test. J’explique mes choix dans le README : structure, validation des entrées, gestion des erreurs." });
   await db.submission.createMany({
     data: [
       { id: "sub-short-chidi", hackathonId: "raccourcisseur", teamId: "raccourcisseur-chidi", ...solution("chidiokafor", "short", "Short"), demoUrl: "https://short.exemple.ng" },
@@ -252,31 +252,6 @@ async function main() {
       score("sub-short-chidi", "ibrahim", [5, 4, 3, 4]),
     ],
   });
-  // The pot is shared 90 / 10 (D6).
-  await db.payout.createMany({
-    data: [
-      { hackathonId: "inscription-accessible", role: "WINNER", beneficiaryId: "kossi", amount: 27_000, operator: "Moov Money", phone: "+228 96 12 34 56", reference: "PO-2610-0482", status: "SENT", sentAt: at(-5, 10) },
-      { hackathonId: "inscription-accessible", role: "PLATFORM", amount: 3_000, reference: "PO-2610-0484", status: "SENT", sentAt: at(-5, 10, 10) },
-    ],
-  });
-
-  // Paid contributions that make up each pot.
-  const pots: Record<string, number[]> = { "agritech-sahel": [50_000, 25_000, 10_000, 5_000, 5_000, 2_000, 2_000, 1_000], raccourcisseur: [30_000, 20_000, 10_000, 6_000], "inscription-accessible": [15_000, 10_000, 5_000] };
-  for (const [hackathonId, amounts] of Object.entries(pots)) {
-    await db.contribution.createMany({
-      data: amounts.map((amount, i) => ({
-        hackathonId,
-        amount,
-        displayName: i === 0 ? "Une entreprise de Cotonou" : `Contributeur ${i}`,
-        email: `sponsor${i}@exemple.org`,
-        anonymous: i % 3 === 2,
-        company: i === 0,
-        status: "PAID" as const,
-        createdAt: minutesAgo(60 * 24 * (i + 1)),
-        paidAt: minutesAgo(60 * 24 * (i + 1)),
-      })),
-    });
-  }
 
   /* Africa Rise-Up (screens R1 to R5) */
   const project = async (id: string, data: { name: string; domain: "WATER" | "HEALTH" | "AGRICULTURE"; summary: string; problem: string; skills: string[]; initiatorId: string }, members: Array<[string, string]>) => {

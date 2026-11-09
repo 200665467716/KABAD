@@ -5,7 +5,7 @@ import { routing } from "@/i18n/routing";
 
 const intl = createIntlMiddleware(routing);
 
-/** Screens of the signed-in app. Public: the landing page, the welcome page, sign-up step 1, sign-in, sponsor pages. */
+/** Screens of the signed-in app. Public: the landing page, the welcome page, sign-up step 1, sign-in. */
 const privatePaths = [
   /^\/(accueil|membres|compte|notifications)$/,
   /^\/(salons|admin|profil|mentorat|hackathons|rise-up|tests|messages)(\/.*)?$/,

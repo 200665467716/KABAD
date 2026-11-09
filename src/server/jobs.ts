@@ -6,7 +6,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { pushNotifications, type NotificationInput } from "./notifications";
-import { CONTEST_HOURS } from "./hackathons";
 
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
@@ -99,24 +98,6 @@ export async function closeEndedHackathons(now = new Date(), prisma: Db = db) {
   });
 }
 
-/** Tells the KABAD team which transfers can be sent, once the 48-hour contest period is over. */
-export async function announcePayableTransfers(now = new Date(), prisma: Db = db) {
-  return prisma.$transaction(async (tx) => {
-    const rows = await tx.payout.findMany({
-      where: { status: "PENDING", notifiedAt: null, hackathon: { resultsAt: { lte: new Date(now.getTime() - CONTEST_HOURS * HOUR) } } },
-      include: { hackathon: { select: { title: true } }, beneficiary: { select: { name: true } } },
-    });
-    if (rows.length === 0) return 0;
-    await tx.payout.updateMany({ where: { id: { in: rows.map((r) => r.id) }, notifiedAt: null }, data: { notifiedAt: now } });
-    const admins = await tx.user.findMany({ where: { isAdmin: true, suspendedAt: null }, select: { id: true } });
-    await pushNotifications(
-      tx,
-      admins.flatMap((a) => rows.map((p) => ({ userId: a.id, actor: p.hackathon.title, key: "payoutDue" as const, params: { amount: p.amount, name: p.beneficiary?.name ?? "KABAD" }, href: "/admin/versements", icon: "wallet" as const, tone: "accent" as const }))),
-    );
-    return rows.length;
-  });
-}
-
 /** Invitations left unanswered for 30 days are removed: the sender may invite again. */
 export async function expireInvitations(now = new Date(), prisma: Db = db) {
   const { count } = await prisma.invitation.deleteMany({ where: { status: "PENDING", createdAt: { lte: new Date(now.getTime() - INVITATION_EXPIRES_DAYS * DAY) } } });
@@ -130,6 +111,5 @@ export const JOBS = {
   "mentoring-remind": { cron: "*/5 * * * *", run: remindSessions },
   "rise-remind": { cron: "*/5 * * * *", run: remindRiseEvents },
   "hackathon-close": { cron: "*/5 * * * *", run: closeEndedHackathons },
-  "payout-announce": { cron: "0 * * * *", run: announcePayableTransfers },
   "invitation-expire": { cron: "30 3 * * *", run: expireInvitations },
 } as const;

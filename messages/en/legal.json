@@ -20,12 +20,11 @@
         "title": "Your data",
         "kept": "We keep what the service needs: your profile, your messages, your pairings, your solutions and your test reports.",
         "voice": "Voice rooms are not recorded.",
-        "momo": "Your Mobile Money number is only used to pay out your winnings, and is only shown to the team.",
         "account": "From “My account”, you can download all your data and delete your account at any time."
       },
       "prizes": {
-        "title": "Challenges and prize pools",
-        "text": "A prize pool is shared between the winning team (90%) and KABAD (10%), after the results are published and a 48-hour dispute period. The jury is made up of three verified seniors; a juror never scores someone they mentor."
+        "title": "Hackathons and their prizes",
+        "text": "Each organizer sets their own prizes, or none, and hands them out to the winners themselves: KABAD neither collects nor pays out any money. Prizes follow the jury’s ranking. The jury is made up of three verified mentors; a juror never scores someone they mentor."
       },
       "backToSignup": "Back to sign-up"
     }

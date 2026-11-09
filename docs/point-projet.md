@@ -55,6 +55,7 @@ Accroche de l’écran de bienvenue : « Créons la prochaine génération de de
 - **Hors périmètre.** Le scraping de contenus évoqué en réunion concerne un autre projet, pas KABAD.
 - **Mis de côté.** La répartition des tâches évoquée en réunion est mise de côté pour l’instant.
 - **Capsules retirées** (5 novembre). Elles venaient des premières idées du projet et ne font pas partie des priorités.
+- **Plus de cagnotte** (9 novembre). Les hackathons sont organisés par des organisations, qui fixent elles-mêmes leurs prix (un ou plusieurs, ou aucun) et les remettent aux gagnants. KABAD ne collecte ni ne verse d’argent. Les prix suivent le classement du jury.
 
 ## 4. Technique et règles de travail
 

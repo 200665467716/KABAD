@@ -25,7 +25,6 @@ const ACTIONS = {
   "challenge:create": "challengeCreate",
   "challenge:close": "challengeClose",
   "challenge:publish": "challengePublish",
-  "payout:sent": "payoutSent",
 } as const;
 
 function actionKey(action: string) {

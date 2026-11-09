@@ -151,7 +151,6 @@ export const reviewBadgeSchema = z.object({ approve: z.boolean(), reason: z.stri
 
 /* Hackathons */
 
-export const OPERATORS = ["Moov Money", "MTN MoMo", "Orange Money", "Wave", "Airtel Money", "Flooz", "T-Money"] as const;
 export const SUBMISSION_MAX = 800;
 
 export const submissionSchema = z.object({
@@ -159,8 +158,6 @@ export const submissionSchema = z.object({
   repoUrl: z.string().trim().regex(/^https:\/\/(github\.com|gitlab\.com|codeberg\.org)\/[\w.-]+\/[\w.-]+\/?$/, "Indique l’adresse d’un dépôt public GitHub, GitLab ou Codeberg."),
   demoUrl: z.union([z.literal(""), z.url({ protocol: /^https$/, message: "La démo doit être une adresse https." }).max(200)]).optional(),
   explanation: trimmed(40, SUBMISSION_MAX, "Décris ce que fait ta solution (40 caractères au moins).", `${SUBMISSION_MAX} caractères au plus.`),
-  payoutOperator: z.enum(OPERATORS).optional(),
-  payoutPhone: z.string().trim().regex(/^\+?[\d\s]{8,20}$/, "Indique le numéro Mobile Money qui recevra le gain.").optional(),
   teamAgrees: z.literal(true, "Confirme que toute l’équipe a relu la soumission."),
 });
 
@@ -193,10 +190,7 @@ export const hackathonSchema = z.object({
   stack: trimmed(2, 60, "Indique les technologies attendues.", "60 caractères au plus."),
   description: trimmed(30, 2000, "Décris le défi (30 caractères au moins).", "2 000 caractères au plus."),
   rulesUrl: z.union([z.literal(""), z.url({ protocol: /^https$/, message: "Le règlement doit être un lien https." }).max(200)]).optional(),
-  prizeKind: z.enum(["CAGNOTTE", "SPONSORISE", "LOT"]).optional(),
   prizes: z.array(trimmed(2, 120, "Prix vide.", "120 caractères au plus.")).max(5, "5 prix au plus.").default([]),
-  sponsorName: z.string().trim().max(120).optional(),
-  sponsorAmount: z.number().int().min(0).max(100_000_000).optional(),
   missionText: z.string().trim().max(600).optional(),
   instructorFee: z.number().int().min(0).max(10_000_000).optional(),
   instructorCount: z.number().int().min(0).max(20).optional(),
@@ -214,18 +208,6 @@ export const juryScoreSchema = z.object({
   explain: mark,
   comment: z.string().trim().max(1000).optional(),
 });
-
-export const contributionSchema = z.object({
-  hackathonId: id,
-  amount: z.number().int().positive(),
-  displayName: trimmed(2, 80, "Indique le nom à afficher.", "80 caractères au plus."),
-  email: z.email("Indique une adresse e-mail valide pour recevoir le reçu.").max(200),
-  phone: z.string().trim().regex(/^\+?[\d\s]{8,20}$/, "Indique un numéro de téléphone valide, avec l’indicatif (+228…)."),
-  anonymous: z.boolean().default(false),
-  company: z.boolean().default(false),
-});
-
-export const payoutSentSchema = z.object({ reference: trimmed(3, 60, "Indique la référence du transfert.", "60 caractères au plus.") });
 
 /* Community tests */
 

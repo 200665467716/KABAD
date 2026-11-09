@@ -20,12 +20,11 @@
         "title": "Vos données",
         "kept": "Nous gardons ce qui sert au service : votre profil, vos messages, vos binômes, vos solutions et vos rapports de test.",
         "voice": "Les salons vocaux ne sont pas enregistrés.",
-        "momo": "Votre numéro Mobile Money n’est utilisé que pour vous verser un gain, et n’est montré qu’à l’équipe.",
         "account": "Depuis « Mon compte », vous téléchargez toutes vos données et vous supprimez votre compte à tout moment."
       },
       "prizes": {
-        "title": "Les défis et les cagnottes",
-        "text": "Une cagnotte est partagée entre l’équipe gagnante (90 %) et KABAD (10 %), après la publication des résultats et 48 heures de contestation. Le jury est composé de trois seniors vérifiés ; un juré ne note jamais une personne qu’il accompagne."
+        "title": "Les hackathons et leurs prix",
+        "text": "Chaque organisateur fixe ses prix, ou n’en propose aucun, et les remet lui-même aux gagnants : KABAD ne collecte ni ne verse d’argent. Les prix suivent le classement du jury. Le jury est composé de trois mentors vérifiés ; un juré ne note jamais une personne qu’il accompagne."
       },
       "backToSignup": "Retour à l’inscription"
     }

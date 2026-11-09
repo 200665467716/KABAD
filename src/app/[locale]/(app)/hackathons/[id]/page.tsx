@@ -5,12 +5,11 @@ import { Suspense } from "react";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink } from "@/components/ui/Button";
-import { Alert, Avatar, AvatarGroup, Badge, Card, Overline, Ticket } from "@/components/ui/Display";
+import { Alert, Avatar, AvatarGroup, Badge, Overline, Ticket } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { AdminActions } from "@/components/features/hackathons/AdminActions";
 import { useCountdown, useWhere } from "@/components/features/hackathons/HackathonTicket";
-import { Link } from "@/i18n/navigation";
-import { formatFCFA, initials } from "@/lib/format";
+import { initials } from "@/lib/format";
 import type { HackathonDetail } from "@/lib/domain-types";
 import { badgedMentors } from "@/server/admin";
 import { getHackathon } from "@/server/hackathons";
@@ -60,7 +59,6 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
   const now = readClock();
   const hours = Math.round((new Date(h.endsAt).getTime() - new Date(h.startsAt).getTime()) / 3_600_000);
   const registrationsOpen = h.status === "OPEN" && new Date(h.closesAt).getTime() > now && h.published;
-  const cash = h.prizeKind === "CAGNOTTE" || h.prizeKind === "SPONSORISE";
   const size = h.teamMax === 1 ? tt("solo") : h.teamMin === 1 ? tt("soloOrTeam") : tt("range", { min: h.teamMin, max: h.teamMax });
   const facts = [
     { label: t("dates"), value: format.dateTimeRange(new Date(h.startsAt), new Date(h.endsAt), { day: "numeric", month: "short" }) },
@@ -113,20 +111,9 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
               ))}
             </ol>
           ) : (
-            !cash && <p className="text-sm text-muted">{t("noPrize")}</p>
+            <p className="text-sm text-muted">{t("noPrize")}</p>
           )}
-          {cash && (
-            <Card className="gap-1.5">
-              <span className="text-xs font-extrabold tracking-[0.08em] text-brand-text uppercase">{h.prizeKind === "CAGNOTTE" ? t("pot") : t("sponsored", { sponsor: h.sponsorName ?? "" })}</span>
-              <span className="font-display text-2xl font-extrabold tabular">{formatFCFA(h.pot)}</span>
-              <span className="text-[13px] text-muted">{t("split2")}</span>
-              {h.prizeKind === "CAGNOTTE" && h.status === "OPEN" && (
-                <Link href={`/soutenir/${h.id}`} className="text-sm font-extrabold">
-                  {t("support")}
-                </Link>
-              )}
-            </Card>
-          )}
+          {h.prizes.length > 0 && <p className="text-[13px] text-muted">{t("prizesBy", { organizer: h.organizerName })}</p>}
         </section>
 
         {h.instructorsList.length > 0 && (

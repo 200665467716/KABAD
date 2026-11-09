@@ -7,8 +7,7 @@
  *   (the worker records the change, src/server/jobs.ts);
  * - three badged mentors score each solution anonymously on 4 criteria; the mark is the average of their totals;
  * - hackathons and mentoring are independent: anyone may enter, without any mentoring required;
- * - publishing the results splits the pot 90/10 between the winning team and KABAD (D6);
- *   transfers are sent by Mobile Money after a 48 h contest period, then marked as sent with their reference;
+ * - the organizer sets the prizes (or none) and hands them out; KABAD holds no money;
  * - organizers offer paid instructor missions to badged mentors; KABAD records them, the organizer pays.
  */
 import { randomBytes } from "node:crypto";
@@ -17,11 +16,9 @@ import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
 import { mentoredBy } from "./mentoring";
 import { pushNotifications, type NotificationInput } from "./notifications";
-import { averageMark, totalScore } from "@/lib/jury";
-import { splitPrize } from "@/lib/prize";
-import type { ContributionView, HackathonDetail, HackathonResults, HackathonSummary, JuryItem, MissionView, PayoutView, RankingRow, TeamView } from "@/lib/domain-types";
+import { averageMark, awardPrizes, totalScore } from "@/lib/jury";
+import type { HackathonDetail, HackathonResults, HackathonSummary, JuryItem, MissionView, RankingRow, TeamView } from "@/lib/domain-types";
 
-export const CONTEST_HOURS = 48;
 type Tx = Db | Prisma.TransactionClient;
 
 /** With the jury: recorded as such, or past its end and not recorded yet by the worker. */
@@ -32,27 +29,15 @@ export async function requireAdmin(userId: string, prisma: Tx = db) {
   if (!u?.isAdmin) throw forbidden("Action réservée à l’équipe KABAD.");
 }
 
-const hasCash = (h: { prizeKind: string | null }) => h.prizeKind === "CAGNOTTE" || h.prizeKind === "SPONSORISE";
-
-type Totals = { pot: number; contributors: number; companies: number; teams: number; participants: number; instructors: number };
+type Totals = { teams: number; participants: number; instructors: number };
 
 async function totals(ids: string[], prisma: Tx): Promise<Map<string, Totals>> {
-  const [hackathons, paid, companies, teams, seats, missions] = await Promise.all([
-    prisma.hackathon.findMany({ where: { id: { in: ids } }, select: { id: true, sponsorAmount: true, sponsorName: true } }),
-    prisma.contribution.groupBy({ by: ["hackathonId"], where: { hackathonId: { in: ids }, status: "PAID" }, _sum: { amount: true }, _count: { _all: true } }),
-    prisma.contribution.groupBy({ by: ["hackathonId"], where: { hackathonId: { in: ids }, status: "PAID", company: true }, _count: { _all: true } }),
+  const [teams, seats, missions] = await Promise.all([
     prisma.team.groupBy({ by: ["hackathonId"], where: { hackathonId: { in: ids } }, _count: { _all: true } }),
     prisma.teamMember.groupBy({ by: ["hackathonId"], where: { hackathonId: { in: ids } }, _count: { _all: true } }),
     prisma.instructorMission.groupBy({ by: ["hackathonId"], where: { hackathonId: { in: ids }, status: "ACCEPTED" }, _count: { _all: true } }),
   ]);
-  const out = new Map<string, Totals>();
-  for (const h of hackathons) out.set(h.id, { pot: h.sponsorAmount, contributors: h.sponsorAmount > 0 ? 1 : 0, companies: h.sponsorName ? 1 : 0, teams: 0, participants: 0, instructors: 0 });
-  for (const p of paid) {
-    const t = out.get(p.hackathonId)!;
-    t.pot += p._sum.amount ?? 0;
-    t.contributors += p._count._all;
-  }
-  for (const c of companies) out.get(c.hackathonId)!.companies += c._count._all;
+  const out = new Map<string, Totals>(ids.map((id) => [id, { teams: 0, participants: 0, instructors: 0 }]));
   for (const t of teams) out.get(t.hackathonId)!.teams = t._count._all;
   for (const s of seats) out.get(s.hackathonId)!.participants = s._count._all;
   for (const m of missions) out.get(m.hackathonId)!.instructors = m._count._all;
@@ -73,9 +58,7 @@ const summarySelect = {
   status: true,
   level: true,
   stack: true,
-  prizeKind: true,
   prizes: true,
-  sponsorName: true,
   instructorCount: true,
   publishedAt: true,
   resultsAt: true,
@@ -139,8 +122,6 @@ function toTeam(t: TeamRow, viewerId: string): TeamView {
       repoUrl: t.submission.repoUrl,
       demoUrl: t.submission.demoUrl,
       explanation: t.submission.explanation,
-      payoutOperator: t.submission.payoutOperator,
-      payoutPhone: t.submission.payoutPhone,
       updatedAt: t.submission.updatedAt.toISOString(),
     },
   };
@@ -211,10 +192,7 @@ export type HackathonInput = {
   stack: string;
   description: string;
   rulesUrl?: string;
-  prizeKind?: "CAGNOTTE" | "SPONSORISE" | "LOT";
   prizes: string[];
-  sponsorName?: string;
-  sponsorAmount?: number;
   missionText?: string;
   instructorFee?: number;
   instructorCount?: number;
@@ -264,10 +242,7 @@ export async function createHackathon(userId: string, input: HackathonInput, pri
         stack: input.stack,
         description: input.description,
         rulesUrl: input.rulesUrl || null,
-        prizeKind: input.prizeKind ?? null,
         prizes: input.prizes,
-        sponsorName: input.sponsorName || null,
-        sponsorAmount: input.sponsorAmount ?? 0,
         missionText: input.missionText || null,
         instructorFee: input.instructorFee ?? null,
         instructorCount: input.instructorCount ?? 0,
@@ -429,7 +404,7 @@ export async function myEntries(userId: string, prisma: Db = db) {
 export async function submitSolution(
   userId: string,
   hackathonId: string,
-  input: { projectName: string; repoUrl: string; demoUrl?: string; explanation: string; payoutOperator?: string; payoutPhone?: string },
+  input: { projectName: string; repoUrl: string; demoUrl?: string; explanation: string },
   prisma: Db = db,
 ) {
   const h = await prisma.hackathon.findUnique({ where: { id: hackathonId } });
@@ -439,15 +414,7 @@ export async function submitSolution(
   const team = await teamOf(prisma, hackathonId, userId);
   if (!team) throw forbidden("Inscris-toi d’abord à ce hackathon.");
   if (team.members.length < h.teamMin) throw new DomainError("team_small", `Il faut au moins ${h.teamMin} membres dans l’équipe pour soumettre.`, 409);
-  if (hasCash(h) && (!input.payoutOperator || !input.payoutPhone)) throw new DomainError("payout", "Indique le numéro Mobile Money qui recevra le gain de l’équipe.", 400, "payoutPhone");
-  const data = {
-    projectName: input.projectName,
-    repoUrl: input.repoUrl,
-    demoUrl: input.demoUrl || null,
-    explanation: input.explanation,
-    payoutOperator: hasCash(h) ? input.payoutOperator! : null,
-    payoutPhone: hasCash(h) ? input.payoutPhone! : null,
-  };
+  const data = { projectName: input.projectName, repoUrl: input.repoUrl, demoUrl: input.demoUrl || null, explanation: input.explanation };
   return prisma.$transaction(async (tx) => {
     const s = await tx.submission.upsert({ where: { teamId: team.id }, create: { hackathonId, teamId: team.id, ...data }, update: data });
     const me = team.members.find((m) => m.userId === userId)!.user.name;
@@ -461,7 +428,7 @@ export async function submitSolution(
 
 /* Jury */
 
-/** Jurors who mentored a member of a team do not score its solution: a mentor may receive part of the pot. */
+/** Jurors who mentored a member of a team do not score its solution, to avoid any conflict of interest. */
 async function recusals(prisma: Tx, submissions: Array<{ id: string; team: { members: Array<{ userId: string }> } }>) {
   const members = submissions.flatMap((s) => s.team.members.map((m) => m.userId));
   const mentors = await mentoredBy(members, prisma);
@@ -530,7 +497,7 @@ export async function ranking(hackathonId: string, prisma: Tx = db): Promise<Ran
     .map(({ at: _at, ...r }) => r);
 }
 
-/* Results and transfers */
+/* Results */
 
 /** Ends registrations and solutions before the planned date. */
 export async function closeHackathon(adminId: string, hackathonId: string, prisma: Db = db) {
@@ -542,7 +509,7 @@ export async function closeHackathon(adminId: string, hackathonId: string, prism
   return { ok: true };
 }
 
-/** Publishes the ranking and prepares the transfers (D6). Every juror must have scored every solution they may score. */
+/** Publishes the ranking. Every juror must have scored every solution they may score. */
 export async function publishResults(adminId: string, hackathonId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
   const h = await prisma.hackathon.findUnique({
@@ -557,73 +524,37 @@ export async function publishResults(adminId: string, hackathonId: string, prism
   if (missing) throw new DomainError("unscored", `${missing} solution${missing > 1 ? "s n’ont" : " n’a"} pas encore été notée${missing > 1 ? "s" : ""} par tout le jury.`, 409);
 
   const rank = await ranking(hackathonId, prisma);
-  const winner = h.submissions.find((s) => s.teamId === rank[0].teamId)!;
-  const [{ pot }] = [...(await totals([hackathonId], prisma)).values()];
-  const everyone = h.submissions.flatMap((s) => s.team.members.map((m) => ({ userId: m.userId, won: s.id === winner.id })));
+  // Every juror may be recused for a solution: it then has no mark and no rank.
+  if (rank.length === 0) throw new DomainError("unscored", "Aucune solution n’a reçu de note du jury.", 409);
+  const awards = new Map(awardPrizes(rank, h.prizes).map((a) => [a.team.teamId, a]));
+  const everyone = h.submissions.flatMap((s) => s.team.members.map((m) => ({ userId: m.userId, teamId: s.teamId })));
   const href = `/hackathons/${hackathonId}/resultats`;
   const actor = h.title;
 
   return prisma.$transaction(async (tx) => {
     const now = new Date();
-    // Two clicks, or two admins at once: only one publication creates the transfers.
+    // Two clicks, or two admins at once: only one publication sends the notifications.
     const { count } = await tx.hackathon.updateMany({ where: { id: hackathonId, status: { in: ["OPEN", "JURY"] } }, data: { status: "DONE", resultsAt: now } });
     if (!count) throw new DomainError("already_published", "Les résultats sont déjà publiés.", 409);
-    const notes: NotificationInput[] = everyone.filter((e) => !e.won).map((e) => ({ userId: e.userId, actor, key: "resultsPublished", href, icon: "trophy", tone: "accent" }));
-    const winners = everyone.filter((e) => e.won);
-    if (hasCash(h) && pot > 0) {
-      const captain = rank[0].captainId;
-      const split = splitPrize(pot);
-      await tx.payout.createMany({
-        data: [
-          { hackathonId, role: "WINNER", beneficiaryId: captain, amount: split.winner, operator: winner.payoutOperator, phone: winner.payoutPhone },
-          { hackathonId, role: "PLATFORM", amount: split.platform },
-        ],
-      });
-      for (const w of winners) notes.push({ userId: w.userId, actor, key: "teamWonMoney", params: { amount: split.winner, hours: CONTEST_HOURS }, href, icon: "trophy", tone: "accent" });
-    } else {
-      for (const w of winners) notes.push({ userId: w.userId, actor, key: "teamWonPrize", href, icon: "trophy", tone: "accent" });
-    }
+    // The organizer hands out the prizes: each prize-winning team is told which prize, and that it will be contacted.
+    const notes: NotificationInput[] = everyone.map((e) => {
+      const award = awards.get(e.teamId);
+      const note = { userId: e.userId, actor, href, icon: "trophy" as const, tone: "accent" as const };
+      if (award) return { ...note, key: "teamWonPrize", params: { prize: award.prize, rank: award.rank } };
+      if (h.prizes.length === 0 && e.teamId === rank[0].teamId) return { ...note, key: "teamWon" };
+      return { ...note, key: "resultsPublished" };
+    });
     await pushNotifications(tx, notes);
     await tx.adminAction.create({ data: { adminId, action: "hackathon:publish_results", targetId: hackathonId } });
-    return { winnerTeamId: winner.teamId };
-  });
-}
-
-/** Records a Mobile Money transfer made by the team, once the contest period is over. */
-export async function markPayoutSent(adminId: string, payoutId: string, reference: string, prisma: Db = db) {
-  await requireAdmin(adminId, prisma);
-  const p = await prisma.payout.findUnique({ where: { id: payoutId }, include: { hackathon: { select: { title: true, resultsAt: true, id: true } } } });
-  if (!p) throw notFound("Versement introuvable.");
-  if (p.status === "SENT") throw new DomainError("already_sent", "Ce versement est déjà marqué comme envoyé.", 409);
-  const contestEnds = (p.hackathon.resultsAt?.getTime() ?? Infinity) + CONTEST_HOURS * 3600_000;
-  if (Date.now() < contestEnds) throw new DomainError("contest", `Attends la fin des ${CONTEST_HOURS} h de contestation avant de verser.`, 409);
-  return prisma.$transaction(async (tx) => {
-    const { count } = await tx.payout.updateMany({ where: { id: payoutId, status: "PENDING" }, data: { status: "SENT", reference, sentAt: new Date() } });
-    if (!count) throw new DomainError("already_sent", "Ce versement est déjà marqué comme envoyé.", 409);
-    await tx.adminAction.create({ data: { adminId, action: "payout:sent", targetId: payoutId, details: `${p.amount} F CFA · réf. ${reference}` } });
-    if (p.beneficiaryId) {
-      await pushNotifications(tx, [{ userId: p.beneficiaryId, actor: "KABAD", key: "payoutSent", params: { amount: p.amount, title: p.hackathon.title }, href: `/hackathons/${p.hackathon.id}/resultats`, icon: "wallet", tone: "accent" }]);
-    }
-    return { ok: true };
+    return { winnerTeamId: rank[0].teamId };
   });
 }
 
 export async function getResults(id: string, prisma: Db = db): Promise<HackathonResults> {
-  const h = await prisma.hackathon.findUnique({ where: { id }, select: { ...summarySelect, payouts: { include: { beneficiary: { select: { name: true } } }, orderBy: { role: "asc" } } } });
+  const h = await prisma.hackathon.findUnique({ where: { id }, select: summarySelect });
   if (!h || h.status !== "DONE") throw notFound("Résultats introuvables.");
   const [summary] = await summaries([h], prisma);
-  const payouts: PayoutView[] = h.payouts.map((p) => ({
-    role: p.role,
-    amount: p.amount,
-    beneficiary: p.beneficiary?.name ?? null,
-    operator: p.operator,
-    // Only the last digits are shown.
-    phone: p.phone ? p.phone.replace(/\d(?=(?:\D*\d){4})/g, "•") : null,
-    reference: p.reference,
-    status: p.status,
-    sentAt: p.sentAt?.toISOString() ?? null,
-  }));
-  return { ...summary, ranking: await ranking(id, prisma), payouts, publishedAt: h.resultsAt?.toISOString() ?? null };
+  return { ...summary, ranking: await ranking(id, prisma), publishedAt: h.resultsAt?.toISOString() ?? null };
 }
 
 /** A team's own marks and the jurors' comments, shown once the results are out. Jurors stay anonymous. */
@@ -633,11 +564,6 @@ export async function myFeedback(userId: string, hackathonId: string, prisma: Db
   const sub = await prisma.submission.findUnique({ where: { id: team.submission.id }, include: { scores: true, hackathon: { select: { status: true } } } });
   if (!sub || sub.hackathon.status !== "DONE" || sub.scores.length === 0) return null;
   return { mark: averageMark(sub.scores.map(totalScore)), comments: sub.scores.map((s) => s.comment).filter((c): c is string => Boolean(c)) };
-}
-
-export async function recentContributions(hackathonId: string, prisma: Db = db): Promise<ContributionView[]> {
-  const rows = await prisma.contribution.findMany({ where: { hackathonId, status: "PAID" }, orderBy: { paidAt: "desc" }, take: 6 });
-  return rows.map((r) => ({ name: r.anonymous ? "Anonyme" : r.displayName, amount: r.amount, createdAt: (r.paidAt ?? r.createdAt).toISOString() }));
 }
 
 /* Instructor missions */
@@ -708,26 +634,11 @@ export async function missionsFor(userId: string, hackathonId: string, prisma: D
 
 /* Administration */
 
-/** For the admin page: hackathons with their state, proposals to review and transfers still to send. */
+/** For the admin page: hackathons with their state and proposals to review. */
 export async function adminOverview(adminId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
   const rows = await prisma.hackathon.findMany({ select: summarySelect, orderBy: { startsAt: "asc" } });
   const hackathons = await summaries(rows, prisma);
-  const payouts = await prisma.payout.findMany({ where: { status: "PENDING" }, include: { beneficiary: { select: { name: true } }, hackathon: { select: { title: true, resultsAt: true } } }, orderBy: { createdAt: "asc" } });
   const [pendingBadges, openReports] = await Promise.all([prisma.mentorBadgeRequest.count({ where: { status: "PENDING" } }), prisma.report.count({ where: { status: "OPEN" } })]);
-  return {
-    hackathons,
-    payouts: payouts.map((p) => ({
-      id: p.id,
-      role: p.role,
-      amount: p.amount,
-      beneficiary: p.beneficiary?.name ?? "KABAD",
-      operator: p.operator,
-      phone: p.phone,
-      hackathon: p.hackathon.title,
-      payableFrom: new Date((p.hackathon.resultsAt?.getTime() ?? 0) + CONTEST_HOURS * 3600_000).toISOString(),
-    })),
-    pendingBadges,
-    openReports,
-  };
+  return { hackathons, pendingBadges, openReports };
 }

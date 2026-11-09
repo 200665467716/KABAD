@@ -48,7 +48,6 @@ export default async function TermsPage() {
         <ul className="grid list-disc gap-1 pl-5">
           <li>{t("data.kept")}</li>
           <li>{t("data.voice")}</li>
-          <li>{t("data.momo")}</li>
           <li>{t("data.account")}</li>
         </ul>
       </Part>

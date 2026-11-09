@@ -6,7 +6,7 @@ Vision : créer la prochaine génération de devs africains, plus productifs et 
 
 Projet de l’équipe KABAD pour la Coupe d’Afrique des Développeurs (CADEV 2026) de Systalink. La vision, les décisions et les fonctionnalités de référence sont dans [`docs/point-projet.md`](docs/point-projet.md) ; ce qui reste à faire est dans [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
-Tout fonctionne sur de vraies données : comptes, mentorat par créneaux, badge mentor, hackathons et jury, tests d’apps, messagerie en temps réel, Africa Rise-Up, modération et tableau de bord de l’équipe. Le paiement en ligne des cagnottes n’est pas encore branché : ce sera XedoPay, en mode test.
+Tout fonctionne sur de vraies données : comptes, mentorat par créneaux, badge mentor, hackathons et jury, tests d’apps, messagerie en temps réel, Africa Rise-Up, modération et tableau de bord de l’équipe. Les hackathons n’ont pas de cagnotte : l’organisateur fixe ses prix et les remet lui-même aux gagnants.
 
 ## Lancer KABAD sur son ordinateur
 
@@ -77,7 +77,7 @@ Mot de passe **`kabad-demo-2026`** pour tous les comptes. Les noms sont des exem
 | Fatou Sow, intermédiaire | `fatou.sow@exemple.sn` | Testeuse, membre de projets Rise-Up |
 | Chidi Okafor, intermédiaire | `chidi.okafor@exemple.ng` | App « TontineApp » à faire tester |
 | FinLab Cotonou, organisation | `contact@finlab.exemple.bj` | Organisateur du hackathon « Fintech pour l’inclusion » |
-| **Équipe KABAD** | `equipe@kabad.app` | **Tableau de bord** `/admin` : badges mentor, hackathons à publier, signalements, membres, versements, journal |
+| **Équipe KABAD** | `equipe@kabad.app` | **Tableau de bord** `/admin` : badges mentor, hackathons à publier, signalements, membres, journal |
 
 Ouvrez deux navigateurs (ou une fenêtre privée) avec deux comptes pour voir les messages en direct.
 
@@ -179,7 +179,6 @@ src/
     (auth)/        Inscription en 5 étapes, connexion, e-mail à confirmer, mot de passe oublié
     (app)/         Application connectée : accueil, mentorat, hackathons, Rise-Up, tests,
                    messages, membres, notifications, profil, compte, admin (et salons, désactivés)
-    soutenir/[id]  Page publique d’une cagnotte de hackathon
     conditions/    Conditions d’utilisation
   app/api/         Routes de l’API : elles valident l’entrée (Zod) puis appellent src/server
   components/      Design system (ui), cadre (shell), blocs métier (features)

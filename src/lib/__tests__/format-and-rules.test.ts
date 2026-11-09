@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatDuration, formatFCFA, initials } from "../format";
 import { charactersLeft, checkInvitationMessage, INVITATION_MAX_LENGTH } from "../invitation";
-import { averageMark, totalScore } from "../jury";
+import { averageMark, awardPrizes, totalScore } from "../jury";
 
 const NBSP = " ";
 
@@ -45,5 +45,14 @@ describe("jury", () => {
   it("averages the three jurors to one decimal", () => {
     expect(averageMark([17, 18, 17])).toBe(17.3);
     expect(averageMark([])).toBe(0);
+  });
+
+  it("gives the organizer's prizes down the ranking, and nothing past the last prize", () => {
+    expect(awardPrizes(["A", "B", "C"], ["1er prix", "2e prix"])).toEqual([
+      { team: "A", rank: 1, prize: "1er prix" },
+      { team: "B", rank: 2, prize: "2e prix" },
+    ]);
+    expect(awardPrizes(["A"], ["1er prix", "2e prix"])).toEqual([{ team: "A", rank: 1, prize: "1er prix" }]);
+    expect(awardPrizes(["A", "B"], [])).toEqual([]);
   });
 });

@@ -17,6 +17,11 @@ export function totalScore(score: JuryScore): number {
   }, 0);
 }
 
+/** The organizer's prizes go down the ranking: the 1st prize to the 1st team, and so on. Teams past the last prize win nothing. */
+export function awardPrizes<T>(ranking: T[], prizes: string[]): Array<{ team: T; rank: number; prize: string }> {
+  return ranking.slice(0, prizes.length).map((team, i) => ({ team, rank: i + 1, prize: prizes[i] }));
+}
+
 /** Final mark = average of the jurors' totals, rounded to one decimal. */
 export function averageMark(totals: number[]): number {
   if (totals.length === 0) return 0;

@@ -1,7 +1,7 @@
 {
   "admin": {
     "title": "KABAD team",
-    "subtitle": "Badges, moderation, members, hackathons and payouts",
+    "subtitle": "Badges, moderation, members and hackathons",
     "loading": "Loading…",
     "error": "The action did not go through.",
     "nav": {
@@ -11,7 +11,6 @@
       "reports": "Reports",
       "members": "Members",
       "hackathons": "Hackathons",
-      "payouts": "Payouts",
       "journal": "Log"
     },
     "dashboard": {
@@ -21,7 +20,6 @@
       "openReports": "open reports",
       "toPublish": "hackathons to publish",
       "juryHackathons": "hackathons being judged",
-      "payouts": "payouts to send ({count})",
       "members": "members",
       "newMembers": "new in 7 days",
       "mentors": "badged mentors",
@@ -146,8 +144,7 @@
         "seniorReject": "refused a Senior status",
         "challengeCreate": "created a challenge",
         "challengeClose": "closed a challenge",
-        "challengePublish": "published results",
-        "payoutSent": "recorded a payout"
+        "challengePublish": "published results"
       }
     }
   }

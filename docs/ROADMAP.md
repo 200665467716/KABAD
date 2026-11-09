@@ -62,9 +62,9 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
 
 - [x] D6. Défis en 3 niveaux (27 octobre). Le mentor reçoit 30 % au plus, KABAD 10 % au plus.
   - Niveau 1 : défi sans récompense en argent, évalué par un jury. À valider en premier ; on n'étend aux niveaux 2 et 3 que si les autres fonctionnalités sont prêtes.
-  - Niveau 2 : récompense par cagnotte communautaire ou sponsor, sans mentor. 90 % au gagnant, 10 % à KABAD.
+  - ~~Niveau 2 : récompense par cagnotte communautaire ou sponsor, sans mentor. 90 % au gagnant, 10 % à KABAD.~~ Retiré le 9 novembre (D12).
   - ~~Niveau 3 : récompense avec mentor, 60/30/10.~~ Retiré le 7 novembre (D11) : hackathons et mentorat sont indépendants.
-  - Aux niveaux 2 et 3, la moitié de la part de KABAD (5 % du total) est mise en réserve pour abonder de futures cagnottes.
+  - ~~Aux niveaux 2 et 3, la moitié de la part de KABAD (5 % du total) est mise en réserve pour abonder de futures cagnottes.~~
 
 - [x] D7. Salons de réflexion d'Africa Rise-Up : lien visio externe (31 octobre).
   - Un événement de projet porte un lien Meet ou Jitsi ; sans lien saisi, KABAD crée une salle Jitsi.
@@ -90,9 +90,15 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
   - Questions encore ouvertes : partie 8 du point projet (visio à long terme, salon vocal Rise-Up, rémunération des instructeurs, jury des hackathons, organisations autorisées, durée des séances).
 
 - [x] D11. Hackathons et mentorat indépendants (7 novembre).
-  - Plus aucun temps de mentorat exigé pour participer à un hackathon ; le niveau 3 de D6 disparaît, une cagnotte se partage 90/10.
+  - Plus aucun temps de mentorat exigé pour participer à un hackathon ; le niveau 3 de D6 disparaît.
   - Les hackathons restent relus et publiés par l'équipe KABAD.
-  - Migration `hackathons_sans_mentorat` : la colonne `mentoringMinutes` disparaît ; les anciens versements « MENTOR » restent dans l'historique.
+  - Migration `hackathons_sans_mentorat` : la colonne `mentoringMinutes` disparaît.
+
+- [x] D12. Plus de cagnotte (9 novembre).
+  - Un hackathon est organisé par une organisation, qui fixe elle-même ses prix (un ou plusieurs, ou aucun) et les remet aux gagnants. KABAD ne collecte ni ne verse d'argent.
+  - Les prix suivent le classement du jury : le 1er prix à la 1re équipe, et ainsi de suite. Chaque équipe primée est prévenue de son prix.
+  - Retirés : page `/soutenir/[id]`, contributions, versements et écran `/admin/versements`, partage 90/10, numéro Mobile Money à la soumission, tâche `payout-announce`.
+  - Migration `retrait_cagnottes` : tables `Contribution` et `Payout`, colonnes `prizeKind`, `sponsorName`, `sponsorAmount` et `payout*` supprimées.
 
 ## P0 — Recevable, en ligne, stable (objectif : 2 novembre)
 
@@ -125,7 +131,7 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
   - Supervision externe avec alerte en moins de 5 min.
 
 - [x] R5. Worker de tâches planifiées : pg-boss (MIT) et un service `worker` dans compose (1er novembre).
-  - `src/server/jobs.ts` : expiration des demandes de séance non traitées, relance du mentor à 48 h, rappel 1 h avant une séance et avant un événement Rise-Up, passage des hackathons au jury, annonce des versements après 48 h, expiration des invitations à 30 j. Chaque tâche est idempotente et testée.
+  - `src/server/jobs.ts` : expiration des demandes de séance non traitées, relance du mentor à 48 h, rappel 1 h avant une séance et avant un événement Rise-Up, passage des hackathons au jury, expiration des invitations à 30 j. Chaque tâche est idempotente et testée.
   - `worker/index.ts`, regroupé par esbuild dans l'image `kabad-worker` ; expirations « à la lecture » retirées (les écritures vérifient toujours les dates).
   - La réaffectation à 72 h n'a plus d'objet avec les créneaux (D9).
 
@@ -216,8 +222,8 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
   - Figer le SHA du dernier commit avant l'échéance (API GitHub).
   - Calculer une moyenne pondérée selon la grille du défi.
 
-- [ ] R17. Répartition, contestation et éligibilité (D6, F2.8, F2.11).
-  - Répartition 90/10 (D11), avec 5 % du total mis en réserve KABAD. Testée, sans perte d'un franc à l'arrondi.
+- [ ] R17. Contestation et éligibilité (F2.11).
+  - ~~Répartition 90/10~~ : retirée le 9 novembre (D12), il n'y a plus de cagnotte.
   - Contestation possible pendant 48 h, arbitrée par un modérateur.
 
 ### Tests communautaires (F3)
@@ -276,7 +282,7 @@ R11, R15 et R16 forment le niveau 1 de D6, à finir en priorité.
 
 ## P2 — Les « Should » (si le temps le permet)
 
-- [ ] R40. Cagnotte en sandbox, niveaux 2 et 3 de D6 (F2.6, F2.7, F2.9).
+- [x] R40. ~~Cagnotte en sandbox, niveaux 2 et 3 de D6 (F2.6, F2.7, F2.9)~~ : abandonnée le 9 novembre (D12).
   - XedoPay en sandbox (D2), avec un webhook signé `X-Xedopay-Signature` et idempotent : une référence de paiement n'est créditée qu'une fois.
   - Registre comptable et séquestre, avec la réserve KABAD de 5 % suivie à part.
   - Remboursement si le défi est annulé.

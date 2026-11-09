@@ -40,7 +40,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       {top}
-      <SubmissionForm hackathonId={id} heading={`${team.name} · ${h.title}`} hasCash={h.prizeKind === "CAGNOTTE" || h.prizeKind === "SPONSORISE"} initial={team.submission} />
+      <SubmissionForm hackathonId={id} heading={`${team.name} · ${h.title}`} initial={team.submission} />
     </>
   );
 }

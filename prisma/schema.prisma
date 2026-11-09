@@ -87,7 +87,6 @@ model User {
   teamRequests         TeamJoinRequest[]
   missions             InstructorMission[]
   scores               JuryScore[]
-  payouts              Payout[]
   testApps             TestApp[]
   testSeats            TestParticipant[]
   testReports          TestReport[]
@@ -380,15 +379,8 @@ model MentoringBooking {
 }
 
 /**
- * Hackathons (the former code challenges) and their prize pots
+ * Hackathons (the former code challenges)
  */
-
-/// How the winner is rewarded (decision D6). LOT: a physical prize; CAGNOTTE and SPONSORISE: money.
-enum PrizeKind {
-  CAGNOTTE
-  SPONSORISE
-  LOT
-}
 
 enum HackathonStatus {
   OPEN
@@ -403,48 +395,43 @@ enum HackathonFormat {
 }
 
 model Hackathon {
-  id               String          @id
-  title            String          @db.VarChar(120)
+  id              String          @id
+  title           String          @db.VarChar(120)
   /// Shown as "par FinLab Cotonou": a company, a school or a community.
-  organizerName    String          @db.VarChar(80)
-  createdById      String?
-  createdBy        User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  format           HackathonFormat
-  city             String?         @db.VarChar(60)
-  startsAt         DateTime
-  endsAt           DateTime
+  organizerName   String          @db.VarChar(80)
+  createdById     String?
+  createdBy       User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  format          HackathonFormat
+  city            String?         @db.VarChar(60)
+  startsAt        DateTime
+  endsAt          DateTime
   /// Registrations close at this date; solutions are due at endsAt.
-  closesAt         DateTime
+  closesAt        DateTime
   /// 1 allows solo entries. teamMax 1: solo only.
-  teamMin          Int             @default(1)
-  teamMax          Int             @default(5)
-  level            String          @db.VarChar(20)
-  stack            String          @db.VarChar(60)
+  teamMin         Int             @default(1)
+  teamMax         Int             @default(5)
+  level           String          @db.VarChar(20)
+  stack           String          @db.VarChar(60)
   /// The challenge to solve.
-  description      String          @db.VarChar(2000)
-  rulesUrl         String?         @db.VarChar(200)
-  status           HackathonStatus @default(OPEN)
-  resultsAt        DateTime?
-  prizeKind        PrizeKind?
-  /// Prizes in order: ["Un ordinateur portable", "Un an d’hébergement"]. For LOT and to announce money prizes.
-  prizes           String[]        @default([])
-  sponsorName      String?         @db.VarChar(120)
-  /// Amount committed by the sponsor, in F CFA. Paid contributions add to it.
-  sponsorAmount    Int             @default(0)
+  description     String          @db.VarChar(2000)
+  rulesUrl        String?         @db.VarChar(200)
+  status          HackathonStatus @default(OPEN)
+  resultsAt       DateTime?
+  /// Prizes in order, set by the organizer: ["1er prix : 500 000 F CFA", "2e prix : un ordinateur portable"].
+  /// Empty: no prize. The organizer hands out the prizes; KABAD holds no money.
+  prizes          String[]        @default([])
   /// Instructor missions offered to KABAD mentors.
-  missionText      String?         @db.VarChar(600)
-  instructorFee    Int?
-  instructorCount  Int             @default(0)
+  missionText     String?         @db.VarChar(600)
+  instructorFee   Int?
+  instructorCount Int             @default(0)
   /// Set by a moderator. Until then only its author and the team see it.
-  publishedAt      DateTime?
-  createdAt        DateTime        @default(now())
+  publishedAt     DateTime?
+  createdAt       DateTime        @default(now())
 
-  jurors        HackathonJuror[]
-  teams         Team[]
-  submissions   Submission[]
-  missions      InstructorMission[]
-  contributions Contribution[]
-  payouts       Payout[]
+  jurors      HackathonJuror[]
+  teams       Team[]
+  submissions Submission[]
+  missions    InstructorMission[]
 
   @@index([status, startsAt])
 }
@@ -514,20 +501,18 @@ model TeamJoinRequest {
 
 /// One solution per team, due at the end of the hackathon.
 model Submission {
-  id             String      @id @default(cuid())
-  hackathonId    String
-  teamId         String      @unique
-  hackathon      Hackathon   @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
-  team           Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  projectName    String      @db.VarChar(60)
-  repoUrl        String      @db.VarChar(200)
-  demoUrl        String?     @db.VarChar(200)
-  explanation    String      @db.VarChar(800)
-  payoutOperator String?     @db.VarChar(30)
-  payoutPhone    String?     @db.VarChar(30)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  scores         JuryScore[]
+  id          String      @id @default(cuid())
+  hackathonId String
+  teamId      String      @unique
+  hackathon   Hackathon   @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  team        Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  projectName String      @db.VarChar(60)
+  repoUrl     String      @db.VarChar(200)
+  demoUrl     String?     @db.VarChar(200)
+  explanation String      @db.VarChar(800)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  scores      JuryScore[]
 
   @@index([hackathonId])
 }
@@ -569,61 +554,6 @@ model InstructorMission {
 
   @@unique([hackathonId, mentorId])
   @@index([mentorId, status])
-}
-
-enum ContributionStatus {
-  PENDING
-  PAID
-  FAILED
-}
-
-/// A sponsor's payment. Counted in the pot only once PAID.
-model Contribution {
-  id          String             @id @default(cuid())
-  hackathonId String
-  hackathon   Hackathon          @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
-  amount      Int
-  displayName String             @db.VarChar(80)
-  email       String             @db.VarChar(200)
-  anonymous   Boolean            @default(false)
-  company     Boolean            @default(false)
-  status      ContributionStatus @default(PENDING)
-  createdAt   DateTime           @default(now())
-  paidAt      DateTime?
-
-  @@index([hackathonId, status])
-}
-
-enum PayoutRole {
-  WINNER
-  MENTOR
-  PLATFORM
-}
-
-enum PayoutStatus {
-  PENDING
-  SENT
-}
-
-/// The split of a pot (90/10 or 60/30/10, decision D6), sent by Mobile Money after the 48 h contest period.
-model Payout {
-  id            String       @id @default(cuid())
-  hackathonId   String
-  hackathon     Hackathon    @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
-  role          PayoutRole
-  beneficiaryId String?
-  beneficiary   User?        @relation(fields: [beneficiaryId], references: [id], onDelete: SetNull)
-  amount        Int
-  operator      String?      @db.VarChar(30)
-  phone         String?      @db.VarChar(30)
-  reference     String?      @db.VarChar(60)
-  status        PayoutStatus @default(PENDING)
-  createdAt     DateTime     @default(now())
-  /// The team was told the transfer can be sent, once the contest period is over (worker).
-  notifiedAt    DateTime?
-  sentAt        DateTime?
-
-  @@unique([hackathonId, role])
 }
 
 /**
