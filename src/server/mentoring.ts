@@ -11,7 +11,7 @@ import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
 import { pushNotifications } from "./notifications";
 import { freeSlots, isOfferedSlot, rangesProblem, type WeeklyRange } from "@/lib/slots";
-import { jitsiRoom, MAX_PENDING_BOOKINGS, SESSION_MINUTES } from "@/lib/mentoring";
+import { MAX_PENDING_BOOKINGS, SESSION_MINUTES } from "@/lib/mentoring";
 import type { AvailabilityView, BookingView, MentorCard, MentorDetail } from "@/lib/domain-types";
 
 /** How far ahead slots are offered. */
@@ -192,8 +192,10 @@ export async function answerBooking(mentorId: string, bookingId: string, input: 
   const b = await prisma.mentoringBooking.findUnique({ where: { id: bookingId }, include: { mentor: { select: { name: true, meetingUrl: true } }, mentee: { select: { timeZone: true } } } });
   if (!b || b.mentorId !== mentorId) throw notFound("Demande introuvable.");
   if (b.startsAt.getTime() <= Date.now()) throw new DomainError("answered", "Cette demande a expiré : la séance a déjà commencé.", 409);
+  // Google Meet in V1: the session takes the mentor's own link, KABAD creates no room.
+  if (input.accept && !b.mentor.meetingUrl) throw new DomainError("meet_required", "Ajoute ton lien Google Meet dans tes disponibilités avant d’accepter une séance.", 409);
   return prisma.$transaction(async (tx) => {
-    const meetingUrl = input.accept ? b.mentor.meetingUrl || jitsiRoom() : null;
+    const meetingUrl = input.accept ? b.mentor.meetingUrl : null;
     const { count } = await tx.mentoringBooking.updateMany({
       where: { id: bookingId, status: "PENDING" },
       data: input.accept ? { status: "ACCEPTED", meetingUrl, answeredAt: new Date() } : { status: "DECLINED", declineReason: input.reason || null, answeredAt: new Date() },
@@ -257,6 +259,11 @@ export async function saveAvailability(
     new Intl.DateTimeFormat("fr", { timeZone: input.timeZone });
   } catch {
     throw new DomainError("bad_zone", "Fuseau horaire inconnu.", 400, "timeZone");
+  }
+  // No slot opens without a Google Meet link: every accepted session needs one.
+  if (input.ranges.length > 0) {
+    const link = input.meetingUrl ?? (await prisma.user.findUniqueOrThrow({ where: { id: mentorId }, select: { meetingUrl: true } })).meetingUrl;
+    if (!link) throw new DomainError("meet_required", "Ajoute ton lien Google Meet avant d’ouvrir des créneaux.", 400, "meetingUrl");
   }
   await prisma.$transaction([
     prisma.availability.deleteMany({ where: { mentorId } }),

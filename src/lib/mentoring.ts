@@ -2,13 +2,27 @@
  * Mentoring by time slots: free sessions of 30 minutes, booked on a mentor's open slots.
  * Hackathons and mentoring are independent (point projet, 7 November 2026).
  */
-import { randomBytes } from "node:crypto";
-
 export const SESSION_MINUTES = 30;
 /** A member waits for answers on 3 requests at most, so mentors are not flooded. */
 export const MAX_PENDING_BOOKINGS = 3;
 
-/** A private Jitsi room for one session, when the mentor has not given their own video link. */
-export function jitsiRoom(prefix = "kabad"): string {
-  return `https://meet.jit.si/${prefix}-${randomBytes(9).toString("base64url")}`;
+/*
+ * Visio du mentorat : Google Meet en V1 (point projet). Le mentor colle son lien une fois, dans ses
+ * disponibilités ; il sert à toutes ses séances. KABAD ne crée pas de salle.
+ */
+export const MEET_LINK_MESSAGE = "Colle un lien Google Meet, par exemple meet.google.com/abc-defg-hij.";
+
+/** "meet.google.com/abc-defg-hij" → "https://meet.google.com/abc-defg-hij"; anything else is returned trimmed. */
+export function normalizeMeetLink(raw: string): string {
+  const link = raw.trim();
+  return /^meet\.google\.com\//i.test(link) ? `https://${link}` : link;
+}
+
+export function isMeetLink(link: string): boolean {
+  try {
+    const u = new URL(link);
+    return u.protocol === "https:" && u.hostname === "meet.google.com" && u.pathname.length > 1;
+  } catch {
+    return false;
+  }
 }

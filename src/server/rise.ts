@@ -7,17 +7,20 @@
  * - members schedule events (checkpoint, workshop…) held on an external video link (decision D7);
  *   the other members are notified, and an event is "live" while it runs.
  */
+import { randomBytes } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
 import { joinCommunityGroup, leaveCommunityGroup, openCommunityGroup } from "./messaging";
 import { pushNotifications } from "./notifications";
-import { jitsiRoom } from "@/lib/mentoring";
 import type { RiseDomain, RiseEventView, RisePostView, RiseProjectDetail, RiseProjectSummary } from "@/lib/domain-types";
 
 type Tx = Db | Prisma.TransactionClient;
 
 const isLive = (e: { startsAt: Date; minutes: number }, now = Date.now()) => e.startsAt.getTime() <= now && now < e.startsAt.getTime() + e.minutes * 60_000;
+
+/** A private Jitsi room for a project event when its author gives no video link. */
+const jitsiRoom = () => `https://meet.jit.si/kabad-riseup-${randomBytes(9).toString("base64url")}`;
 
 const toEvent = (e: { id: string; title: string; agenda: string; startsAt: Date; minutes: number; meetingUrl: string; projectId: string; project: { name: string } }): RiseEventView => ({
   id: e.id,
@@ -186,7 +189,7 @@ export async function createEvent(userId: string, projectId: string, input: { ti
   return prisma.$transaction(async (tx) => {
     const p = await tx.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { name: true, members: { select: { userId: true, user: { select: { timeZone: true } } } } } });
     const e = await tx.riseEvent.create({
-      data: { projectId, createdById: userId, title: input.title, agenda: input.agenda, startsAt, minutes: input.minutes, meetingUrl: input.meetingUrl || jitsiRoom("kabad-riseup") },
+      data: { projectId, createdById: userId, title: input.title, agenda: input.agenda, startsAt, minutes: input.minutes, meetingUrl: input.meetingUrl || jitsiRoom() },
     });
     if (input.notify) {
       await pushNotifications(

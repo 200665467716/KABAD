@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { INVITATION_MAX_LENGTH } from "./invitation";
+import { isMeetLink, MEET_LINK_MESSAGE, normalizeMeetLink } from "./mentoring";
 import { PASSWORD_NO_DIGIT, PASSWORD_TOO_SHORT, passwordRules } from "./password";
 
 /** A new password: 8 characters at least, with at least one digit (src/lib/password.ts). */
@@ -124,7 +125,8 @@ export const answerBookingSchema = z.object({ accept: z.boolean(), reason: z.str
 const minuteOfDay = z.number().int().min(0).max(24 * 60);
 export const availabilitySchema = z.object({
   timeZone: z.string().min(3).max(40),
-  meetingUrl: z.union([z.literal(""), z.url({ protocol: /^https$/, message: "Le lien de visio doit commencer par https://." }).max(200)]).optional(),
+  // Google Meet only (V1). Typed without https://, the link is completed.
+  meetingUrl: z.string().max(200).transform(normalizeMeetLink).refine((l) => l === "" || isMeetLink(l), MEET_LINK_MESSAGE).optional(),
   ranges: z.array(z.object({ weekday: z.number().int().min(1).max(7), startMin: minuteOfDay, endMin: minuteOfDay })).max(40, "40 plages au plus."),
   blocked: z.array(z.object({ day: z.iso.date("Date invalide."), reason: z.string().trim().max(80).optional() })).max(60, "60 dates bloquées au plus."),
 });

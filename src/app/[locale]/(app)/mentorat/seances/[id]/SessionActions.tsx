@@ -91,3 +91,21 @@ export function SessionActions({ id, cancellable, calendar }: { id: string; canc
     </>
   );
 }
+
+/** « Copier le lien » next to the Google Meet link (M7). */
+export function CopyLink({ url }: { url: string }) {
+  const t = useTranslations("mentoring.session");
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={async () => {
+        await navigator.clipboard?.writeText(url).catch(() => {});
+        setCopied(true);
+      }}
+    >
+      <span role="status">{copied ? t("copied") : t("copy")}</span>
+    </Button>
+  );
+}

@@ -22,6 +22,15 @@ if ((process.env.NODE_ENV === "production" || !["127.0.0.1", "localhost", "::1"]
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
 export const DEMO_PASSWORD = "kabad-demo-2026";
+/**
+ * Liens Google Meet des mentors de démonstration. Ce sont des exemples : avant la démo, les remplacer
+ * par de vraies réunions créées sur meet.google.com, sinon « Rejoindre sur Google Meet » n'ouvre rien.
+ */
+const DEMO_MEET: Record<string, string> = {
+  awa: "https://meet.google.com/kbd-awad-dem",
+  ibrahim: "https://meet.google.com/kbd-ibra-dem",
+  aicha: "https://meet.google.com/kbd-aich-dem",
+};
 
 type SeedUser = {
   id: string;
@@ -89,6 +98,7 @@ async function main() {
         passwordHash,
         emailVerifiedAt: minutesAgo(60 * 24 * 100),
         seniorVerifiedAt: mentor ? minutesAgo(60 * 24 * 90) : null,
+        meetingUrl: DEMO_MEET[u.id] ?? "",
       })),
       // The team account: reviews badges, publishes hackathons and results, records transfers.
       { id: "equipe", email: "equipe@kabad.app", name: "Équipe KABAD", city: "Lomé", country: "Togo", passwordHash, isAdmin: true, emailVerifiedAt: now },
@@ -124,9 +134,9 @@ async function main() {
   const thursday = nextWeekday(4, 15, 0);
   await db.mentoringBooking.createMany({
     data: [
-      { id: "seance-momo", mentorId: "awa", menteeId: "kossi", startsAt: thursday, topic: "Interconnecter des API de mobile money", problem: "Je construis un paiement régional qui doit passer par trois opérateurs. Je ne sais pas comment gérer les confirmations qui arrivent en retard sans débiter deux fois.", status: "ACCEPTED", meetingUrl: "https://meet.jit.si/kabad-demo-momo", createdAt: minutesAgo(60 * 30), answeredAt: minutesAgo(60 * 28) },
-      { mentorId: "awa", menteeId: "kossi", startsAt: at(-12, 15, 0), topic: "Découper le projet", problem: "Je ne sais pas par quel module commencer : encaissement, webhooks ou tableau de bord.", status: "ACCEPTED", meetingUrl: "https://meet.jit.si/kabad-demo-1", createdAt: at(-14), answeredAt: at(-14) },
-      { mentorId: "awa", menteeId: "kossi", startsAt: at(-5, 15, 30), topic: "Tester un webhook", problem: "Je veux écrire un test qui prouve qu’un webhook reçu deux fois n’est traité qu’une fois.", status: "ACCEPTED", meetingUrl: "https://meet.jit.si/kabad-demo-2", createdAt: at(-7), answeredAt: at(-7) },
+      { id: "seance-momo", mentorId: "awa", menteeId: "kossi", startsAt: thursday, topic: "Interconnecter des API de mobile money", problem: "Je construis un paiement régional qui doit passer par trois opérateurs. Je ne sais pas comment gérer les confirmations qui arrivent en retard sans débiter deux fois.", status: "ACCEPTED", meetingUrl: DEMO_MEET.awa, createdAt: minutesAgo(60 * 30), answeredAt: minutesAgo(60 * 28) },
+      { mentorId: "awa", menteeId: "kossi", startsAt: at(-12, 15, 0), topic: "Découper le projet", problem: "Je ne sais pas par quel module commencer : encaissement, webhooks ou tableau de bord.", status: "ACCEPTED", meetingUrl: DEMO_MEET.awa, createdAt: at(-14), answeredAt: at(-14) },
+      { mentorId: "awa", menteeId: "kossi", startsAt: at(-5, 15, 30), topic: "Tester un webhook", problem: "Je veux écrire un test qui prouve qu’un webhook reçu deux fois n’est traité qu’une fois.", status: "ACCEPTED", meetingUrl: DEMO_MEET.awa, createdAt: at(-7), answeredAt: at(-7) },
       { mentorId: "awa", menteeId: "fatou", startsAt: nextWeekday(2, 16, 0, 2), topic: "Sécuriser les webhooks d’un agrégateur de paiement", problem: "Mon agrégateur reçoit des webhooks de deux opérateurs. Je veux vérifier les signatures sans bloquer les paiements légitimes.", status: "PENDING", createdAt: minutesAgo(60 * 3) },
     ],
   });

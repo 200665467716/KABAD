@@ -15,6 +15,7 @@ async function refused(p: Promise<unknown>, code: string) {
 }
 
 const DAY = 86_400_000;
+const MEET = "https://meet.google.com/abc-defg-hij";
 
 beforeEach(async () => {
   await resetDb();
@@ -26,7 +27,7 @@ afterAll(() => prisma.$disconnect());
 
 /** Awa opens every day from 09:00 to 18:00, Lomé time (UTC). */
 async function awaOpensEveryDay() {
-  await saveAvailability("awa", { timeZone: "Africa/Lome", ranges: [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({ weekday, startMin: 9 * 60, endMin: 18 * 60 })), blocked: [] }, prisma);
+  await saveAvailability("awa", { timeZone: "Africa/Lome", meetingUrl: MEET, ranges: [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({ weekday, startMin: 9 * 60, endMin: 18 * 60 })), blocked: [] }, prisma);
   const { slots } = await getMentor("awa", prisma);
   return slots;
 }
@@ -49,11 +50,23 @@ describe("mentorat par créneaux", () => {
     await refused(bookSlot("awa", booking(night.toISOString()), prisma), "self");
   });
 
+  it("sans lien Google Meet, un mentor n’ouvre aucun créneau et n’accepte aucune séance", async () => {
+    const week = { timeZone: "Africa/Lome", ranges: [{ weekday: 1, startMin: 9 * 60, endMin: 10 * 60 }], blocked: [] };
+    await refused(saveAvailability("awa", week, prisma), "meet_required");
+    const [slot] = await awaOpensEveryDay();
+    const { id } = await bookSlot("kossi", booking(slot), prisma);
+    await prisma.user.update({ where: { id: "awa" }, data: { meetingUrl: "" } });
+    await refused(answerBooking("awa", id, { accept: true }, prisma), "meet_required");
+    // Declining needs no link.
+    expect((await answerBooking("awa", id, { accept: false }, prisma)).status).toBe("DECLINED");
+  });
+
   it("une séance acceptée donne un lien de visio et ne s'accepte qu'une fois", async () => {
     const [slot] = await awaOpensEveryDay();
     const { id } = await bookSlot("kossi", booking(slot), prisma);
     const { meetingUrl } = await answerBooking("awa", id, { accept: true }, prisma);
-    expect(meetingUrl).toMatch(/^https:\/\/meet\.jit\.si\//);
+    // Google Meet in V1: the session carries the mentor's own link.
+    expect(meetingUrl).toBe(MEET);
     await refused(answerBooking("awa", id, { accept: false }, prisma), "answered");
   });
 });

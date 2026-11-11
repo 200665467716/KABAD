@@ -11,7 +11,7 @@ import { BookingSummary } from "@/components/features/mentoring/BookingSummary";
 import { orNotFound } from "@/server/messaging";
 import { getBooking } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
-import { SessionActions } from "./SessionActions";
+import { CopyLink, SessionActions } from "./SessionActions";
 import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 /** Read once per request on the server: not a render-time clock. */
@@ -77,7 +77,10 @@ async function SessionData({ params }: { params: Promise<{ id: string }> }) {
         {b.status === "ACCEPTED" && b.meetingUrl && (
           <section className="grid gap-1.5">
             <Overline>{t("visio")}</Overline>
-            <p className="rounded-md border-2 border-line-strong bg-raised px-3.5 py-3 text-sm font-bold break-all">{b.meetingUrl.replace(/^https:\/\//, "")}</p>
+            <div className="flex items-center gap-2 rounded-md border-2 border-line-strong bg-raised py-1.5 pr-1.5 pl-3.5">
+              <p className="min-w-0 flex-1 text-sm font-bold break-all">{b.meetingUrl.replace(/^https:\/\//, "")}</p>
+              <CopyLink url={b.meetingUrl} />
+            </div>
           </section>
         )}
 

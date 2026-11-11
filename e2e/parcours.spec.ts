@@ -70,7 +70,7 @@ test("mentorat : Kossi réserve un créneau d’Aïcha, Aïcha accepte, la séan
 
   await kossi.goto(sessionUrl);
   await expect(kossi.getByRole("heading", { name: "Séance confirmée" }).first()).toBeVisible();
-  await expect(kossi.getByRole("link", { name: /Rejoindre la visio/ })).toBeVisible();
+  await expect(kossi.getByRole("link", { name: /Rejoindre sur Google Meet/ })).toBeVisible();
   await kossi.context().close();
   await aicha.context().close();
 });

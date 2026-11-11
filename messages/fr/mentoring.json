@@ -72,7 +72,7 @@
       "pendingTitle": "Demande envoyée",
       "pendingText": "{name} va lire ta demande. Tu recevras une notification dès qu’il ou elle répond.",
       "acceptedTitle": "Séance confirmée",
-      "acceptedText": "{name} a accepté ta demande. Vous avez tous les deux le lien de la visio.",
+      "acceptedText": "{name} a accepté ta demande. Vous avez reçu tous les deux la confirmation et le lien Google Meet.",
       "declinedTitle": "Séance refusée",
       "declinedText": "{name} ne peut pas assurer cette séance.",
       "cancelledTitle": "Séance annulée",
@@ -94,9 +94,9 @@
       "step2Title": "{name} accepte ou refuse",
       "step2Text": "selon les points que tu veux aborder.",
       "step3Title": "Vous recevez tous les deux",
-      "step3Text": "la confirmation et le lien de la visio.",
-      "visio": "Lien de la visio",
-      "join": "Rejoindre la visio",
+      "step3Text": "la confirmation et le lien Google Meet.",
+      "visio": "Lien Google Meet",
+      "join": "Rejoindre sur Google Meet",
       "calendar": "Ajouter à mon calendrier",
       "cancel": "Annuler la séance",
       "cancelConfirm": "Annuler la séance",
@@ -105,7 +105,9 @@
       "calendarTitle": "Mentorat KABAD avec {name}",
       "cancelTitle": "Annuler la séance ?",
       "cancelText": "L’autre personne sera prévenue. Le créneau redevient libre.",
-      "keep": "Garder la séance"
+      "keep": "Garder la séance",
+      "copy": "Copier le lien",
+      "copied": "Lien copié"
     },
     "requests": {
       "title": "Demandes reçues",
@@ -143,8 +145,8 @@
       "noBlocked": "Aucune date bloquée.",
       "removeBlocked": "Débloquer le {day}",
       "zone": "Fuseau horaire",
-      "meeting": "Ton lien de visio",
-      "meetingHint": "Facultatif. Sans lien, KABAD crée une salle Jitsi pour chaque séance.",
+      "meeting": "Ton lien Google Meet",
+      "meetingHint": "Obligatoire pour ouvrir des créneaux. Crée une réunion sur meet.google.com (« Nouvelle réunion », puis « Créer une réunion pour plus tard ») et colle son lien ici : il sert à toutes tes séances.",
       "save": "Enregistrer",
       "saved": "Disponibilités enregistrées.",
       "weekdays": {

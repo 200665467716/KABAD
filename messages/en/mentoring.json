@@ -72,7 +72,7 @@
       "pendingTitle": "Request sent",
       "pendingText": "{name} will read your request. You’ll get a notification as soon as they answer.",
       "acceptedTitle": "Session confirmed",
-      "acceptedText": "{name} accepted your request. You both have the video link.",
+      "acceptedText": "{name} accepted your request. You both received the confirmation and the Google Meet link.",
       "declinedTitle": "Session declined",
       "declinedText": "{name} can’t hold this session.",
       "cancelledTitle": "Session cancelled",
@@ -94,9 +94,9 @@
       "step2Title": "{name} accepts or declines",
       "step2Text": "depending on what you want to cover.",
       "step3Title": "You both receive",
-      "step3Text": "the confirmation and the video link.",
-      "visio": "Video link",
-      "join": "Join the call",
+      "step3Text": "the confirmation and the Google Meet link.",
+      "visio": "Google Meet link",
+      "join": "Join on Google Meet",
       "calendar": "Add to my calendar",
       "cancel": "Cancel the session",
       "cancelConfirm": "Cancel the session",
@@ -105,7 +105,9 @@
       "calendarTitle": "KABAD mentoring with {name}",
       "cancelTitle": "Cancel the session?",
       "cancelText": "The other person will be told. The slot becomes free again.",
-      "keep": "Keep the session"
+      "keep": "Keep the session",
+      "copy": "Copy the link",
+      "copied": "Link copied"
     },
     "requests": {
       "title": "Requests received",
@@ -143,8 +145,8 @@
       "noBlocked": "No blocked date.",
       "removeBlocked": "Unblock {day}",
       "zone": "Time zone",
-      "meeting": "Your video link",
-      "meetingHint": "Optional. Without a link, KABAD creates a Jitsi room for each session.",
+      "meeting": "Your Google Meet link",
+      "meetingHint": "Required to open slots. Create a meeting on meet.google.com (“New meeting”, then “Create a meeting for later”) and paste its link here: it is used for all your sessions.",
       "save": "Save",
       "saved": "Availability saved.",
       "weekdays": {

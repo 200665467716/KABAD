@@ -34,7 +34,7 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
   const [timeZone, setTimeZone] = useState(initial.timeZone);
   const [meetingUrl, setMeetingUrl] = useState(initial.meetingUrl);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string; field?: string } | null>(null);
 
   const setDay = (d: Weekday, ranges: Range[]) => setWeek((w) => ({ ...w, [d]: ranges }));
   const addRange = (d: Weekday) => {
@@ -59,7 +59,7 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
       });
       setMessage({ tone: "success", text: t("availability.saved") });
     } catch (e) {
-      setMessage({ tone: "danger", text: e instanceof ApiError ? e.message : t("error") });
+      setMessage({ tone: "danger", text: e instanceof ApiError ? e.message : t("error"), field: e instanceof ApiError ? e.field : undefined });
     } finally {
       setBusy(false);
     }
@@ -180,9 +180,19 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
               </option>
             ))}
           </Select>
-          <TextField id="meeting" type="url" inputMode="url" label={t("availability.meeting")} hint={t("availability.meetingHint")} placeholder="https://meet.google.com/…" value={meetingUrl} maxLength={200} onChange={(e) => setMeetingUrl(e.target.value)} />
+          <TextField
+            id="meeting"
+            inputMode="url"
+            label={t("availability.meeting")}
+            hint={t("availability.meetingHint")}
+            placeholder="meet.google.com/…"
+            value={meetingUrl}
+            maxLength={200}
+            onChange={(e) => setMeetingUrl(e.target.value)}
+            error={message?.field === "meetingUrl" ? message.text : undefined}
+          />
         </section>
-        {message && (
+        {message && message.field !== "meetingUrl" && (
           <Alert tone={message.tone} role={message.tone === "danger" ? "alert" : "status"}>
             {message.text}
           </Alert>
