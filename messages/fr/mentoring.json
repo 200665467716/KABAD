@@ -238,6 +238,23 @@
       "refusedText": "L’équipe KABAD n’a pas validé ta demande. Tu peux en envoyer une nouvelle en tenant compte du motif.",
       "refusedReason": "Motif : {reason}",
       "retry": "Envoyer une nouvelle demande"
+    },
+    "history": {
+      "metaTitle": "Mes séances",
+      "title": "Mes séances",
+      "loading": "Chargement des séances…",
+      "tabs": "Séances",
+      "upcoming": "À venir",
+      "past": "Passées",
+      "closed": "Annulées ou refusées",
+      "count": "{label} · {count}",
+      "asMentor": "Tu es mentor",
+      "asMentee": "Avec ton mentor",
+      "emptyUpcoming": "Aucune séance à venir.",
+      "emptyPast": "Aucune séance passée pour l’instant.",
+      "emptyClosed": "Aucune séance annulée ou refusée.",
+      "find": "Trouver un mentor",
+      "all": "Toutes mes séances"
     }
   }
 }

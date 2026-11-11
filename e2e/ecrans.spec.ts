@@ -16,6 +16,7 @@ const SIGNED_IN = [
   "/inscription/recommandations",
   "/mentorat",
   "/mentorat/mentors/awa",
+  "/mentorat/seances",
   "/mentorat/seances/seance-momo",
   "/mentorat/badge",
   "/hackathons",

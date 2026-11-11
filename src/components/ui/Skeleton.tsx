@@ -31,14 +31,14 @@ export function ScreenSkeleton({ label, cards = 3 }: { label: string; cards?: nu
 }
 
 /** Empty state (P4): dashed card, a square picture, a title, a sentence and one action. */
-export function EmptyState({ icon, title, text, action }: { icon: React.ReactNode; title: string; text: string; action?: React.ReactNode }) {
+export function EmptyState({ icon, title, text, action }: { icon: React.ReactNode; title: string; text?: string; action?: React.ReactNode }) {
   return (
     <div className="grid justify-items-center gap-2.5 rounded-lg border-2 border-dashed border-line-strong bg-raised px-5 py-7 text-center">
       <span className="grid size-16 place-items-center rounded-lg bg-[var(--mist)] text-brand-text" aria-hidden="true">
         {icon}
       </span>
       <h3 className="mt-1 font-display text-md font-extrabold uppercase">{title}</h3>
-      <p className="max-w-[30ch] text-sm text-muted">{text}</p>
+      {text && <p className="max-w-[30ch] text-sm text-muted">{text}</p>}
       {action}
     </div>
   );

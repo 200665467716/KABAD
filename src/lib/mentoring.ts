@@ -6,6 +6,19 @@ export const SESSION_MINUTES = 30;
 /** A member waits for answers on 3 requests at most, so mentors are not flooded. */
 export const MAX_PENDING_BOOKINGS = 3;
 
+export type SessionBucket = "upcoming" | "past" | "closed";
+
+/**
+ * Where a session goes in the history: still to come (waiting or confirmed), held (confirmed and over),
+ * or closed without taking place (declined, cancelled, or left unanswered until its time).
+ */
+export function sessionBucket(b: { status: string; startsAt: Date | string; minutes: number }, now: Date): SessionBucket {
+  const over = new Date(b.startsAt).getTime() + b.minutes * 60_000 <= now.getTime();
+  if (b.status === "ACCEPTED") return over ? "past" : "upcoming";
+  if (b.status === "PENDING" && !over) return "upcoming";
+  return "closed";
+}
+
 /*
  * Visio du mentorat : Google Meet en V1 (point projet). Le mentor colle son lien une fois, dans ses
  * disponibilités ; il sert à toutes ses séances. KABAD ne crée pas de salle.

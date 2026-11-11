@@ -238,6 +238,23 @@
       "refusedText": "The KABAD team did not approve your request. You can send a new one taking the reason into account.",
       "refusedReason": "Reason: {reason}",
       "retry": "Send a new request"
+    },
+    "history": {
+      "metaTitle": "My sessions",
+      "title": "My sessions",
+      "loading": "Loading sessions…",
+      "tabs": "Sessions",
+      "upcoming": "Upcoming",
+      "past": "Past",
+      "closed": "Cancelled or declined",
+      "count": "{label} · {count}",
+      "asMentor": "You are the mentor",
+      "asMentee": "With your mentor",
+      "emptyUpcoming": "No upcoming session.",
+      "emptyPast": "No past session yet.",
+      "emptyClosed": "No cancelled or declined session.",
+      "find": "Find a mentor",
+      "all": "All my sessions"
     }
   }
 }

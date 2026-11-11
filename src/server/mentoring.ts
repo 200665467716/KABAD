@@ -169,6 +169,12 @@ export async function getBooking(userId: string, bookingId: string, prisma: Db =
   return toView(b, userId);
 }
 
+/** Every session of a member, as a mentee or as a mentor, the most recent first (history screen). */
+export async function sessionHistory(userId: string, prisma: Db = db): Promise<BookingView[]> {
+  const rows = await prisma.mentoringBooking.findMany({ where: { OR: [{ mentorId: userId }, { menteeId: userId }] }, include: bookingInclude, orderBy: { startsAt: "desc" }, take: 200 });
+  return rows.map((b) => toView(b, userId));
+}
+
 /** The member's sessions: as a mentee, and as a mentor when they hold the badge. */
 export async function myBookings(userId: string, prisma: Db = db) {
   const since = new Date(Date.now() - 60 * 86_400_000);

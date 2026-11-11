@@ -65,7 +65,7 @@ async function MyProfile() {
       </Card>
 
       <div className="divide-y-2 divide-line overflow-hidden rounded-lg border-2 border-line-strong bg-raised">
-        <Row href="/mentorat" icon="users" title={t("sessions")} text={t("sessionsCount", { count: upcoming })} />
+        <Row href="/mentorat/seances" icon="users" title={t("sessions")} text={t("sessionsCount", { count: upcoming })} />
         <Row href={entry ? `/hackathons/${entry.hackathonId}` : "/hackathons"} icon="trophy" title={t("hackathons")} text={entry ? entry.team : t("hackathonsNone")} />
         <Row href="/tests" icon="clipboard" title={t("tests")} text={t("testsCount", { testing: tests.testing.length, mine: tests.mine.length })} />
         <Row href={projects[0] ? `/rise-up/${projects[0].id}` : "/rise-up"} icon="rise" title={t("rise")} text={projects.length === 0 ? t("riseNone") : projects.length === 1 ? projects[0].name : t("riseMore", { name: projects[0].name, count: projects.length - 1 })} />

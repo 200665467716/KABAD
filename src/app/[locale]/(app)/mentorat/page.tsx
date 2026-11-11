@@ -76,15 +76,26 @@ async function MentoringData({ searchParams }: { searchParams: Promise<Search> }
 
       {mine.length > 0 && (
         <section aria-labelledby="m-mine" className="grid gap-3">
-          <h2 id="m-mine" className="font-display text-md font-extrabold uppercase">
-            {t("list.mySessions")}
-          </h2>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="m-mine" className="font-display text-md font-extrabold uppercase">
+              {t("list.mySessions")}
+            </h2>
+            <Link href="/mentorat/seances" className="inline-flex min-h-11 items-center text-sm font-extrabold text-brand-text no-underline">
+              {t("history.all")}
+            </Link>
+          </div>
           {mine.map((b) => (
             <Link key={b.id} href={`/mentorat/seances/${b.id}`} className="rounded-lg border-2 border-line-strong bg-raised p-4 text-ink no-underline">
               <BookingSummary startsAt={b.startsAt} minutes={b.minutes} topic={b.topic} otherName={b.mentor.name} timeZone={tz} status={b.status} />
             </Link>
           ))}
         </section>
+      )}
+
+      {mine.length === 0 && bookings.asMentee.length + bookings.asMentorAccepted.length > 0 && (
+        <Link href="/mentorat/seances" className="inline-flex min-h-11 items-center justify-self-start text-sm font-extrabold text-brand-text no-underline">
+          {t("history.all")}
+        </Link>
       )}
 
       <form method="get" role="search" className="flex gap-2">
