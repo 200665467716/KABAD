@@ -33,4 +33,8 @@ test("la bande défilante se met en pause avec son bouton", async ({ page }) => 
   const pause = page.getByRole("button", { name: "Mettre en pause le défilement" });
   await pause.click();
   await expect(page.getByRole("button", { name: "Reprendre le défilement" })).toHaveAttribute("aria-pressed", "true");
+  // The CADEV logo sits in the band; it is loaded (a broken image has no width).
+  const logo = page.getByRole("img", { name: "Logo de la Coupe d’Afrique des développeurs" });
+  await expect(logo).toBeVisible();
+  expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 });

@@ -9,7 +9,7 @@ Vérifications automatiques au 11 novembre : lint et types propres, 41 tests uni
 | # | Fonctionnalité | Note | Ce qui bloque le 10 |
 | --- | --- | --- | --- |
 | 0 | Mise en ligne et socle technique | **2/10** | Rien n'est en ligne ; `main` n'a pas reçu la refonte ; pas de reverse proxy, de déploiement, de sauvegardes ni de supervision |
-| 1 | Landing page | **9/10** | Logo de la CADEV dans le bandeau (fichier à fournir), vrais chiffres à la place des exemples |
+| 1 | Landing page | **9/10** | Vrais chiffres à la place des exemples |
 | 2 | Inscription et connexion | **8,5/10** | Code e-mail en 6 cases, icônes des écrans, détails de textes |
 | 3 | Accueil, profil, notifications | **7,5/10** | En-tête de l'accueil, carte « Tests d'apps », profil (vedette, couleurs, Paramètres), « Tout marquer comme lu » dans l'en-tête |
 | 4 | Mentorat | **9/10** | Plages en pastilles (M8), évaluation de la séance (mise de côté) |

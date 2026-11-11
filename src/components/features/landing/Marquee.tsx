@@ -10,6 +10,9 @@ export function Marquee() {
   const segment = (hidden?: boolean) => (
     <div className="seg" aria-hidden={hidden || undefined}>
       <i />
+      {/* The CADEV logo, next to the sentence that names it. On a white plate: its dark green would vanish on the ink band. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- a small SVG served as is, nothing to optimise */}
+      <img className="cadev" src="/partenaires/cadev.svg" width={79} height={36} alt={hidden ? "" : t("logo")} />
       {t("s1")}
       <i />
       {t("s2")}
