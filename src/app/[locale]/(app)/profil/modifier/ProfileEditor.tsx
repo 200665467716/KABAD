@@ -11,9 +11,10 @@ import { useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
 import type { Level } from "@/lib/domain-types";
 import { COUNTRIES, GOALS, LEVELS, TECH_CHOICES } from "@/lib/schemas";
+import { zoneChoices, zoneCity } from "@/lib/time-zones";
 
 type Goal = (typeof GOALS)[number];
-type Initial = { country: string; city: string; level: Level; headline: string; bio: string; profileLink: string; stack: string[]; goals: string[] };
+type Initial = { country: string; city: string; level: Level; headline: string; bio: string; profileLink: string; stack: string[]; goals: string[]; gender: "FEMALE" | "MALE" | null; timeZone: string };
 const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
 export function ProfileEditor({ initial }: { initial: Initial }) {
@@ -44,7 +45,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
     try {
       await api("/api/me", {
         method: "PATCH",
-        body: { country: text("country") || undefined, city: text("city") || undefined, level, headline: text("headline"), bio: text("bio"), profileLink: text("profileLink"), stack, goals },
+        body: { country: text("country") || undefined, city: text("city") || undefined, level, headline: text("headline"), bio: text("bio"), profileLink: text("profileLink"), stack, goals, gender: text("gender") || null, timeZone: text("timeZone") },
       });
       router.push("/profil");
       router.refresh();
@@ -68,6 +69,18 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
             ))}
           </Select>
           <TextField id="city" name="city" label={t("city")} defaultValue={initial.city} error={fieldError("city")} />
+          <Select id="timeZone" name="timeZone" label={t("timeZone")} hint={t("timeZoneHint")} defaultValue={initial.timeZone}>
+            {zoneChoices(initial.timeZone).map((z) => (
+              <option key={z} value={z}>
+                {zoneCity(z)}
+              </option>
+            ))}
+          </Select>
+          <Select id="gender" name="gender" label={t("gender")} hint={t("genderHint")} defaultValue={initial.gender ?? ""}>
+            <option value="">{t("genderNone")}</option>
+            <option value="FEMALE">{t("genderFemale")}</option>
+            <option value="MALE">{t("genderMale")}</option>
+          </Select>
         </div>
         <TextField id="headline" name="headline" label={t("headline")} hint={t("headlineHint")} defaultValue={initial.headline} maxLength={80} />
         <TextArea id="bio" name="bio" label={t("bio")} hint={t("bioHint")} defaultValue={initial.bio} maxLength={600} rows={4} />

@@ -82,7 +82,7 @@ export async function recommendations(userId: string, prisma: Db = db): Promise<
  */
 export async function updateProfile(
   userId: string,
-  input: { country?: string; city?: string; diaspora?: boolean; level?: Level; stack?: string[]; goals?: string[]; profileLink?: string; headline?: string; bio?: string; years?: number; timeZone?: string },
+  input: { country?: string; city?: string; diaspora?: boolean; level?: Level; stack?: string[]; goals?: string[]; profileLink?: string; headline?: string; bio?: string; years?: number; timeZone?: string; gender?: "FEMALE" | "MALE" | null },
   prisma: Db = db,
 ) {
   if (input.timeZone) {

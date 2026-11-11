@@ -52,7 +52,7 @@ export type MentorCard = {
   sessionsHeld: number;
 };
 
-export type MentorDetail = MentorCard & { bio: string; topics: string; timeZone: string; slots: string[] };
+export type MentorDetail = MentorCard & { bio: string; topics: string; timeZone: string; gender: "FEMALE" | "MALE" | null; slots: string[] };
 
 export type BookingStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "CANCELLED";
 

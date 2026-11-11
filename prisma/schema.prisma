@@ -41,6 +41,8 @@ model User {
   emailVerifiedAt  DateTime?
   /// Set by a KABAD admin. A suspended member cannot sign in; their sessions are closed.
   suspendedAt      DateTime?
+  /// Optional: only used to agree the texts about the member ("Vérifiée", "elle peut t'aider").
+  gender           Gender?
   /// The member receives the important notifications by e-mail too (sessions, badge, invitations).
   emailNotifications Boolean @default(true)
   suspensionReason String?   @db.VarChar(300)
@@ -172,6 +174,11 @@ model Conversation {
   messages Message[]
   testApp  TestApp?
   project  RiseProject?
+}
+
+enum Gender {
+  FEMALE
+  MALE
 }
 
 enum MemberRole {

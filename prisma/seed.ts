@@ -26,6 +26,8 @@ export const DEMO_PASSWORD = "kabad-demo-2026";
  * Liens Google Meet des mentors de démonstration. Ce sont des exemples : avant la démo, les remplacer
  * par de vraies réunions créées sur meet.google.com, sinon « Rejoindre sur Google Meet » n'ouvre rien.
  */
+/** Genre des membres de démonstration, pour montrer les textes accordés (« Vérifiée », « il peut t'aider »). */
+const DEMO_GENDER: Record<string, "FEMALE" | "MALE"> = { awa: "FEMALE", aicha: "FEMALE", nadia: "FEMALE", fatou: "FEMALE", kossi: "MALE", ibrahim: "MALE", moussa: "MALE", edem: "MALE", yao: "MALE", chidi: "MALE" };
 const DEMO_MEET: Record<string, string> = {
   awa: "https://meet.google.com/kbd-awad-dem",
   ibrahim: "https://meet.google.com/kbd-ibra-dem",
@@ -99,6 +101,7 @@ async function main() {
         emailVerifiedAt: minutesAgo(60 * 24 * 100),
         seniorVerifiedAt: mentor ? minutesAgo(60 * 24 * 90) : null,
         meetingUrl: DEMO_MEET[u.id] ?? "",
+        gender: DEMO_GENDER[u.id] ?? null,
       })),
       // The team account: reviews badges, publishes hackathons and results, records transfers.
       { id: "equipe", email: "equipe@kabad.app", name: "Équipe KABAD", city: "Lomé", country: "Togo", passwordHash, isAdmin: true, emailVerifiedAt: now },

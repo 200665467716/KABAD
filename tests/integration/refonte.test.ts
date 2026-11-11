@@ -7,6 +7,7 @@ import { createTestApp, joinTest, leaveTest, setStep } from "@/server/community-
 import { leaveGroup, listConversations } from "@/server/messaging";
 import { addPost, createProject, joinProject } from "@/server/rise";
 import { sendVerificationEmail, verifyEmailCode } from "@/server/account";
+import { updateProfile } from "@/server/members";
 import { makeUsers, prisma, resetDb } from "./helpers";
 
 async function refused(p: Promise<unknown>, code: string) {
@@ -192,6 +193,17 @@ describe("Africa Rise-Up", () => {
     await addPost("kossi", id, { body: "Bonjour" }, prisma);
     const p = await prisma.riseProject.findUniqueOrThrow({ where: { id }, include: { conversation: { include: { members: true } } } });
     expect(p.conversation?.members.map((m) => m.userId).sort()).toEqual(["kossi", "yao"]);
+  });
+});
+
+describe("profil", () => {
+  it("enregistre le genre et le fuseau du membre ; un fuseau inconnu est ignoré", async () => {
+    await updateProfile("kossi", { gender: "MALE", timeZone: "America/Toronto" }, prisma);
+    await updateProfile("kossi", { timeZone: "Mars/Olympus" }, prisma);
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: "kossi" }, select: { gender: true, timeZone: true } })).toEqual({ gender: "MALE", timeZone: "America/Toronto" });
+    // Le genre est facultatif : on peut le retirer.
+    await updateProfile("kossi", { gender: null }, prisma);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: "kossi" } })).gender).toBeNull();
   });
 });
 

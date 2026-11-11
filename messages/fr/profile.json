@@ -53,7 +53,14 @@
       "goals": "Ce que tu viens chercher",
       "save": "Enregistrer",
       "busy": "Enregistrement…",
-      "failed": "Ton profil n’a pas été enregistré. Réessaie."
+      "failed": "Ton profil n’a pas été enregistré. Réessaie.",
+      "timeZone": "Fuseau horaire",
+      "timeZoneHint": "Les heures des séances et des événements s’affichent à l’heure de cette ville.",
+      "gender": "Genre (facultatif)",
+      "genderHint": "Sert seulement à accorder les textes, par exemple « Vérifiée » sur ta fiche de mentor.",
+      "genderNone": "Je préfère ne pas le dire",
+      "genderFemale": "Femme",
+      "genderMale": "Homme"
     },
     "public": {
       "title": "Profil",

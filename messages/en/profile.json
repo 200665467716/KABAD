@@ -53,7 +53,14 @@
       "goals": "What you’re here for",
       "save": "Save",
       "busy": "Saving…",
-      "failed": "Your profile wasn’t saved. Try again."
+      "failed": "Your profile wasn’t saved. Try again.",
+      "timeZone": "Time zone",
+      "timeZoneHint": "Session and event times are shown in this city’s time.",
+      "gender": "Gender (optional)",
+      "genderHint": "Only used to word texts about you, for example on your mentor page.",
+      "genderNone": "I prefer not to say",
+      "genderFemale": "Woman",
+      "genderMale": "Man"
     },
     "public": {
       "title": "Profile",

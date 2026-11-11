@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
+import { zoneCity } from "@/lib/time-zones";
 
 /** "2026-11-05": the calendar day of a moment in a time zone. */
 function dayOf(iso: string | Date, timeZone: string) {
@@ -100,7 +101,10 @@ export function SlotPicker({ mentorId, slots, timeZone, zone }: { mentorId: stri
           <h3 id="mp-hours" className="font-display text-md font-extrabold uppercase">
             {day ? format.dateTime(new Date(`${day}T12:00:00Z`), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }) : t("hours")}
           </h3>
-          <span className="text-[13px] font-bold text-muted">{t("localTime", { zone })}</span>
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-muted">
+            <Icon name="globe" size={16} />
+            {t("localTime", { city: zoneCity(timeZone), zone })}
+          </span>
         </div>
         {day ? (
           <div role="group" aria-label={t("hours")} className="grid grid-cols-3 gap-2 sm:grid-cols-4">

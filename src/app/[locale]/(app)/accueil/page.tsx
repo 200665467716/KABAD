@@ -89,7 +89,7 @@ async function HomeData() {
           </Link>
         }
         title={t("hello", { name: first })}
-        subtitle={format.dateTime(now, { weekday: "short", day: "numeric", month: "short" })}
+        subtitle={format.dateTime(now, { weekday: "short", day: "numeric", month: "short", timeZone: user.timeZone })}
         actions={
           <>
             <IconButton icon="search" label={t("search")} href="/membres" />
@@ -109,7 +109,7 @@ async function HomeData() {
               <Badge tone="success">{t("session.confirmed")}</Badge>
             </div>
             <div className="flex items-center gap-3.5">
-              <TimeBlock time={format.dateTime(new Date(next.startsAt), { hour: "numeric", minute: "2-digit" })} length={t("session.length", { minutes: next.minutes })} />
+              <TimeBlock time={format.dateTime(new Date(next.startsAt), { hour: "numeric", minute: "2-digit", timeZone: user.timeZone })} length={t("session.length", { minutes: next.minutes })} />
               <div className="grid min-w-0 gap-1.5">
                 <Link href={`/mentorat/seances/${next.id}`} className="text-md font-extrabold text-ink no-underline">
                   {next.topic}
@@ -153,7 +153,7 @@ async function HomeData() {
                 {project.event?.live ? (
                   <Badge tone="live">{t("rise.live")}</Badge>
                 ) : project.event ? (
-                  <Badge tone="live">{t("rise.next", { when: format.dateTime(new Date(project.event.startsAt), { weekday: "short", hour: "numeric", minute: "2-digit" }) })}</Badge>
+                  <Badge tone="live">{t("rise.next", { when: format.dateTime(new Date(project.event.startsAt), { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: user.timeZone }) })}</Badge>
                 ) : (
                   <span />
                 )}

@@ -106,6 +106,8 @@ export const profileSchema = z.object({
   bio: z.string().trim().max(600).optional(),
   years: z.number().int().min(0).max(50).optional(),
   timeZone: z.string().max(40).optional(),
+  // null: the member prefers not to say; the texts stay neutral.
+  gender: z.enum(["FEMALE", "MALE"]).nullable().optional(),
 });
 
 export const localeSchema = z.object({ locale: z.enum(["fr", "en"]) });

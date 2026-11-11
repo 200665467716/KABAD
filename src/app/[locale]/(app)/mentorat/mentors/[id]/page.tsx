@@ -37,7 +37,7 @@ async function MentorData({ params }: { params: Promise<{ id: string }> }) {
             <span className="text-xs font-extrabold text-brand-text">{t("sessionsHeld", { count: mentor.sessionsHeld })}</span>
           </div>
           <Badge tone="success" icon="check">
-            {t("verified")}
+            {t("verified", { gender: mentor.gender ?? "other" })}
           </Badge>
         </section>
         {(mentor.bio || mentor.topics) && (
@@ -45,7 +45,7 @@ async function MentorData({ params }: { params: Promise<{ id: string }> }) {
             {mentor.bio && <p className="text-sm">{mentor.bio}</p>}
             {mentor.topics && (
               <>
-                <Overline>{t("about")}</Overline>
+                <Overline>{t("about", { gender: mentor.gender ?? "other" })}</Overline>
                 <p className="text-sm text-muted">{mentor.topics}</p>
               </>
             )}

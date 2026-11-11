@@ -86,7 +86,7 @@ export async function listMentors(opts: { domain?: string; excludeId?: string } 
 }
 
 export async function getMentor(mentorId: string, prisma: Db = db): Promise<MentorDetail> {
-  const u = await prisma.user.findFirst({ where: { id: mentorId, ...mentorWhere }, select: { id: true, name: true, city: true, country: true, headline: true, bio: true, timeZone: true } });
+  const u = await prisma.user.findFirst({ where: { id: mentorId, ...mentorWhere }, select: { id: true, name: true, city: true, country: true, headline: true, bio: true, timeZone: true, gender: true } });
   if (!u) throw notFound("Mentor introuvable.");
   const from = new Date();
   const to = new Date(from.getTime() + BOOKING_WINDOW_DAYS * 86_400_000);

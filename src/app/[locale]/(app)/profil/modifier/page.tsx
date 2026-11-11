@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 async function EditorData() {
   const u = await pageUser("/profil/modifier");
-  return <ProfileEditor initial={{ country: u.country, city: u.city, level: u.level, headline: u.headline, bio: u.bio, profileLink: u.profileLink, stack: u.stack, goals: u.goals }} />;
+  return <ProfileEditor initial={{ country: u.country, city: u.city, level: u.level, headline: u.headline, bio: u.bio, profileLink: u.profileLink, stack: u.stack, goals: u.goals, gender: u.gender, timeZone: u.timeZone }} />;
 }
 
 export default async function EditProfilePage() {

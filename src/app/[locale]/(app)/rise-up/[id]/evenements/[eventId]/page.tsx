@@ -42,7 +42,7 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
           </div>
           <h2 className="font-display text-2xl font-extrabold uppercase">{e.title}</h2>
           <p className="text-sm font-semibold text-[var(--grey-light)]">
-            {t("when", { date: format.dateTime(start, { weekday: "long", day: "numeric", month: "long" }), time: format.dateTime(start, { hour: "numeric", minute: "2-digit" }) })} · {t("duration", { minutes: e.minutes })}
+            {t("when", { date: format.dateTime(start, { weekday: "long", day: "numeric", month: "long", timeZone: user.timeZone }), time: format.dateTime(start, { hour: "numeric", minute: "2-digit", timeZone: user.timeZone }) })} · {t("duration", { minutes: e.minutes })}
           </p>
           <Link href={`/rise-up/${id}`} className="text-sm font-extrabold text-accent no-underline">
             {e.projectName}

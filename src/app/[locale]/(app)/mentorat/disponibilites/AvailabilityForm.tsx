@@ -10,12 +10,11 @@ import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import type { AvailabilityView } from "@/lib/domain-types";
+import { zoneChoices, zoneCity } from "@/lib/time-zones";
 
 type Range = { startMin: number; endMin: number };
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 type Weekday = (typeof WEEKDAYS)[number];
-/** Time zones of the members' countries, plus the diaspora's main ones. */
-const ZONES = ["Africa/Abidjan", "Africa/Accra", "Africa/Bamako", "Africa/Dakar", "Africa/Douala", "Africa/Kinshasa", "Africa/Lagos", "Africa/Lome", "Africa/Niamey", "Africa/Ouagadougou", "Africa/Porto-Novo", "Africa/Nairobi", "Africa/Casablanca", "Europe/Paris", "Europe/Brussels", "Europe/London", "America/Toronto", "America/New_York"];
 const TIMES = Array.from({ length: 49 }, (_, i) => i * 30);
 const hm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
@@ -42,7 +41,7 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
     const start = last ? Math.min(last.endMin + 60, 22 * 60) : 18 * 60;
     setDay(d, [...week[d], { startMin: start, endMin: Math.min(start + 120, 24 * 60) }]);
   };
-  const zones = ZONES.includes(timeZone) ? ZONES : [timeZone, ...ZONES];
+  const zones = zoneChoices(timeZone);
 
   async function save() {
     setBusy(true);
@@ -176,7 +175,7 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
           <Select id="zone" label={t("availability.zone")} value={timeZone} onChange={(e) => setTimeZone(e.target.value)}>
             {zones.map((z) => (
               <option key={z} value={z}>
-                {z.split("/")[1].replace(/_/g, " ")} ({z.split("/")[0]})
+                {zoneCity(z)}
               </option>
             ))}
           </Select>
