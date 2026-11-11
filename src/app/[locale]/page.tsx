@@ -10,6 +10,7 @@ import { LpIcon, LpLogo, type LpIconName } from "@/components/features/landing/L
 import { Marquee } from "@/components/features/landing/Marquee";
 import { LanguageSwitcher } from "@/components/shell/LanguageSwitcher";
 import { Link } from "@/i18n/navigation";
+import { CONTACT_EMAIL } from "@/lib/contact";
 import "@/components/features/landing/landing.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -75,18 +76,11 @@ export default async function Landing() {
                 {t("hero.eyebrow")}
               </p>
               <h1 className="h1" id="titre">
-                {(["l1", "l2", "l3", "l4"] as const).map((k) => (
-                  <span key={k} className="ln">
-                    <span>{t(`hero.${k}`)}</span>
-                  </span>
-                ))}
-                <span className="ln">
-                  <span>{t.rich("hero.l5", { em })}</span>
-                </span>
+                {t.rich("hero.title", { em })}
               </h1>
               <p className="lead">{t.rich("hero.lead", { b: (c) => <b>{c}</b> })}</p>
               <div className="hero-cta">
-                <Link className="btn btn--sun" id="cta-main" href="/inscription">
+                <Link className="btn btn--sun btn--call" id="cta-main" href="/inscription">
                   {t("hero.cta")}
                   <Arrow />
                 </Link>
@@ -154,6 +148,7 @@ export default async function Landing() {
                   </span>
                 </p>
               </article>
+              <p className="sample">{t("hero.sample")}</p>
             </div>
           </div>
         </section>
@@ -166,46 +161,37 @@ export default async function Landing() {
             <div className="why">
               <div className="why-row rv">
                 <div>
-                  <div className="ico peers">
-                    <LpIcon name="people" />
-                  </div>
-                  <h3>{t("why.peersTitle")}</h3>
-                  <p>{t("why.peersText")}</p>
-                </div>
-                <div className="map rv-stagger">
-                  <div className="city hub">
-                    <b>{t("why.hub")}</b>
-                    <span>{t("why.hubText")}</span>
-                  </div>
-                  {([1, 2, 3, 4] as const).map((n) => (
-                    <div key={n} className="city">
-                      <b>{t(`why.city${n}`)}</b>
-                      <span>{t(`why.city${n}Text`)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="why-row rv">
-                <div>
                   <div className="ico mentor">
                     <LpIcon name="cap" />
                   </div>
                   <h3>{t("why.mentorTitle")}</h3>
                   <p>{t("why.mentorText")}</p>
                 </div>
-                <div className="side rv-stagger">
-                  {([1, 2, 3] as const).map((n) => (
-                    <div key={n} className="chip">
-                      <b>{n}</b>
-                      {t(`why.step${n}`)}
-                    </div>
-                  ))}
-                  <div className="chip palm">
-                    <b>
-                      <LpIcon name="check" />
-                    </b>
-                    {t("why.step4")}
+                {/* Une séance racontée en trois cartes : le problème du dev, le mentor, la séance. */}
+                <div className="duo rv-stagger">
+                  <div className="who">
+                    <span className="tag">{t("why.mentorYou")}</span>
+                    <b>{t("why.mentorProblem")}</b>
+                    <span>{t("why.mentorYouMeta", { name: s.mentee.name })}</span>
+                  </div>
+                  <span className="link" aria-hidden="true">
+                    <LpIcon name="arrow" strokeWidth={2.4} />
+                  </span>
+                  <div className="who mentor">
+                    <span className="tag">{t("why.mentorMentor")}</span>
+                    <b>{t("why.mentorMentorName", { name: s.mentor.name })}</b>
+                    <span className="pill ok">
+                      <LpIcon name="check" strokeWidth={2.6} />
+                      {t("why.mentorVerified")}
+                    </span>
+                  </div>
+                  <span className="link" aria-hidden="true">
+                    <LpIcon name="arrow" strokeWidth={2.4} />
+                  </span>
+                  <div className="who session">
+                    <span className="tag">{t("why.mentorSession")}</span>
+                    <b>{t("why.mentorSessionText")}</b>
+                    <span className="pill ok">{t("why.mentorFree")}</span>
                   </div>
                 </div>
               </div>
@@ -234,6 +220,30 @@ export default async function Landing() {
                       {t(`why.${k}`)}
                     </div>
                   ))}
+                </div>
+              </div>
+
+              <div className="why-row rv">
+                <div>
+                  <div className="ico tests">
+                    <LpIcon name="clipboard" />
+                  </div>
+                  <h3>{t("why.testsTitle")}</h3>
+                  <p>{t("why.testsText")}</p>
+                </div>
+                <div className="side rv-stagger">
+                  {([1, 2, 3] as const).map((n) => (
+                    <div key={n} className="chip">
+                      <b>{n}</b>
+                      {t(`why.test${n}`)}
+                    </div>
+                  ))}
+                  <div className="chip palm">
+                    <b>
+                      <LpIcon name="check" />
+                    </b>
+                    {t("why.test4")}
+                  </div>
                 </div>
               </div>
             </div>
@@ -399,11 +409,10 @@ export default async function Landing() {
             <a href="#faq">{t("nav.faq")}</a>
           </nav>
           <div className="legal">
-            {/* Contact and privacy pages: contents to come from the team (placeholders kept on purpose). */}
-            <a href="#">{t("footer.contact")}</a>
-            <a href="#">{t("footer.privacy")}</a>
+            <a href={`mailto:${CONTACT_EMAIL}`}>{t("footer.contact")}</a>
+            <Link href="/conditions#donnees">{t("footer.privacy")}</Link>
             <Link href="/conditions">{t("footer.conditions")}</Link>
-            <span>{t("footer.question")}</span>
+            <span>{t.rich("footer.question", { email: CONTACT_EMAIL, mail: (c) => <a href={`mailto:${CONTACT_EMAIL}`}>{c}</a> })}</span>
             <span className="foot-lang">
               <LanguageSwitcher compact />
             </span>
@@ -426,16 +435,23 @@ function SectionHead({ id, kicker, title, lead }: { id: string; kicker: string; 
 
 function Step({ n, title, text, tags, last }: { n: number; title: string; text: string; tags: string[]; last?: boolean }) {
   return (
-    <div className="step">
-      <span className="num">{n}</span>
-      <h3>{title}</h3>
-      <p>{text}</p>
-      <div className="mini">
-        {tags.map((tag) => (
-          <span key={tag}>{tag}</span>
-        ))}
+    <>
+      <div className="step">
+        <span className="num">{n}</span>
+        <h3>{title}</h3>
+        <p>{text}</p>
+        <div className="mini">
+          {tags.map((tag) => (
+            <span key={tag}>{tag}</span>
+          ))}
+        </div>
       </div>
-      {!last && <LpIcon name="arrow" className="arrow" strokeWidth={2.4} />}
-    </div>
+      {/* The arrow sits in the gap between two steps, in its own circle. */}
+      {!last && (
+        <span className="step-arrow" aria-hidden="true">
+          <LpIcon name="arrow" strokeWidth={2.4} />
+        </span>
+      )}
+    </>
   );
 }

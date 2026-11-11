@@ -9,9 +9,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("metaTitle") };
 }
 
-function Part({ title, children }: { title: string; children: ReactNode }) {
+function Part({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
   return (
-    <section className="grid gap-2">
+    <section id={id} className="grid scroll-mt-6 gap-2">
       <h2 className="font-display text-xl font-bold">{title}</h2>
       {children}
     </section>
@@ -44,7 +44,7 @@ export default async function TermsPage() {
       <Part title={t("moderation.title")}>
         <p>{t("moderation.text")}</p>
       </Part>
-      <Part title={t("data.title")}>
+      <Part title={t("data.title")} id="donnees">
         <ul className="grid list-disc gap-1 pl-5">
           <li>{t("data.kept")}</li>
           <li>{t("data.voice")}</li>

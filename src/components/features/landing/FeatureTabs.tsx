@@ -15,58 +15,65 @@ const TABS = [
   { id: "rise", key: "rise", icon: "sprout", tone: "rise" },
 ] as const;
 
-/** Six seconds per feature; the rotation stops for good as soon as the visitor touches the section. */
+/** Six seconds per feature. A click restarts the six seconds on the chosen feature, then the rotation goes on. */
 const ROTATE_MS = 6000;
 
 /**
  * Section « Fonctionnalités » : cinq onglets (tablist ARIA, flèches, Début, Fin) et un téléphone
  * qui montre un écran simplifié de chaque espace. Les onglets tournent seuls tant que la section
- * est visible et que personne n'y a touché ; jamais avec « réduire les animations ».
+ * est visible. Un clic choisit une fonctionnalité, puis la rotation repart de là. Au clavier
+ * (flèches, Début, Fin), la rotation s'arrête : le visiteur garde la main (WCAG 2.2.2).
+ * Jamais de rotation avec « réduire les animations ».
  */
 export function FeatureTabs() {
   const t = useTranslations("landing.features");
   const [index, setIndex] = useState(0);
+  /** Counts the turns: it restarts the timer and the progress bar, even when the same tab is chosen again. */
+  const [turn, setTurn] = useState(0);
   const [auto, setAuto] = useState(true);
+  const [visible, setVisible] = useState(false);
   const section = useRef<HTMLDivElement>(null);
   const tabs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
-    if (!auto || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let timer: ReturnType<typeof setInterval> | null = null;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !timer) timer = setInterval(() => setIndex((i) => (i + 1) % TABS.length), ROTATE_MS);
-        else if (!entry.isIntersecting && timer) {
-          clearInterval(timer);
-          timer = null;
-        }
-      },
-      { threshold: 0.3 },
-    );
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.3 });
     observer.observe(section.current!);
-    return () => {
-      observer.disconnect();
-      if (timer) clearInterval(timer);
-    };
-  }, [auto]);
+    return () => observer.disconnect();
+  }, []);
 
-  function choose(i: number, focus = false) {
-    setAuto(false);
+  const rotating = auto && visible;
+  useEffect(() => {
+    if (!rotating || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = setTimeout(() => {
+      setIndex((i) => (i + 1) % TABS.length);
+      setTurn((n) => n + 1);
+    }, ROTATE_MS);
+    return () => clearTimeout(timer);
+  }, [rotating, turn]);
+
+  /** A click (or a tap): show this feature, and let the rotation go on from it. */
+  function choose(i: number) {
     setIndex(i);
-    if (focus) tabs.current[i]?.focus();
+    setTurn((n) => n + 1);
+    setAuto(true);
   }
 
+  /** Keyboard: the visitor moves through the tabs at their own pace, the rotation stops. */
   function onKey(e: KeyboardEvent, i: number) {
     const next = { ArrowDown: i + 1, ArrowRight: i + 1, ArrowUp: i - 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
     if (next === undefined) return;
     e.preventDefault();
-    choose((next + TABS.length) % TABS.length, true);
+    const target = (next + TABS.length) % TABS.length;
+    setAuto(false);
+    setIndex(target);
+    tabs.current[target]?.focus();
   }
 
   const current = TABS[index];
   return (
-    <div className="feat-grid" ref={section} onPointerDown={() => setAuto(false)} onFocus={() => setAuto(false)}>
-      <div className={auto ? "tabs rv" : "tabs rv paused"} role="tablist" aria-label={t("label")} aria-orientation="vertical">
+    <div className="feat-grid" ref={section}>
+      {/* The class never changes here: LandingEffects adds « in » by hand, and React would erase it (the list vanished on click). */}
+      <div className="tabs rv" data-rotating={rotating} role="tablist" aria-label={t("label")} aria-orientation="vertical">
         {TABS.map((tab, i) => (
           <button
             key={tab.id}
@@ -91,8 +98,8 @@ export function FeatureTabs() {
               <span className="td">{t(`${tab.key}Text`)}</span>
             </span>
             <LpIcon name="chevron" className="chev" />
-            {/* Restarted with the tab: the bar fills up in 6 s. */}
-            <span key={`${index}-${auto}`} className="bar" />
+            {/* Restarted at each turn: the bar fills up in 6 s. */}
+            <span key={turn} className="bar" />
           </button>
         ))}
       </div>

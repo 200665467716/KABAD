@@ -5,7 +5,7 @@ test.use({ storageState: { cookies: [], origins: [] } });
 
 test("« Créer mon compte » mène à l’inscription et « Se connecter » à la connexion", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("devs africains");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("nouvelle génération de développeurs");
   await page.locator("#cta-main").click();
   await expect(page).toHaveURL(/\/inscription$/);
   await page.goto("/");
@@ -20,6 +20,9 @@ test("les onglets des fonctionnalités changent l’écran du téléphone, au cl
   await tabs.getByRole("tab", { name: /Hackathons/ }).click();
   await expect(tabs.getByRole("tab", { name: /Hackathons/ })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator("#scr-hack")).toBeVisible();
+  // The list stays on screen after a click (it used to vanish: React erased the class added by the reveal effect).
+  await expect(tabs).toHaveClass(/\bin\b/);
+  await expect(tabs).toHaveCSS("opacity", "1");
   await page.keyboard.press("ArrowDown");
   await expect(tabs.getByRole("tab", { name: /Tests d’apps/ })).toBeFocused();
   await expect(page.locator("#scr-test")).toBeVisible();

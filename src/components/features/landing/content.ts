@@ -5,6 +5,7 @@
  */
 export const landingSample = {
   mentor: { name: "Awa Diop", initials: "AD" },
+  mentee: { name: "Kossi" },
   rise: { devs: 126, countries: 7, members: ["YA", "FS", "CO"] },
   hackathon: { days: 12, otherDays: 30 },
   chat: { initials: "YA" },
