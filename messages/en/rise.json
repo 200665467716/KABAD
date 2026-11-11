@@ -42,7 +42,8 @@
       "sending": "Sending…",
       "joinToWrite": "Join the project to take part in the discussion.",
       "openChat": "Project chat",
-      "error": "Something went wrong. Try again."
+      "error": "Something went wrong. Try again.",
+      "tabInfo": "About"
     },
     "thread": {
       "metaTitle": "Project discussion",
@@ -102,6 +103,14 @@
       "submit": "Schedule the event",
       "submitting": "Scheduling…",
       "error": "The event wasn’t scheduled. Try again."
+    },
+    "info": {
+      "domain": "Challenge",
+      "initiator": "Led by",
+      "since": "Launched on",
+      "team": "Team",
+      "teamCount": "{members, plural, one {# dev} other {# devs}} · {countries, plural, one {# country} other {# countries}}",
+      "summary": "In one sentence"
     }
   }
 }

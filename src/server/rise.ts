@@ -109,6 +109,7 @@ export async function getProject(viewerId: string | null, id: string, prisma: Db
   return {
     ...summary,
     problem: p.problem,
+    createdAt: p.createdAt.toISOString(),
     initiator: p.initiator,
     // The chat is for members only.
     conversationId: summary.isMember ? p.conversationId : null,

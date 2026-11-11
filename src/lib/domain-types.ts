@@ -210,6 +210,7 @@ export type RisePostView = { id: string; body: string; createdAt: string; author
 
 export type RiseProjectDetail = RiseProjectSummary & {
   problem: string;
+  createdAt: string;
   initiator: { id: string; name: string };
   conversationId: string | null;
   posts: RisePostView[];

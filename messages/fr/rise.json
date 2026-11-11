@@ -42,7 +42,8 @@
       "sending": "Envoi…",
       "joinToWrite": "Rejoins le projet pour participer à la discussion.",
       "openChat": "Canal de discussion",
-      "error": "Une erreur est survenue. Réessaie."
+      "error": "Une erreur est survenue. Réessaie.",
+      "tabInfo": "Fiche"
     },
     "thread": {
       "metaTitle": "Discussion du projet",
@@ -102,6 +103,14 @@
       "submit": "Programmer l’événement",
       "submitting": "Programmation…",
       "error": "L’événement n’a pas été programmé. Réessaie."
+    },
+    "info": {
+      "domain": "Défi",
+      "initiator": "Porté par",
+      "since": "Lancé le",
+      "team": "Équipe",
+      "teamCount": "{members, plural, one {# dev} other {# devs}} · {countries, plural, one {# pays} other {# pays}}",
+      "summary": "En une phrase"
     }
   }
 }

@@ -13,7 +13,7 @@ import { api, ApiError } from "@/lib/api";
 import type { RiseEventView, RiseProjectDetail } from "@/lib/domain-types";
 import { initials } from "@/lib/format";
 
-type Tab = "talk" | "events" | "members";
+type Tab = "talk" | "events" | "members" | "info";
 
 export function ProjectView({ project: p, viewerId, now }: { project: RiseProjectDetail; viewerId: string; now: number }) {
   const t = useTranslations("rise");
@@ -77,28 +77,20 @@ export function ProjectView({ project: p, viewerId, now }: { project: RiseProjec
 
       <Segmented
         label={t("project.tabsLabel")}
-        stretch
+        // Four tabs: each takes the width of its word, so they fit on a 360 px screen.
+        className="flex w-full [&>button]:flex-auto [&>button]:px-2 [&>button]:text-[13px] sm:[&>button]:px-4 sm:[&>button]:text-sm"
         value={tab}
         onChange={setTab}
         items={[
           { value: "talk", label: t("project.tabTalk") },
           { value: "events", label: t("project.tabEvents") },
           { value: "members", label: t("project.tabMembers") },
+          { value: "info", label: t("project.tabInfo") },
         ]}
       />
 
       {tab === "talk" && (
         <div className="grid gap-3">
-          <details className="rounded-lg border-2 border-line-strong bg-raised p-4">
-            <summary className="cursor-pointer text-sm font-extrabold">{t("project.problem")}</summary>
-            <p className="mt-2 text-[15px] leading-[22px]">{p.problem}</p>
-            {p.skills.length > 0 && (
-              <div className="mt-3 grid gap-2">
-                <Overline as="h3">{t("project.skills")}</Overline>
-                <TagList items={p.skills} />
-              </div>
-            )}
-          </details>
           {p.posts.map((post) => (
             <article key={post.id} className="grid gap-2 rounded-lg border-2 border-line-strong bg-raised p-3.5">
               <div className="flex items-center gap-2.5">
@@ -114,6 +106,40 @@ export function ProjectView({ project: p, viewerId, now }: { project: RiseProjec
           ))}
           {p.posts.length === 0 && <p className="py-4 text-center text-muted">{t("project.noPosts")}</p>}
           {p.isMember ? <Composer projectId={p.id} /> : <p className="text-sm text-muted">{t("project.joinToWrite")}</p>}
+        </div>
+      )}
+
+      {/* The project sheet: what the project is about, always one tap away in its channel. */}
+      {tab === "info" && (
+        <div className="grid gap-4 rounded-lg border-2 border-line-strong bg-raised p-4">
+          <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-sm">
+            <dt className="font-extrabold text-muted">{t("info.domain")}</dt>
+            <dd className="m-0 font-bold">{t(`domain.${p.domain}`)}</dd>
+            <dt className="font-extrabold text-muted">{t("info.initiator")}</dt>
+            <dd className="m-0">
+              <Link href={`/profil/${p.initiator.id}`} className="font-bold text-brand-text no-underline">
+                {p.initiator.name}
+              </Link>
+            </dd>
+            <dt className="font-extrabold text-muted">{t("info.since")}</dt>
+            <dd className="m-0 font-bold">{format.dateTime(new Date(p.createdAt), { day: "numeric", month: "long", year: "numeric" })}</dd>
+            <dt className="font-extrabold text-muted">{t("info.team")}</dt>
+            <dd className="m-0 font-bold">{t("info.teamCount", { members: p.members, countries: p.countries })}</dd>
+          </dl>
+          <div className="grid gap-1.5 border-t-2 border-line pt-3.5">
+            <Overline as="h3">{t("info.summary")}</Overline>
+            <p className="text-[15px] leading-[22px]">{p.summary}</p>
+          </div>
+          <div className="grid gap-1.5">
+            <Overline as="h3">{t("project.problem")}</Overline>
+            <p className="text-[15px] leading-[22px] whitespace-pre-line">{p.problem}</p>
+          </div>
+          {p.skills.length > 0 && (
+            <div className="grid gap-2">
+              <Overline as="h3">{t("project.skills")}</Overline>
+              <TagList items={p.skills} />
+            </div>
+          )}
         </div>
       )}
 
