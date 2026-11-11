@@ -32,9 +32,9 @@ Comparaison des 62 écrans du canevas « KABAD — Refonte » (version du 7 nove
 ## Lot 3 — Parcours à reprendre
 
 - [ ] **Organiser un hackathon en 3 étapes** (H6 infos, H7 défi et prix avec « Pas de prix », H8 instructeurs puis « Publier le hackathon »).
-- [ ] **M3** : créneaux déjà réservés visibles et barrés, fuseau en nom de ville (« Heure de Lomé »), résumé « Jeu. 5 nov. · 15 h 00 – 15 h 30 ».
-- [ ] **M6** : « Accepter » mène à la séance confirmée ; état « Demande refusée · X est prévenu ».
-- [ ] **M7** : « Lien Google Meet », « Rejoindre sur Google Meet », « Copier le lien ».
+- [ ] **M3** : créneaux déjà réservés visibles et barrés, résumé « Jeu. 5 nov. · 15 h 00 – 15 h 30 ». Fait le 11 novembre : fuseau en nom de ville (« Heure de Lomé »).
+- [x] **M6** : « Accepter » mène à la séance confirmée ; état « Demande refusée · X est prévenu ».
+- [x] **M7** : « Lien Google Meet », « Rejoindre sur Google Meet », « Copier le lien » (11 novembre).
 - [ ] **B1** : technos en puces comme à l'inscription (pré-remplies depuis le profil), domaines bloqués à 3.
 - [ ] **H5/H5e** : vérifier que le dépôt est public ; « Ce lien ne mène à aucun dépôt public… » ; `https://` ajouté tout seul.
 - [ ] **H3** : inviter des coéquipiers, « Demander » sur chaque équipe.
@@ -48,10 +48,10 @@ Reprise mot pour mot des textes (messagerie : « Écrire un message… », « me
 
 ## Questions à trancher par l'équipe
 
-1. **Visio** : la maquette dit Google Meet. Aujourd'hui, si le mentor n'a pas de lien, KABAD crée une salle Jitsi (D7). Garder ce repli, ou exiger un lien Meet du mentor ?
+1. ~~Visio~~ : **tranché le 11 novembre**, Google Meet pour le mentorat, lien exigé du mentor (fait). Africa Rise-Up garde ses canaux de discussion ; voir la question 6.
 2. ~~Publication des hackathons~~ : **tranché le 7 novembre**, l'équipe KABAD relit et publie. Le bouton de H8 dira « Proposer le hackathon ».
 3. ~~Mentorat exigé pour un hackathon~~ : **tranché le 7 novembre**, plus aucune exigence ; partage 90/10 (fait).
-4. **Champs en plus** de T3 (présentation, objectif, questions de contrôle), H6 (clôture, niveau, technos), R3 (le projet en une phrase) : les garder ?
+4. **Champs en plus** de T3 (présentation, objectif, questions de contrôle), H6 (clôture, niveau, technos), R3 (le projet en une phrase) : les garder ? **Mis de côté le 11 novembre** : pas de changement sur les tests d'apps ni sur les hackathons pour le moment.
 5. **Technologies** : 12 dans le point projet, 15 dans la maquette A5 (avec PostgreSQL, Docker, AWS).
-6. **Salon Rise-Up** : « Rejoindre le salon » ou « Rejoindre la visio » en V1 ?
-7. **Genre** : M2 écrit « Vérifiée », « Sur quoi elle peut t'aider ». Formulation neutre, ou genre sur le profil ?
+6. **Salon Rise-Up** : le 11 novembre, Rise-Up reste fait de canaux de discussion, avec une fiche du projet dans chaque canal (faite, onglet « Fiche ») et la possibilité de lancer des salons de discussion. Reste à préciser la forme du salon : vocal dans KABAD, discussion écrite à part, ou lien de visio.
+7. ~~Genre~~ : **tranché le 11 novembre**, genre facultatif sur le profil (fait).

@@ -166,6 +166,18 @@ Le canevas « KABAD — Refonte » a évolué : nouvelle landing page, écrans d
 - [x] Lot 1, socle et règles : mot de passe, code e-mail à 10 min, focus, erreurs, désactivé, feuilles de confirmation, consentement, squelettes, notifications, A2e, A3e, A7e.
 - [ ] Lots 2 à 4 : écrans absents (M2, T4, discussion d'équipe, photo de groupe), parcours à reprendre, textes.
 
+## Mise à jour du 11 novembre (branche `dev/modifications`)
+
+Décisions du jour (Emmerson) : Google Meet pour le mentorat seulement ; genre sur le profil ; notifications par e-mail ; Africa Rise-Up reste fait de canaux de discussion, avec une fiche du projet dans chaque canal et, à préciser, des salons de discussion. Tests d'apps, hackathons et évaluation des séances : pas de changement pour le moment.
+
+- [x] Mentorat : la visio passe par Google Meet. Le mentor colle son lien Meet dans ses disponibilités ; sans lien, il ne peut ni ouvrir de créneaux ni accepter une séance. La salle Jitsi créée par défaut disparaît du mentorat. Écran M7 : « Lien Google Meet », « Rejoindre sur Google Meet », « Copier le lien ».
+- [x] Notifications par e-mail : le worker envoie chaque minute les notifications importantes (demande de séance, réponse, rappel 1 h avant, invitation, mission, résultat de hackathon…) aux membres dont l'e-mail est confirmé. Réglage dans « Mon compte ». Tâche `notification-mail`, sans doublon si elle tourne deux fois. En production : `SMTP_URL` et `MAIL_FROM` dans le `.env` du serveur (voir `.env.example`).
+- [x] Profil : genre facultatif (accords « Vérifiée » / « Vérifié » sur la fiche d'un mentor) et fuseau horaire au choix ; les heures de l'accueil et des événements suivent le fuseau du membre.
+- [x] Mentorat : historique « Toutes mes séances » (`/mentorat/seances`) en trois onglets, à venir, passées, annulées.
+- [x] Rise-Up : onglet « Fiche » dans le canal d'un projet (défi, porteur, date de lancement, équipe, problème, compétences recherchées).
+- [ ] Rise-Up : salons de discussion à lancer depuis un canal (forme à préciser : vocal, texte ou lien de visio).
+- Tests : 33 unitaires, 51 d'intégration, 111 e2e.
+
 ## P1 — Les « Must » manquants et Africa Rise-Up (objectif : 11 novembre)
 
 > **À réaligner sur `docs/point-projet.md`** avant de les prendre : R11 à R17 décrivent encore les défis (devenus hackathons, D8), R12 à R14 le binôme de mentorat (devenu des créneaux, D9), R24 à R26 l'ancien Africa'Raise-up. Une partie est déjà couverte par la refonte. Relire chaque tâche avec l'équipe, puis la réécrire ou la retirer.
