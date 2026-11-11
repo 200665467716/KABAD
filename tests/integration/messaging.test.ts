@@ -6,6 +6,7 @@ import {
   createGroup,
   createReport,
   getConversation,
+  getGroupPhoto,
   listConversations,
   listInvitations,
   markRead,
@@ -15,8 +16,11 @@ import {
   sendAttachment,
   sendInvitation,
   sendMessage,
+  setGroupPhoto,
   unreadTotal,
+  updateGroup,
 } from "@/server/messaging";
+import { createProject } from "@/server/rise";
 import { NOTIFY_BATCH } from "@/server/realtime-events";
 import { captureEvents, makeContacts, makeUsers, prisma, resetDb } from "./helpers";
 
@@ -212,6 +216,37 @@ describe("private groups", () => {
     expect(events).toHaveLength(3);
     for (const e of events) expect(JSON.stringify(e).length).toBeLessThan(8000);
     expect(new Set(events.flatMap((e) => e.recipients as string[])).size).toBe(extra.length + 2);
+  });
+
+  it("only the owner renames a private group and sets its photo; the photo is for its members", async () => {
+    const { id } = await createGroup("kossi", { name: "API Lomé", memberIds: ["moussa"] }, prisma);
+    await refused(updateGroup("moussa", id, { name: "Autre nom" }, prisma), "forbidden");
+    await updateGroup("kossi", id, { name: "API Lomé et Cotonou", theme: "Fintech" }, prisma);
+    const renamed = await getConversation("moussa", id, {}, prisma);
+    expect(renamed).toMatchObject({ title: "API Lomé et Cotonou", theme: "Fintech", photo: null });
+    expect(renamed.messages.at(-1)).toMatchObject({ system: true, body: "Kossi a renommé le groupe « API Lomé et Cotonou »" });
+    // The same name and theme again: nothing is written.
+    await updateGroup("kossi", id, { name: "API Lomé et Cotonou", theme: "Fintech" }, prisma);
+    expect((await getConversation("moussa", id, {}, prisma)).messages).toHaveLength(renamed.messages.length);
+
+    const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+    await refused(setGroupPhoto("kossi", id, new TextEncoder().encode("%PDF-1.7"), prisma), "bad_file");
+    await refused(setGroupPhoto("moussa", id, PNG, prisma), "forbidden");
+    const { photo } = await setGroupPhoto("kossi", id, PNG, prisma);
+    expect(photo).toContain(`/api/groups/${id}/photo?v=`);
+    expect((await listConversations("moussa", prisma))[0].photo).toBe(photo);
+    expect((await getGroupPhoto("moussa", id, prisma)).mime).toBe("image/png");
+    await refused(getGroupPhoto("yao", id, prisma), "not_found");
+
+    await setGroupPhoto("kossi", id, null, prisma);
+    expect((await getConversation("moussa", id, {}, prisma)).photo).toBeNull();
+    await refused(getGroupPhoto("moussa", id, prisma), "not_found");
+  });
+
+  it("the group of a Rise-Up project keeps the name of its project: it is not renamed from the messaging", async () => {
+    const project = await createProject("kossi", { name: "Forages au Sahel", domain: "WATER", summary: "Une carte des forages.", problem: "x".repeat(40), skills: [] }, prisma);
+    const { conversationId } = await prisma.riseProject.findUniqueOrThrow({ where: { id: project.id } });
+    await refused(updateGroup("kossi", conversationId!, { name: "Autre nom" }, prisma), "community_group");
   });
 
   it("only the creator adds participants, and only among their contacts", async () => {

@@ -36,6 +36,7 @@ export function Inbox({
   const t = useTranslations("messaging.inbox");
   const time = useChatTime();
   const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
   const [conversations, setConversations] = useState(initialConversations);
   const [invitations, setInvitations] = useState(initialInvitations);
   const [sent, setSent] = useState(initialSent);
@@ -73,10 +74,15 @@ export function Inbox({
   useRealtime("invitation:answered", () => refresh());
   useRealtimeReconnect(refresh);
 
+  // The search looks at the name of the person or of the group, without accents or capitals.
+  const plain = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+  const wanted = plain(query.trim());
   const rows: Row[] = [
     ...conversations.filter((c) => filter === "all" || (filter === "groups") === (c.kind === "GROUP")).map((c): Row => ({ type: "conversation", at: c.lastMessageAt, c })),
     ...(filter === "groups" ? [] : sent.map((i): Row => ({ type: "sent", at: i.createdAt, i }))),
-  ].sort((a, b) => b.at.localeCompare(a.at));
+  ]
+    .filter((row) => !wanted || plain(row.type === "sent" ? row.i.to.name : row.c.title).includes(wanted))
+    .sort((a, b) => b.at.localeCompare(a.at));
   const firstNames = invitations.map((i) => i.from.name.split(" ")[0]);
   const names = firstNames.length <= 1 ? firstNames.join("") : `${firstNames.slice(0, -1).join(", ")} ${t("and")} ${firstNames[firstNames.length - 1]}`;
 
@@ -85,7 +91,7 @@ export function Inbox({
       <TopBar title={t("title")} actions={<IconButton icon="search" label={t("members")} href="/membres" />} />
       <Page narrow>
         {invitations.length > 0 && (
-          <Link href="/messages/invitations" className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border-2 border-line-strong bg-raised p-3.5 text-ink no-underline shadow-pop">
+          <Link href="/messages/invitations" className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border-2 border-dashed border-line-strong p-3.5 text-ink no-underline">
             <AvatarGroup>
               {invitations.slice(0, 2).map((i) => (
                 <Avatar key={i.id} initials={initials(i.from.name)} size="sm" />
@@ -109,6 +115,12 @@ export function Inbox({
             { value: "groups", label: t("tabGroups") },
           ]}
         />
+        {conversations.length + sent.length > 0 && (
+          <label className="flex h-12 items-center gap-2 rounded-md border-2 border-line-strong bg-raised px-3.5">
+            <Icon name="search" size={18} className="text-muted" />
+            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} aria-label={t("search")} placeholder={t("searchPlaceholder")} className="min-w-0 flex-1 bg-transparent text-base outline-none" />
+          </label>
+        )}
         {conversations.length === 0 && sent.length === 0 ? (
           <div className="grid justify-items-center gap-3 py-10 text-center">
             <p className="text-muted">{t("empty")}</p>
@@ -117,7 +129,7 @@ export function Inbox({
             </ButtonLink>
           </div>
         ) : rows.length === 0 ? (
-          <p className="py-6 text-center text-muted">{t("emptyFilter")}</p>
+          <p className="py-6 text-center text-muted">{wanted ? t("emptySearch", { query: query.trim() }) : t("emptyFilter")}</p>
         ) : (
           <ul className="m-0 list-none overflow-hidden rounded-lg border-2 border-line-strong bg-raised p-0 [&>li+li]:border-t-2 [&>li+li]:border-line">
             {rows.map((row) => {
@@ -145,7 +157,7 @@ export function Inbox({
               return (
                 <li key={c.id}>
                   <Link href={`/messages/${c.id}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 text-ink no-underline hover:bg-bg">
-                    <Avatar initials={initials(c.title)} square={group} tone={group ? "neutral" : "brand"} />
+                    <Avatar initials={initials(c.title)} src={c.photo} square={group} tone={group ? "neutral" : "brand"} />
                     <span className="grid min-w-0">
                       <b className="truncate text-[15px] leading-5">{c.title}</b>
                       <small className={c.unread > 0 ? "truncate text-[13px] leading-[18px] font-bold text-ink" : "truncate text-[13px] leading-[18px] text-muted"}>{c.last ? `${author}${c.last.body.split("\n")[0] || (c.last.attachment === "VOICE" ? t("voiceNote") : c.last.attachment === "FILE" ? t("file") : "")}` : t("noMessage")}</small>
@@ -164,7 +176,8 @@ export function Inbox({
             })}
           </ul>
         )}
-        <ButtonLink href="/messages/groupes/nouveau" variant="ink" icon="users" block className="md:w-auto md:justify-self-start">
+        {/* MS1: the floating button, above the tab bar on a phone. It is the one indigo button of the screen. */}
+        <ButtonLink href="/messages/groupes/nouveau" icon="users" size="lg" className="sticky bottom-22 z-10 justify-self-end shadow-pop lg:bottom-6">
           {t("newGroup")}
         </ButtonLink>
       </Page>

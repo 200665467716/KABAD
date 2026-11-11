@@ -51,6 +51,17 @@ export function attachmentProblem(kind: AttachmentKind, mime: string | null, siz
   return null;
 }
 
+/** The photo of a group: a small image. The browser resizes it to 256 px before sending, so it weighs a few dozen KB. */
+export const GROUP_PHOTO_MAX_BYTES = 300 * 1024;
+export const GROUP_PHOTO_SIZE = 256;
+
+export function groupPhotoProblem(mime: string | null, size: number): string | null {
+  if (size === 0) return "Le fichier est vide.";
+  if (!mime || !mime.startsWith("image/")) return "La photo du groupe est une image PNG, JPEG ou WebP.";
+  if (size > GROUP_PHOTO_MAX_BYTES) return "La photo du groupe fait 300 Ko au plus.";
+  return null;
+}
+
 /** A file name safe to show and to send back in a download header. */
 export function safeFileName(name: string, mime: string): string {
   const ext: Record<string, string> = { "application/pdf": "pdf", "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "m4a" };

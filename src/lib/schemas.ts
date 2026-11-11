@@ -62,6 +62,12 @@ export const createGroupSchema = z.object({
   memberIds: z.array(id).min(1, "Choisis au moins un participant.").max(GROUP_MAX_MEMBERS - 1, `Un groupe compte ${GROUP_MAX_MEMBERS} membres au plus.`),
 });
 
+/** The owner renames a private group or changes its theme (null removes the theme). */
+export const updateGroupSchema = z.object({
+  name: trimmed(1, GROUP_NAME_MAX, "Donne un nom au groupe.", `Le nom du groupe fait ${GROUP_NAME_MAX} caractères au plus.`),
+  theme: z.enum(GROUP_THEMES).nullable().optional(),
+});
+
 export const addMembersSchema = z.object({
   memberIds: z.array(id).min(1, "Choisis au moins un participant.").max(GROUP_MAX_MEMBERS),
 });

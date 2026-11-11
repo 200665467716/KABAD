@@ -19,10 +19,13 @@
       "noMessage": "Aucun message",
       "unread": "{count, plural, one {# non lu} other {# non lus}}",
       "yesterday": "Hier",
-      "voiceNote": "Note vocale",
+      "voiceNote": "Message vocal",
       "file": "Fichier",
       "pending": "En attente",
-      "inviteSentNoMessage": "Invitation envoyée"
+      "inviteSentNoMessage": "Invitation envoyée",
+      "search": "Chercher une conversation",
+      "searchPlaceholder": "Chercher une personne ou un groupe",
+      "emptySearch": "Aucune conversation ne correspond à « {query} »."
     },
     "invitations": {
       "metaTitle": "Invitations",
@@ -87,12 +90,13 @@
       "yesterday": "Hier",
       "blockedByThem": "Tu ne peux plus écrire à ce membre.",
       "blockedByMe": "Tu as bloqué ce membre. Débloque-le depuis « Mon compte » pour reprendre la discussion.",
-      "placeholderGroup": "Message au groupe",
-      "placeholder": "Ton message",
+      "placeholderGroup": "Écrire au groupe…",
+      "placeholder": "Écrire un message…",
       "send": "Envoyer",
       "tooLong": "Un message fait {max} caractères au plus.",
-      "voiceSending": "Note vocale…",
-      "uploadFailed": "Le fichier n’a pas été envoyé. Réessaie."
+      "voiceSending": "Message vocal…",
+      "uploadFailed": "Le fichier n’a pas été envoyé. Réessaie.",
+      "groupInfo": "Infos du groupe"
     },
     "add": {
       "title": "Ajouter des participants",
@@ -121,7 +125,16 @@
       "openTest": "Voir l’annonce de test",
       "openProject": "Voir le projet",
       "linkedTest": "Ce groupe suit l’annonce de test : on y entre en rejoignant le test et on en sort en le quittant.",
-      "linkedProject": "Ce groupe suit le projet Rise-Up : on y entre en rejoignant le projet et on en sort en le quittant."
+      "linkedProject": "Ce groupe suit le projet Rise-Up : on y entre en rejoignant le projet et on en sort en le quittant.",
+      "infoTitle": "Infos du groupe",
+      "edit": "Modifier",
+      "photoAdd": "Ajouter une photo",
+      "photoChange": "Changer la photo",
+      "photoRemove": "Retirer la photo",
+      "photoSending": "Envoi…",
+      "noTheme": "Aucun thème",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…"
     },
     "group": {
       "metaTitle": "Nouveau groupe",
@@ -199,12 +212,12 @@
     "attachments": {
       "attach": "Joindre un fichier",
       "download": "Télécharger",
-      "play": "Écouter la note vocale",
+      "play": "Écouter le message vocal",
       "pause": "Mettre en pause",
-      "record": "Enregistrer une note vocale",
+      "record": "Enregistrer un message vocal",
       "stop": "Arrêter et envoyer",
-      "unsupported": "Ton navigateur ne permet pas d’enregistrer une note vocale.",
-      "micDenied": "Autorise le micro pour enregistrer une note vocale."
+      "unsupported": "Ton navigateur ne permet pas d’enregistrer un message vocal.",
+      "micDenied": "Autorise le micro pour enregistrer un message vocal."
     }
   }
 }

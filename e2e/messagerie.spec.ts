@@ -53,7 +53,7 @@ test("un message arrive chez l’autre membre sans recharger la page", async ({ 
   await yao.context().close();
 });
 
-test("un groupe privé avec un thème : tout le monde reçoit en direct", async ({ browser }) => {
+test("un groupe privé avec un thème : tout le monde reçoit en direct, et son responsable le renomme", async ({ browser }) => {
   const kossi = await signIn(browser, "kossi");
   const yao = await signIn(browser, "yao");
 
@@ -70,6 +70,13 @@ test("un groupe privé avec un thème : tout le monde reçoit en direct", async 
   await kossi.getByRole("textbox").last().fill(text);
   await kossi.getByRole("button", { name: "Envoyer" }).click();
   await expect(thread(yao).getByText(text)).toBeVisible({ timeout: 10_000 });
+
+  // The owner renames the group from « Infos du groupe »: the other member reads it at once.
+  await kossi.getByRole("button", { name: "Infos du groupe" }).click();
+  await kossi.getByRole("button", { name: "Modifier" }).click();
+  await kossi.locator("#group-name").fill("Revue de code du jeudi");
+  await kossi.getByRole("button", { name: "Enregistrer", exact: true }).click();
+  await expect(thread(yao).getByText("Kossi a renommé le groupe « Revue de code du jeudi »")).toBeVisible({ timeout: 10_000 });
 
   await kossi.context().close();
   await yao.context().close();

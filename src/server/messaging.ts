@@ -8,7 +8,7 @@
  */
 import { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
-import { attachmentProblem, safeFileName, sniffMime, type AttachmentKind } from "@/lib/attachments";
+import { attachmentProblem, groupPhotoProblem, safeFileName, sniffMime, type AttachmentKind } from "@/lib/attachments";
 import { DomainError, forbidden, notFound } from "./errors";
 import { pushNotifications } from "./notifications";
 import { notify } from "./realtime-events";
@@ -21,6 +21,8 @@ const directKey = (a: string, b: string) => [a, b].sort().join(":");
 /** After a refusal, the same person can be invited again only after this delay. */
 export const REINVITE_AFTER_DAYS = 30;
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
+/** The address of a group's photo; the date makes the browser fetch the new picture after a change. */
+const photoUrl = (c: { id: string; photoAt: Date | null }) => (c.photoAt ? `/api/groups/${c.id}/photo?v=${c.photoAt.getTime()}` : null);
 const listNames = (names: string[]) => (names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`);
 
 async function isBlocked(prisma: Db | Prisma.TransactionClient, a: string, b: string) {
@@ -85,6 +87,7 @@ export async function listConversations(userId: string, prisma: Db = db): Promis
       kind: c.kind,
       title: c.kind === "GROUP" ? (c.name ?? "Groupe") : (other?.name ?? "Conversation"),
       theme: c.theme,
+      photo: photoUrl(c),
       otherId: other?.id ?? null,
       memberCount: c.members.length,
       isOwner: c.createdById === userId,
@@ -176,6 +179,7 @@ export async function getConversation(userId: string, conversationId: string, op
     kind: c.kind,
     title: c.kind === "GROUP" ? (c.name ?? "Groupe") : (other?.name ?? "Conversation"),
     theme: c.theme,
+    photo: photoUrl(c),
     other: other ? { id: other.id, name: other.name, role: other.role, city: other.city } : null,
     isOwner: c.createdById === userId,
     linked: c.testApp ? { kind: "test", id: c.testApp.id } : c.project ? { kind: "rise", id: c.project.id } : null,
@@ -484,6 +488,71 @@ export async function removeGroupMember(userId: string, conversationId: string, 
     await notify(tx, { t: "conversation", conversationId, recipients: everyone });
     return { ok: true };
   });
+}
+
+/** The owner of a private group, checked before a change to its name, theme or photo. */
+async function ownedGroup(prisma: Db, userId: string, conversationId: string) {
+  const m = await membership(prisma, userId, conversationId);
+  if (m.conversation.kind !== "GROUP") throw new DomainError("not_group", "Seul un groupe a un nom et une photo.");
+  if (m.conversation.createdById !== userId) throw forbidden("Seul le responsable du groupe peut le modifier.");
+  await assertPrivateGroup(prisma, conversationId);
+  return m;
+}
+
+/** A line « Kossi a … » in the group, pushed to everyone, and the list of conversations refreshed. */
+async function announceChange(tx: Prisma.TransactionClient, conversationId: string, everyone: string[], body: string) {
+  const msg = await tx.message.create({ data: { conversationId, kind: "SYSTEM", body } });
+  await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: msg.createdAt } });
+  await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients: everyone });
+  await notify(tx, { t: "conversation", conversationId, recipients: everyone });
+}
+
+/** The owner renames the group or changes its theme. Nothing is written when nothing changes. */
+export async function updateGroup(userId: string, conversationId: string, input: { name: string; theme?: string | null }, prisma: Db = db) {
+  const m = await ownedGroup(prisma, userId, conversationId);
+  const theme = input.theme === undefined ? m.conversation.theme : input.theme;
+  const renamed = input.name !== m.conversation.name;
+  if (!renamed && theme === m.conversation.theme) return { ok: true };
+  return prisma.$transaction(async (tx) => {
+    const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+    await tx.conversation.update({ where: { id: conversationId }, data: { name: input.name, theme } });
+    const body = renamed ? `${firstName(me.name)} a renommé le groupe « ${input.name} »` : `${firstName(me.name)} a changé le thème du groupe`;
+    await announceChange(tx, conversationId, m.conversation.members.map((x) => x.userId), body);
+    return { ok: true };
+  });
+}
+
+/** The owner sets the group's photo (an image checked by its content), or removes it with `null`. */
+export async function setGroupPhoto(userId: string, conversationId: string, data: Uint8Array | null, prisma: Db = db) {
+  const m = await ownedGroup(prisma, userId, conversationId);
+  const mime = data ? sniffMime(data) : null;
+  if (data) {
+    const problem = groupPhotoProblem(mime, data.byteLength);
+    if (problem) throw new DomainError("bad_file", problem, 400, "photo");
+  } else if (!m.conversation.photoAt) {
+    return { photo: null };
+  }
+  return prisma.$transaction(async (tx) => {
+    const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+    const photoAt = data ? new Date() : null;
+    if (data) {
+      const bytes = Buffer.from(data);
+      await tx.groupPhoto.upsert({ where: { conversationId }, create: { conversationId, mime: mime!, data: bytes }, update: { mime: mime!, data: bytes } });
+    } else {
+      await tx.groupPhoto.deleteMany({ where: { conversationId } });
+    }
+    await tx.conversation.update({ where: { id: conversationId }, data: { photoAt } });
+    await announceChange(tx, conversationId, m.conversation.members.map((x) => x.userId), `${firstName(me.name)} a ${data ? "changé" : "retiré"} la photo du groupe`);
+    return { photo: photoUrl({ id: conversationId, photoAt }) };
+  });
+}
+
+/** The photo of a group, for its members only. */
+export async function getGroupPhoto(userId: string, conversationId: string, prisma: Db = db) {
+  await membership(prisma, userId, conversationId);
+  const photo = await prisma.groupPhoto.findUnique({ where: { conversationId } });
+  if (!photo) throw notFound("Photo introuvable.");
+  return photo;
 }
 
 /** A member leaves a group. If the creator leaves, the longest-standing member takes over; the last one out deletes the group. */

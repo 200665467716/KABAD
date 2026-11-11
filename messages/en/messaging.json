@@ -19,10 +19,13 @@
       "noMessage": "No message",
       "unread": "{count} unread",
       "yesterday": "Yesterday",
-      "voiceNote": "Voice note",
+      "voiceNote": "Voice message",
       "file": "File",
       "pending": "Pending",
-      "inviteSentNoMessage": "Invitation sent"
+      "inviteSentNoMessage": "Invitation sent",
+      "search": "Search a conversation",
+      "searchPlaceholder": "Search a person or a group",
+      "emptySearch": "No conversation matches “{query}”."
     },
     "invitations": {
       "metaTitle": "Invitations",
@@ -87,12 +90,13 @@
       "yesterday": "Yesterday",
       "blockedByThem": "You can no longer write to this member.",
       "blockedByMe": "You blocked this member. Unblock them from “My account” to resume the chat.",
-      "placeholderGroup": "Message the group",
-      "placeholder": "Your message",
+      "placeholderGroup": "Write to the group…",
+      "placeholder": "Write a message…",
       "send": "Send",
       "tooLong": "A message is {max} characters at most.",
-      "voiceSending": "Voice note…",
-      "uploadFailed": "The file wasn’t sent. Try again."
+      "voiceSending": "Voice message…",
+      "uploadFailed": "The file wasn’t sent. Try again.",
+      "groupInfo": "Group info"
     },
     "add": {
       "title": "Add participants",
@@ -121,7 +125,16 @@
       "openTest": "See the test listing",
       "openProject": "See the project",
       "linkedTest": "This group follows the test listing: you join it by joining the test and leave it by leaving the test.",
-      "linkedProject": "This group follows the Rise-Up project: you join it by joining the project and leave it by leaving the project."
+      "linkedProject": "This group follows the Rise-Up project: you join it by joining the project and leave it by leaving the project.",
+      "infoTitle": "Group info",
+      "edit": "Edit",
+      "photoAdd": "Add a photo",
+      "photoChange": "Change the photo",
+      "photoRemove": "Remove the photo",
+      "photoSending": "Sending…",
+      "noTheme": "No theme",
+      "save": "Save",
+      "saving": "Saving…"
     },
     "group": {
       "metaTitle": "New group",
@@ -199,12 +212,12 @@
     "attachments": {
       "attach": "Attach a file",
       "download": "Download",
-      "play": "Play the voice note",
+      "play": "Listen to the voice message",
       "pause": "Pause",
-      "record": "Record a voice note",
+      "record": "Record a voice message",
       "stop": "Stop and send",
-      "unsupported": "Your browser can’t record voice notes.",
-      "micDenied": "Allow the microphone to record a voice note."
+      "unsupported": "Your browser cannot record a voice message.",
+      "micDenied": "Allow the microphone to record a voice message."
     }
   }
 }

@@ -168,11 +168,22 @@ model Conversation {
   createdBy     User?            @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt     DateTime         @default(now())
   lastMessageAt DateTime         @default(now())
+  /// Set each time the group's photo changes: the address of the picture carries it, so browsers refresh it.
+  photoAt       DateTime?
 
   members  ConversationMember[]
   messages Message[]
   testApp  TestApp?
   project  RiseProject?
+  photo    GroupPhoto?
+}
+
+/// The picture of a group. Kept in its own table so that listing conversations never loads its bytes.
+model GroupPhoto {
+  conversationId String       @id
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  mime           String       @db.VarChar(20)
+  data           Bytes
 }
 
 enum Gender {

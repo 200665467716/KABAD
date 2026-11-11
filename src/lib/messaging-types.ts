@@ -22,6 +22,8 @@ export type ConversationSummary = {
   title: string;
   /** Group theme: Fintech, Rise-Up, Test… */
   theme: string | null;
+  /** Address of the group's photo, or null: the screens then show its initials. */
+  photo: string | null;
   otherId: string | null;
   memberCount: number;
   isOwner: boolean;
@@ -37,6 +39,7 @@ export type ConversationDetail = {
   kind: "DIRECT" | "GROUP";
   title: string;
   theme: string | null;
+  photo: string | null;
   other: { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string } | null;
   isOwner: boolean;
   /** A community group follows an app to test or a Rise-Up project: one joins or leaves it from there. */

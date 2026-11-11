@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attachmentProblem, formatSize, hasVideoTrack, safeFileName, sniffMime } from "../attachments";
+import { attachmentProblem, formatSize, GROUP_PHOTO_MAX_BYTES, groupPhotoProblem, hasVideoTrack, safeFileName, sniffMime } from "../attachments";
 
 const bytes = (...parts: Array<string | number[]>) => new Uint8Array(parts.flatMap((p) => (typeof p === "string" ? [...p].map((c) => c.charCodeAt(0)) : p)));
 
@@ -38,6 +38,16 @@ describe("attachmentProblem", () => {
     expect(attachmentProblem("VOICE", "audio/webm", 10, 24)).toBeNull();
     expect(attachmentProblem("VOICE", "image/png", 10, 24)).toMatch(/audio/);
     expect(attachmentProblem("VOICE", "audio/ogg", 10, 600)).toMatch(/2 minutes/);
+  });
+});
+
+describe("photo d’un groupe", () => {
+  it("est une image de 300 Ko au plus", () => {
+    expect(groupPhotoProblem("image/webp", 24_000)).toBeNull();
+    expect(groupPhotoProblem("image/png", GROUP_PHOTO_MAX_BYTES + 1)).toMatch(/300 Ko/);
+    expect(groupPhotoProblem("application/pdf", 24_000)).toMatch(/image/);
+    expect(groupPhotoProblem(null, 24_000)).toMatch(/image/);
+    expect(groupPhotoProblem("image/png", 0)).toMatch(/vide/);
   });
 });
 

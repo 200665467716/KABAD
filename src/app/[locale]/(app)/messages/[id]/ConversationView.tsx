@@ -3,7 +3,7 @@
 import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { MessageBubble, SystemLine } from "@/components/features/Thread";
 import { AttachButton, AttachmentView, VoiceRecorder } from "@/components/features/messaging/Attachments";
 import { ReportSheet } from "@/components/features/ReportSheet";
@@ -11,11 +11,14 @@ import { TopBar } from "@/components/shell/TopBar";
 import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Controls";
 import { Alert, Avatar, DaySeparator } from "@/components/ui/Display";
+import { Select, TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
+import { GROUP_PHOTO_SIZE } from "@/lib/attachments";
 import { initials } from "@/lib/format";
+import { squareImage } from "@/lib/image-resize";
 import type { ChatMessage, Contact, ConversationDetail } from "@/lib/messaging-types";
 import { useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
-import { MESSAGE_MAX_LENGTH } from "@/lib/schemas";
+import { GROUP_NAME_MAX, GROUP_THEMES, MESSAGE_MAX_LENGTH } from "@/lib/schemas";
 import { useChatTime } from "../useChatTime";
 
 type Shown = ChatMessage & { status?: "sending" | "failed" };
@@ -189,7 +192,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
         back="/messages"
         leading={
           group ? (
-            <Avatar initials={initials(detail.title)} size="sm" square tone="neutral" />
+            <Avatar initials={initials(detail.title)} src={detail.photo} size="sm" square tone="neutral" />
           ) : detail.other ? (
             <Link href={`/profil/${detail.other.id}`} aria-label={t("profileOf", { name: detail.other.name })}>
               <Avatar initials={initials(detail.other.name)} size="sm" />
@@ -197,11 +200,11 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
           ) : null
         }
         title={detail.title}
-        subtitle={group ? `${t("memberCount", { count: detail.members.length })} · ${memberNames}` : detail.other ? `${detail.other.role === "SENIOR" ? `${t("mentor")} · ` : ""}${detail.other.city}` : undefined}
+        subtitle={group ? `${t("memberCount", { count: detail.members.length })} · ${detail.theme ?? memberNames}` : detail.other ? `${detail.other.role === "SENIOR" ? `${t("mentor")} · ` : ""}${detail.other.city}` : undefined}
         actions={
           <>
             {manageable && <IconButton icon="userPlus" label={t("addMembers")} onClick={() => setAdding(true)} />}
-            {group && <IconButton icon="users" label={t("members")} onClick={() => setPeople(true)} />}
+            {group && <IconButton icon="users" label={t("groupInfo")} onClick={() => setPeople(true)} />}
             <IconButton icon="more" label={t("report")} onClick={() => setReport(true)} />
           </>
         }
@@ -369,8 +372,11 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
   const t = useTranslations("messaging.people");
   const tc = useTranslations("messaging.conversation");
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Only the owner of a private group changes its name, theme and photo.
+  const editable = detail.isOwner && !detail.linked;
 
   async function run(key: string, call: () => Promise<unknown>, after: () => void) {
     setBusy(key);
@@ -389,7 +395,7 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
     <Sheet
       open={open}
       onClose={onClose}
-      title={t("title", { count: detail.members.length })}
+      title={t("infoTitle")}
       footer={
         detail.linked ? (
           <ButtonLink href={detail.linked.kind === "test" ? `/tests/${detail.linked.id}` : `/rise-up/${detail.linked.id}`} variant="secondary" size="lg" block>
@@ -411,7 +417,22 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
         )
       }
     >
+      {/* MS5: the photo, the name of the group and, under it, its theme. */}
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+        <Avatar initials={initials(detail.title)} src={detail.photo} size="lg" square tone="neutral" />
+        <span className="grid min-w-0">
+          <b className="font-display text-lg leading-6 break-words">{detail.title}</b>
+          <span className="text-sm text-muted">{[tc("memberCount", { count: detail.members.length }), detail.theme].filter(Boolean).join(" · ")}</span>
+        </span>
+        {editable && !editing && (
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+            {t("edit")}
+          </Button>
+        )}
+      </div>
+      {editable && editing && <GroupEditor detail={detail} onDone={() => setEditing(false)} onChanged={onChanged} />}
       {detail.linked && <Alert tone="info">{detail.linked.kind === "test" ? t("linkedTest") : t("linkedProject")}</Alert>}
+      <h3 className="text-sm font-extrabold">{t("title", { count: detail.members.length })}</h3>
       {confirmLeave && (
         <Alert tone="info">
           {t("leaveInfo")}
@@ -450,5 +471,85 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
         </Alert>
       )}
     </Sheet>
+  );
+}
+
+/** The owner renames the group, changes its theme and its photo. The photo is cropped and reduced before it is sent. */
+function GroupEditor({ detail, onDone, onChanged }: { detail: ConversationDetail; onDone: () => void; onChanged: () => void }) {
+  const t = useTranslations("messaging.people");
+  const tg = useTranslations("messaging.group");
+  const [name, setName] = useState(detail.title);
+  const [theme, setTheme] = useState(detail.theme ?? "");
+  const [busy, setBusy] = useState<"save" | "photo" | null>(null);
+  const [error, setError] = useState<{ field?: string; text: string } | null>(null);
+  const file = useRef<HTMLInputElement>(null);
+
+  async function run(key: "save" | "photo", call: () => Promise<unknown>, after?: () => void) {
+    setBusy(key);
+    setError(null);
+    try {
+      await call();
+      onChanged();
+      after?.();
+    } catch (e) {
+      setError({ field: e instanceof ApiError ? e.field : undefined, text: e instanceof ApiError ? e.message : t("failed") });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function save(e: FormEvent) {
+    e.preventDefault();
+    run("save", () => api(`/api/groups/${detail.id}`, { method: "PATCH", body: { name, theme: theme || null } }), onDone);
+  }
+
+  function pickPhoto(e: ChangeEvent<HTMLInputElement>) {
+    const chosen = e.target.files?.[0];
+    e.target.value = "";
+    if (!chosen) return;
+    run("photo", async () => {
+      const form = new FormData();
+      form.append("photo", await squareImage(chosen, GROUP_PHOTO_SIZE).catch(() => chosen), "photo");
+      await api(`/api/groups/${detail.id}/photo`, { method: "PUT", body: form });
+    });
+  }
+
+  return (
+    <form onSubmit={save} noValidate className="grid gap-3 rounded-lg border-2 border-line-strong p-3.5">
+      <div className="flex flex-wrap gap-2">
+        <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={pickPhoto} />
+        <Button variant="secondary" size="sm" icon="image" disabled={busy !== null} onClick={() => file.current?.click()}>
+          {busy === "photo" ? t("photoSending") : detail.photo ? t("photoChange") : t("photoAdd")}
+        </Button>
+        {detail.photo && (
+          <Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => run("photo", () => api(`/api/groups/${detail.id}/photo`, { method: "DELETE" }))}>
+            {t("photoRemove")}
+          </Button>
+        )}
+      </div>
+      {error?.field === "photo" && <p className="text-sm font-extrabold text-danger">{error.text}</p>}
+      <TextField id="group-name" label={tg("name")} value={name} maxLength={GROUP_NAME_MAX} onChange={(e) => setName(e.target.value)} error={error?.field === "name" ? error.text : undefined} />
+      <Select id="group-theme" label={tg("theme")} value={theme} onChange={(e) => setTheme(e.target.value)}>
+        <option value="">{t("noTheme")}</option>
+        {GROUP_THEMES.map((g, i) => (
+          <option key={g} value={g}>
+            {tg(`themes.t${i}` as "themes.t0")}
+          </option>
+        ))}
+      </Select>
+      {error && !["photo", "name"].includes(error.field ?? "") && (
+        <Alert tone="danger" role="alert">
+          {error.text}
+        </Alert>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="secondary" onClick={onDone} disabled={busy !== null}>
+          {t("cancel")}
+        </Button>
+        <Button type="submit" variant="ink" disabled={busy !== null || !name.trim()}>
+          {busy === "save" ? t("saving") : t("save")}
+        </Button>
+      </div>
+    </form>
   );
 }

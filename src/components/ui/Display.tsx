@@ -45,10 +45,12 @@ const avatarTones: Record<AvatarTone, string> = {
   solidAccent: "bg-accent text-on-accent",
 };
 
-export function Avatar({ initials, size = "md", tone = "brand", square, className }: { initials: ReactNode; size?: AvatarSize; tone?: AvatarTone; square?: boolean; className?: string }) {
+/** `src`: a photo (a group's) shown in place of the initials. It is decorative: the name is always written next to it. */
+export function Avatar({ initials, size = "md", tone = "brand", square, className, src }: { initials: ReactNode; size?: AvatarSize; tone?: AvatarTone; square?: boolean; className?: string; src?: string | null }) {
   return (
-    <span aria-hidden="true" className={cn("inline-grid shrink-0 place-items-center font-extrabold select-none", square ? "rounded-lg" : "rounded-full", avatarSizes[size], avatarTones[tone], className)}>
-      {initials}
+    <span aria-hidden="true" className={cn("inline-grid shrink-0 place-items-center overflow-hidden font-extrabold select-none", square ? "rounded-lg" : "rounded-full", avatarSizes[size], avatarTones[tone], className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- private file behind a session, not optimisable */}
+      {src ? <img src={src} alt="" className="size-full object-cover" /> : initials}
     </span>
   );
 }
