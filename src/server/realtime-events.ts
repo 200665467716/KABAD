@@ -18,7 +18,15 @@ export type RealtimeEvent =
   /** Closes the member's open sockets: sign-out everywhere, suspension. */
   | { t: "revoke"; recipients: string[] };
 
+/**
+ * PostgreSQL refuses a NOTIFY payload of 8 000 bytes or more. A member id takes about 30 bytes once
+ * quoted, so a big group is told in several events of at most 150 recipients each (about 4 500 bytes).
+ */
+export const NOTIFY_BATCH = 150;
+
 export async function notify(tx: Prisma.TransactionClient, event: RealtimeEvent) {
-  if (event.recipients.length === 0) return;
-  await tx.$executeRaw`SELECT pg_notify(${REALTIME_CHANNEL}, ${JSON.stringify(event)})`;
+  for (let i = 0; i < event.recipients.length; i += NOTIFY_BATCH) {
+    const part = { ...event, recipients: event.recipients.slice(i, i + NOTIFY_BATCH) };
+    await tx.$executeRaw`SELECT pg_notify(${REALTIME_CHANNEL}, ${JSON.stringify(part)})`;
+  }
 }

@@ -226,7 +226,9 @@ export async function suspendMember(adminId: string, userId: string, reason: str
 export async function reinstateMember(adminId: string, userId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
   await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: userId }, data: { suspendedAt: null, suspensionReason: null } });
+    // updateMany: an unknown member gives a clear « introuvable », not an error 500.
+    const { count } = await tx.user.updateMany({ where: { id: userId }, data: { suspendedAt: null, suspensionReason: null } });
+    if (!count) throw notFound("Membre introuvable.");
     await logAction(tx, adminId, "member:reinstate", userId);
   });
   return { ok: true };

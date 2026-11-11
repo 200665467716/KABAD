@@ -9,11 +9,15 @@ import {
   listConversations,
   listInvitations,
   markRead,
+  BLOCKED_MESSAGE,
+  block,
   REINVITE_AFTER_DAYS,
+  sendAttachment,
   sendInvitation,
   sendMessage,
   unreadTotal,
 } from "@/server/messaging";
+import { NOTIFY_BATCH } from "@/server/realtime-events";
 import { captureEvents, makeContacts, makeUsers, prisma, resetDb } from "./helpers";
 
 async function refused(p: Promise<unknown>, code: string) {
@@ -58,6 +62,15 @@ describe("invitations", () => {
     await refused(sendInvitation("moussa", { toId: "kossi", message: "x" }, prisma), "invited_you");
     await makeContacts("kossi", "yao");
     await refused(sendInvitation("kossi", { toId: "yao", message: "x" }, prisma), "already_contacts");
+  });
+
+  it("two taps on « Inviter » at once give one invitation and a clear message, not an error 500", async () => {
+    const both = await Promise.allSettled([sendInvitation("kossi", { toId: "moussa", message: "" }, prisma), sendInvitation("kossi", { toId: "moussa", message: "" }, prisma)]);
+    expect(both.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const failed = both.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect(failed.reason).toBeInstanceOf(DomainError);
+    expect(failed.reason).toMatchObject({ code: "already_sent" });
+    expect(await prisma.invitation.count()).toBe(1);
   });
 
   it("only the recipient answers, once; a refusal is silent and final", async () => {
@@ -119,6 +132,15 @@ describe("messages", () => {
     expect(await unreadTotal("kossi", prisma)).toBe(0);
   });
 
+  it("a file or a voice note received counts as unread, like a text", async () => {
+    const c = await pair();
+    await markRead("kossi", c, prisma);
+    await sendAttachment("moussa", c, { kind: "FILE", name: "specs.pdf", data: new TextEncoder().encode("%PDF-1.7\n") }, prisma);
+    await sendAttachment("moussa", c, { kind: "VOICE", name: "note.webm", data: new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 1]), seconds: 5 }, prisma);
+    expect(await unreadTotal("kossi", prisma)).toBe(2);
+    expect(await unreadTotal("moussa", prisma)).toBe(0);
+  });
+
   it("sends the new message to every member in real time", async () => {
     const c = await pair();
     const { result, events } = await captureEvents(() => sendMessage("kossi", c, { body: "Temps réel" }, prisma));
@@ -165,6 +187,31 @@ describe("private groups", () => {
     const { events } = await captureEvents(() => sendMessage("yao", id, { body: "Vous pouvez relire ?" }, prisma));
     expect(events[0].recipients).toEqual(expect.arrayContaining(["kossi", "moussa", "yao"]));
     expect(await unreadTotal("moussa", prisma)).toBe(1);
+  });
+
+  it("in a shared group, the messages of a blocked member are masked for whoever blocked them, and not pushed to them", async () => {
+    const { id } = await createGroup("kossi", { name: "API Lomé", memberIds: ["moussa", "yao"] }, prisma);
+    await block("moussa", "yao", prisma);
+    await markRead("moussa", id, prisma);
+    const { events } = await captureEvents(() => sendMessage("yao", id, { body: "Tu me lis ?" }, prisma));
+    // Yao still writes to the group; Moussa, who blocked Yao, is not told and reads nothing of it.
+    expect((events[0].recipients as string[]).sort()).toEqual(["kossi", "yao"]);
+    expect(await unreadTotal("moussa", prisma)).toBe(0);
+    expect(await unreadTotal("kossi", prisma)).toBe(1);
+    expect((await getConversation("moussa", id, {}, prisma)).messages.at(-1)).toMatchObject({ body: BLOCKED_MESSAGE, hidden: true, attachment: null });
+    expect((await getConversation("kossi", id, {}, prisma)).messages.at(-1)).toMatchObject({ body: "Tu me lis ?", hidden: false });
+    expect((await listConversations("moussa", prisma))[0].last?.body).toBe(BLOCKED_MESSAGE);
+  });
+
+  it("a big group is told in several events, each under PostgreSQL's 8 000-byte limit", async () => {
+    const { id } = await createGroup("kossi", { name: "Grand groupe", memberIds: ["moussa"] }, prisma);
+    const extra = Array.from({ length: 2 * NOTIFY_BATCH }, (_, i) => `membre-du-grand-groupe-${String(i).padStart(4, "0")}`);
+    await prisma.user.createMany({ data: extra.map((u) => ({ id: u, name: u, email: `${u}@test.kabad`, passwordHash: "x" })) });
+    await prisma.conversationMember.createMany({ data: extra.map((userId) => ({ conversationId: id, userId })) });
+    const { events } = await captureEvents(() => sendMessage("kossi", id, { body: "Bonjour à tous" }, prisma));
+    expect(events).toHaveLength(3);
+    for (const e of events) expect(JSON.stringify(e).length).toBeLessThan(8000);
+    expect(new Set(events.flatMap((e) => e.recipients as string[])).size).toBe(extra.length + 2);
   });
 
   it("only the creator adds participants, and only among their contacts", async () => {

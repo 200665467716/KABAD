@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attachmentProblem, formatSize, safeFileName, sniffMime } from "../attachments";
+import { attachmentProblem, formatSize, hasVideoTrack, safeFileName, sniffMime } from "../attachments";
 
 const bytes = (...parts: Array<string | number[]>) => new Uint8Array(parts.flatMap((p) => (typeof p === "string" ? [...p].map((c) => c.charCodeAt(0)) : p)));
 
@@ -12,6 +12,15 @@ describe("sniffMime", () => {
     expect(sniffMime(bytes([0x1a, 0x45, 0xdf, 0xa3]))).toBe("audio/webm");
     expect(sniffMime(bytes("OggS"))).toBe("audio/ogg");
     expect(sniffMime(bytes([0, 0, 0, 0x20], "ftypM4A "))).toBe("audio/mp4");
+  });
+
+  it("une vidéo MP4 n’est pas une note vocale : elle est refusée", () => {
+    // ftyp, puis la piste : boîte « hdlr », 8 octets, puis le type « vide » (vidéo) ou « soun » (audio).
+    const track = (type: string) => bytes([0, 0, 0, 0x20], "ftypisom", [0, 0, 0, 0x21], "hdlr", [0, 0, 0, 0, 0, 0, 0, 0], type);
+    expect(sniffMime(track("soun"))).toBe("audio/mp4");
+    expect(sniffMime(track("vide"))).toBeNull();
+    expect(hasVideoTrack(track("vide"))).toBe(true);
+    expect(attachmentProblem("VOICE", sniffMime(track("vide")), 10, 5)).toMatch(/Seuls/);
   });
 
   it("refuse le reste, même renommé", () => {

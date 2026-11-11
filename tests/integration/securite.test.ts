@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { DomainError } from "@/server/errors";
 import { createGroup, addGroupMembers, answerInvitation, block, createReport, sendInvitation } from "@/server/messaging";
-import { resolveReport, suspendMember } from "@/server/admin";
+import { reinstateMember, resolveReport, suspendMember } from "@/server/admin";
 import { userFromToken, createSession } from "@/server/auth";
 import { rateLimit } from "@/server/rate-limit";
 import { makeContacts, makeUsers, prisma, resetDb } from "./helpers";
@@ -56,6 +56,13 @@ describe("comptes", () => {
     await suspendMember("equipe", "moussa", "Harcèlement", prisma);
     expect(await userFromToken(token, prisma)).toBeNull();
     expect(await prisma.adminAction.count({ where: { action: "member:suspend" } })).toBe(1);
+  });
+
+  it("réintégrer un membre inconnu répond « introuvable », pas une erreur 500", async () => {
+    await refused(reinstateMember("equipe", "personne", prisma), "not_found");
+    await suspendMember("equipe", "moussa", "Spam", prisma);
+    await reinstateMember("equipe", "moussa", prisma);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: "moussa" } })).suspendedAt).toBeNull();
   });
 
   it("seul un administrateur traite un signalement, et un message retiré est masqué", async () => {

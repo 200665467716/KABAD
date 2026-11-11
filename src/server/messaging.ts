@@ -48,8 +48,11 @@ export async function unreadCounts(userId: string, prisma: Db = db): Promise<Map
     JOIN "Message" m ON m."conversationId" = cm."conversationId"
     WHERE cm."userId" = ${userId}
       AND m."createdAt" > cm."lastReadAt"
-      AND m.kind = 'TEXT'
+      -- Text, files and voice notes count; system lines do not.
+      AND m.kind <> 'SYSTEM'
       AND m."authorId" IS DISTINCT FROM ${userId}
+      -- Nor the messages of someone this member blocked (they stay masked in a shared group).
+      AND NOT EXISTS (SELECT 1 FROM "Block" b WHERE b."blockerId" = ${userId} AND b."blockedId" = m."authorId")
     GROUP BY cm."conversationId"`;
   return new Map(rows.map((r) => [r.conversationId, Number(r.unread)]));
 }
@@ -61,7 +64,7 @@ export async function unreadTotal(userId: string, prisma: Db = db) {
 }
 
 export async function listConversations(userId: string, prisma: Db = db): Promise<ConversationSummary[]> {
-  const [rows, unread] = await Promise.all([
+  const [rows, unread, blocked] = await Promise.all([
     prisma.conversation.findMany({
       where: { members: { some: { userId } } },
       orderBy: { lastMessageAt: "desc" },
@@ -71,10 +74,12 @@ export async function listConversations(userId: string, prisma: Db = db): Promis
       },
     }),
     unreadCounts(userId, prisma),
+    blockedBy(prisma, userId),
   ]);
   return rows.map((c) => {
     const other = c.kind === "DIRECT" ? c.members.find((m) => m.userId !== userId)?.user : undefined;
     const last = c.messages[0];
+    const fromBlocked = Boolean(last?.authorId && blocked.has(last.authorId) && last.kind !== "SYSTEM");
     return {
       id: c.id,
       kind: c.kind,
@@ -86,7 +91,7 @@ export async function listConversations(userId: string, prisma: Db = db): Promis
       unread: unread.get(c.id) ?? 0,
       lastMessageAt: c.lastMessageAt.toISOString(),
       last: last
-        ? { body: last.hiddenAt ? HIDDEN_MESSAGE : last.body, authorId: last.authorId, authorName: last.author?.name ?? null, system: last.kind === "SYSTEM", attachment: last.hiddenAt ? null : last.kind === "FILE" || last.kind === "VOICE" ? last.kind : null }
+        ? { body: last.hiddenAt ? HIDDEN_MESSAGE : fromBlocked ? BLOCKED_MESSAGE : last.body, authorId: last.authorId, authorName: last.author?.name ?? null, system: last.kind === "SYSTEM", attachment: last.hiddenAt || fromBlocked ? null : last.kind === "FILE" || last.kind === "VOICE" ? last.kind : null }
         : null,
     };
   });
@@ -95,6 +100,25 @@ export async function listConversations(userId: string, prisma: Db = db): Promis
 
 
 export const HIDDEN_MESSAGE = "Message retiré par la modération.";
+/** In a shared group, what a member sees in place of the messages of someone they blocked. */
+export const BLOCKED_MESSAGE = "Message d’un membre que tu as bloqué.";
+
+/** The members this user blocked: their messages are masked for them, and not pushed to them. */
+async function blockedBy(prisma: Db | Prisma.TransactionClient, userId: string): Promise<Set<string>> {
+  const rows = await prisma.block.findMany({ where: { blockerId: userId }, select: { blockedId: true } });
+  return new Set(rows.map((r) => r.blockedId));
+}
+
+/** The members of a conversation who should receive a message of `authorId`: everyone but those who blocked the author. */
+async function audience(prisma: Db | Prisma.TransactionClient, authorId: string, members: string[]) {
+  const rows = await prisma.block.findMany({ where: { blockedId: authorId, blockerId: { in: members } }, select: { blockerId: true } });
+  if (rows.length === 0) return members;
+  const blockers = new Set(rows.map((r) => r.blockerId));
+  return members.filter((id) => !blockers.has(id));
+}
+
+/** What `viewer` gets of a message written by someone they blocked: no text, no file. */
+const masked = (m: ChatMessage, blocked: Set<string>): ChatMessage => (m.authorId && blocked.has(m.authorId) && !m.system ? { ...m, body: BLOCKED_MESSAGE, hidden: true, attachment: null } : m);
 
 const attachmentSelect = { select: { id: true, name: true, mime: true, size: true, seconds: true } } as const;
 const withAuthor = { author: { select: { name: true } }, attachment: attachmentSelect } as const;
@@ -144,6 +168,8 @@ export async function getConversation(userId: string, conversationId: string, op
   });
   const other = c.kind === "DIRECT" ? c.members.find((x) => x.userId !== userId)?.user : undefined;
   const blocks = other ? await prisma.block.findMany({ where: { OR: [{ blockerId: userId, blockedId: other.id }, { blockerId: other.id, blockedId: userId }] }, select: { blockerId: true } }) : [];
+  // In a group, a blocked member may still write to the others: their messages are masked for whoever blocked them.
+  const mine = c.kind === "GROUP" ? await blockedBy(prisma, userId) : new Set<string>();
   return {
     blocked: blocks.length === 0 ? null : blocks.some((b) => b.blockerId === userId) ? "by_me" : "by_them",
     id: c.id,
@@ -156,7 +182,7 @@ export async function getConversation(userId: string, conversationId: string, op
     members: c.members.map((x) => ({ id: x.user.id, name: x.user.name, owner: x.role === "OWNER" })),
     lastReadAt: m.lastReadAt.toISOString(),
     hasMore: rows.length > limit,
-    messages: rows.slice(0, limit).reverse().map(toChat),
+    messages: rows.slice(0, limit).reverse().map((row) => masked(toChat(row), mine)),
   };
 }
 
@@ -170,7 +196,8 @@ export async function sendMessage(userId: string, conversationId: string, input:
     const other = m.conversation.members.find((x) => x.userId !== userId)?.userId;
     if (other && (await isBlocked(prisma, userId, other))) throw forbidden("Tu ne peux plus écrire à ce membre.");
   }
-  const recipients = m.conversation.members.map((x) => x.userId);
+  // Whoever blocked the author does not receive the message live (it is masked for them in the group).
+  const recipients = await audience(prisma, userId, m.conversation.members.map((x) => x.userId));
   return prisma.$transaction(async (tx) => {
     const msg = await tx.message.create({
       data: { conversationId, authorId: userId, body: input.body, clientId: input.clientId },
@@ -202,7 +229,8 @@ export async function sendAttachment(
     const other = m.conversation.members.find((x) => x.userId !== userId)?.userId;
     if (other && (await isBlocked(prisma, userId, other))) throw forbidden("Tu ne peux plus écrire à ce membre.");
   }
-  const recipients = m.conversation.members.map((x) => x.userId);
+  // Whoever blocked the author does not receive the message live (it is masked for them in the group).
+  const recipients = await audience(prisma, userId, m.conversation.members.map((x) => x.userId));
   return prisma.$transaction(async (tx) => {
     const msg = await tx.message.create({
       data: {
@@ -302,15 +330,21 @@ export async function sendInvitation(fromId: string, input: { toId: string; mess
     throw new DomainError("declined", `${first} n’a pas donné suite à ton invitation. Tu pourras réessayer dans quelques semaines.`, 409);
   }
 
-  return prisma.$transaction(async (tx) => {
-    // An old invitation (declined long ago, or accepted before a block) is reused for the new one.
-    const inv = mine
-      ? await tx.invitation.update({ where: { id: mine.id }, data: { message, status: "PENDING", createdAt: new Date(), answeredAt: null } })
-      : await tx.invitation.create({ data: { fromId, toId, message } });
-    await notify(tx, { t: "invitation", invitationId: inv.id, recipients: [toId] });
-    await pushNotifications(tx, [{ userId: toId, actor: from.name, key: "invitationReceived", href: `/messages/invitations/${inv.id}`, icon: "user", tone: "brand" }]);
-    return { id: inv.id };
-  });
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // An old invitation (declined long ago, or accepted before a block) is reused for the new one.
+      const inv = mine
+        ? await tx.invitation.update({ where: { id: mine.id }, data: { message, status: "PENDING", createdAt: new Date(), answeredAt: null } })
+        : await tx.invitation.create({ data: { fromId, toId, message } });
+      await notify(tx, { t: "invitation", invitationId: inv.id, recipients: [toId] });
+      await pushNotifications(tx, [{ userId: toId, actor: from.name, key: "invitationReceived", href: `/messages/invitations/${inv.id}`, icon: "user", tone: "brand" }]);
+      return { id: inv.id };
+    });
+  } catch (e) {
+    // Two taps on « Inviter » at once: the second one meets the invitation the first just created.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") throw new DomainError("already_sent", `Tu as déjà invité ${first}. Attends sa réponse.`, 409);
+    throw e;
+  }
 }
 
 /** The sender withdraws an invitation that has not been answered yet. */

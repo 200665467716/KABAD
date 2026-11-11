@@ -19,8 +19,22 @@ export function sniffMime(b: Uint8Array): string | null {
   // Voice notes recorded by the browser: WebM/Opus (Chrome, Firefox), Ogg/Opus, MP4/AAC (Safari).
   if (startsWith(b, [0x1a, 0x45, 0xdf, 0xa3])) return "audio/webm";
   if (startsWith(b, ascii("OggS"))) return "audio/ogg";
-  if (startsWith(b, ascii("ftyp"), 4)) return "audio/mp4";
+  // MP4 holds audio or video alike: a voice note has no video track, and a video is not accepted.
+  if (startsWith(b, ascii("ftyp"), 4)) return hasVideoTrack(b) ? null : "audio/mp4";
   return null;
+}
+
+/**
+ * True when an MP4 file declares a video track. Each track has a « hdlr » box whose handler type,
+ * 8 bytes after the box name, is « vide » for video and « soun » for audio.
+ */
+export function hasVideoTrack(b: Uint8Array): boolean {
+  const hdlr = ascii("hdlr");
+  const vide = ascii("vide");
+  for (let i = 4; i + 16 <= b.length; i++) {
+    if (b[i] === hdlr[0] && startsWith(b, hdlr, i) && startsWith(b, vide, i + 12)) return true;
+  }
+  return false;
 }
 
 /** Checks a file against the kind of message: a voice note is audio, a file is a PDF or an image. */
