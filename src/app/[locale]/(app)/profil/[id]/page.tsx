@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getProfile } from "@/server/members";
+import { getMentor } from "@/server/mentoring";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 import { ProfileView } from "./ProfileView";
@@ -17,7 +18,10 @@ async function ProfileData({ params }: { params: Promise<{ id: string }> }) {
   const user = await pageUser(`/profil/${id}`);
   const profile = await orNotFound(getProfile(user.id, id));
   if (!profile) notFound();
-  return <ProfileView profile={profile} isMe={user.id === id} />;
+  // A badged mentor: what the KABAD team checked (job, subjects, links to their work) shows on the public profile too.
+  const mentor = profile.verified ? await orNotFound(getMentor(id)) : null;
+  const badge = mentor && { jobTitle: mentor.jobTitle, topics: mentor.topics.split("\n").map((x) => x.trim()).filter(Boolean), links: mentor.links, gender: mentor.gender };
+  return <ProfileView profile={profile} isMe={user.id === id} badge={badge} />;
 }
 
 export default async function ProfilePage({ params }: PageProps<"/[locale]/profil/[id]">) {

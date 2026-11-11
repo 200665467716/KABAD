@@ -29,7 +29,7 @@ async function BookData({ params, searchParams }: { params: Promise<{ id: string
     return (
       <Page narrow>
         <p className="rounded-action bg-bg px-4 py-6 text-center text-muted">{t("slotGone")}</p>
-        <ButtonLink href={`/mentorat/mentors/${mentor.id}`} variant="secondary" block>
+        <ButtonLink href={`/mentorat/mentors/${mentor.id}/creneaux`} variant="secondary" block>
           {t("backToSlots")}
         </ButtonLink>
       </Page>
@@ -52,7 +52,7 @@ async function BookScreen({ params, searchParams }: { params: Promise<{ id: stri
   const [{ id }, t] = await Promise.all([params, getTranslations("mentoring")]);
   return (
     <>
-      <TopBar back={`/mentorat/mentors/${id}`} title={t("book.title")} />
+      <TopBar back={`/mentorat/mentors/${id}/creneaux`} title={t("book.title")} />
       <BookData params={params} searchParams={searchParams} />
     </>
   );

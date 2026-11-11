@@ -126,7 +126,7 @@ async function BadgeData({ searchParams }: { searchParams: Promise<{ modifier?: 
       </>
     );
   }
-  return <BadgeForm initial={r && (r.status === "PENDING" || r.status === "REFUSED") ? r : null} updating={r?.status === "PENDING"} />;
+  return <BadgeForm initial={r && (r.status === "PENDING" || r.status === "REFUSED") ? r : null} updating={r?.status === "PENDING"} stack={user.stack} />;
 }
 
 export default async function BadgePage({ searchParams }: PageProps<"/[locale]/mentorat/badge">) {

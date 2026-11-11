@@ -49,9 +49,14 @@ test("mot de passe oublié : même réponse que le compte existe ou non", async 
   await expect(page.getByText("Lien envoyé. Pense aussi aux courriers indésirables.")).toBeVisible();
 });
 
-test("mentorat : Kossi réserve un créneau d’Aïcha, Aïcha accepte, la séance est confirmée", async ({ browser }) => {
+test("mentorat : Kossi lit la fiche d’Aïcha, réserve un créneau, Aïcha accepte, la séance est confirmée", async ({ browser }) => {
   const kossi = await signIn(browser, "kossi.mensah@exemple.tg", "/mentorat/mentors/aicha");
-  const hours = kossi.getByRole("main").getByRole("group").last();
+  // M2, the mentor's sheet: what the team checked for the badge, then « Réserver une séance » leads to the calendar (M3).
+  await expect(kossi.getByText("Vérifiée par KABAD")).toBeVisible();
+  await expect(kossi.getByRole("link", { name: "LinkedIn" })).toHaveAttribute("href", /linkedin\.com/);
+  await kossi.getByRole("link", { name: "Réserver une séance" }).click();
+  await expect(kossi).toHaveURL(/\/mentorat\/mentors\/aicha\/creneaux$/);
+  const hours = kossi.getByRole("main").getByRole("group", { name: "Heures disponibles" });
   await hours.getByRole("button").first().click();
   await kossi.getByRole("link", { name: /Continuer/ }).click();
   await expect(kossi).toHaveURL(/\/reserver\?creneau=/);

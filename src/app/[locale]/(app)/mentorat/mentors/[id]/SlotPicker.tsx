@@ -1,10 +1,12 @@
 "use client";
 
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
+import { formatClock } from "@/lib/format";
+import { SLOT_MINUTES } from "@/lib/slots";
 import { zoneCity } from "@/lib/time-zones";
 
 /** "2026-11-05": the calendar day of a moment in a time zone. */
@@ -13,13 +15,15 @@ function dayOf(iso: string | Date, timeZone: string) {
 }
 
 /**
- * Month calendar and free slots of a mentor (screen M2), shown at the member's own time.
- * Days with at least one slot are in bold; picking a slot leads to the booking form.
+ * Month calendar and slots of a mentor (screen M3), shown at the member's own time.
+ * Days with at least one free slot are in bold; a slot already booked is shown crossed out and cannot be
+ * picked; picking a free slot leads to the booking form.
  */
 /** `zone` is computed on the server ("UTC+0"): Node and the browser do not always name an offset the same way. */
-export function SlotPicker({ mentorId, slots, timeZone, zone }: { mentorId: string; slots: string[]; timeZone: string; zone: string }) {
+export function SlotPicker({ mentorId, slots, taken = [], timeZone, zone }: { mentorId: string; slots: string[]; taken?: string[]; timeZone: string; zone: string }) {
   const t = useTranslations("mentoring.profile");
   const format = useFormatter();
+  const locale = useLocale();
   const byDay = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const s of slots) {
@@ -28,6 +32,7 @@ export function SlotPicker({ mentorId, slots, timeZone, zone }: { mentorId: stri
     }
     return m;
   }, [slots, timeZone]);
+  const booked = useMemo(() => new Set(taken), [taken]);
   const firstDay = slots.length ? dayOf(slots[0], timeZone) : dayOf(new Date(), timeZone);
   const [month, setMonth] = useState(firstDay.slice(0, 7));
   const [day, setDay] = useState<string | null>(slots.length ? firstDay : null);
@@ -40,7 +45,8 @@ export function SlotPicker({ mentorId, slots, timeZone, zone }: { mentorId: stri
   const offset = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
   const monthLabel = format.dateTime(new Date(Date.UTC(y, m - 1, 15)), { month: "long", year: "numeric", timeZone: "UTC" });
   const weekdays = Array.from({ length: 7 }, (_, i) => format.dateTime(new Date(Date.UTC(2026, 10, 2 + i)), { weekday: "short", timeZone: "UTC" }));
-  const daySlots = day ? (byDay.get(day) ?? []) : [];
+  // The free slots of the day and, among them in order of time, those someone already booked.
+  const daySlots = day ? [...(byDay.get(day) ?? []), ...taken.filter((s) => dayOf(s, timeZone) === day)].sort() : [];
   const time = (iso: string) => format.dateTime(new Date(iso), { hour: "2-digit", minute: "2-digit", timeZone });
 
   if (slots.length === 0) return <p className="rounded-action bg-bg px-4 py-6 text-center text-muted">{t("noSlots")}</p>;
@@ -108,17 +114,23 @@ export function SlotPicker({ mentorId, slots, timeZone, zone }: { mentorId: stri
         </div>
         {day ? (
           <div role="group" aria-label={t("hours")} className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {daySlots.map((s) => (
-              <button
-                key={s}
-                type="button"
-                aria-pressed={slot === s}
-                onClick={() => setSlot(s)}
-                className={cn("h-12 rounded-md border-2 border-line-strong text-[15px] font-extrabold tabular", slot === s ? "bg-ink text-raised" : "bg-raised text-ink hover:bg-bg")}
-              >
-                {time(s)}
-              </button>
-            ))}
+            {daySlots.map((s) =>
+              booked.has(s) ? (
+                <button key={s} type="button" disabled aria-label={t("slotTaken", { time: time(s) })} className="h-12 rounded-md border-2 border-dashed border-muted text-[15px] font-normal text-muted line-through tabular">
+                  {time(s)}
+                </button>
+              ) : (
+                <button
+                  key={s}
+                  type="button"
+                  aria-pressed={slot === s}
+                  onClick={() => setSlot(s)}
+                  className={cn("h-12 rounded-md border-2 border-line-strong text-[15px] font-extrabold tabular", slot === s ? "bg-ink text-raised" : "bg-raised text-ink hover:bg-bg")}
+                >
+                  {time(s)}
+                </button>
+              ),
+            )}
           </div>
         ) : (
           <p className="text-sm text-muted">{t("pickDay")}</p>
@@ -126,7 +138,16 @@ export function SlotPicker({ mentorId, slots, timeZone, zone }: { mentorId: stri
       </section>
 
       <div className="grid gap-2">
-        {slot && <p className="text-center text-sm font-bold">{t("summary", { date: format.dateTime(new Date(slot), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone }) })}</p>}
+        {/* M3: « Jeu. 5 nov. · 15 h 00 – 15 h 30 ». */}
+        {slot && (
+          <p className="text-center text-sm font-bold first-letter:uppercase">
+            {t("summary", {
+              date: format.dateTime(new Date(slot), { weekday: "short", day: "numeric", month: "short", timeZone }),
+              from: formatClock(new Date(slot), locale, timeZone),
+              to: formatClock(new Date(new Date(slot).getTime() + SLOT_MINUTES * 60_000), locale, timeZone),
+            })}
+          </p>
+        )}
         {slot ? (
           <ButtonLink href={`/mentorat/mentors/${mentorId}/reserver?creneau=${encodeURIComponent(slot)}`} size="lg" block>
             {t("continue")}

@@ -21,6 +21,14 @@ export function formatDuration(minutes: number): string {
   return `${h}${NBSP}h${NBSP}${m.toString().padStart(2, "0")}`;
 }
 
+/** The time of day as written in French, "15 h 00"; in English, "3:00 PM". */
+export function formatClock(date: Date, locale: string, timeZone: string): string {
+  if (!locale.startsWith("fr")) return new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", timeZone }).format(date);
+  const parts = new Intl.DateTimeFormat("fr", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone }).formatToParts(date);
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return `${part("hour")}${NBSP}h${NBSP}${part("minute")}`;
+}
+
 /** "Awa Diop" → "AD". Works with letters such as Ɔ or Ɗ. */
 export function initials(name: string): string {
   return name

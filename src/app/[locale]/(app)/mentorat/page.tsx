@@ -3,12 +3,14 @@ import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { Link } from "@/i18n/navigation";
 import { Page, TopBar } from "@/components/shell/TopBar";
+import { IconButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { BookingSummary } from "@/components/features/mentoring/BookingSummary";
 import { MentorCard } from "@/components/features/mentoring/MentorCard";
 import { cn } from "@/lib/cn";
 import { BADGE_DOMAINS, myBadgeRequest } from "@/server/badges";
+import { getCurrentUser } from "@/server/auth";
 import { listMentors, myBookings } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
 import { ScreenSkeleton } from "@/components/ui/Skeleton";
@@ -147,11 +149,26 @@ async function MentoringData({ searchParams }: { searchParams: Promise<Search> }
   );
 }
 
+/** M1: for a mentor, the requests to answer are one tap away in the header, with a dot when some are waiting. */
+async function RequestsButton() {
+  const user = await getCurrentUser();
+  if (!user?.seniorVerifiedAt) return null;
+  const [t, { toAnswer }] = await Promise.all([getTranslations("mentoring.list"), myBookings(user.id)]);
+  return <IconButton icon="clock" href="/mentorat/demandes" dot={toAnswer.length > 0} label={t("requestsHeader", { count: toAnswer.length })} />;
+}
+
 export default async function MentoringPage({ searchParams }: PageProps<"/[locale]/mentorat">) {
   const t = await getTranslations("mentoring");
   return (
     <>
-      <TopBar title={t("title")} />
+      <TopBar
+        title={t("title")}
+        actions={
+          <Suspense>
+            <RequestsButton />
+          </Suspense>
+        }
+      />
       <Suspense fallback={<ScreenSkeleton label={t("loading")} />}>
         <MentoringData searchParams={searchParams as Promise<Search>} />
       </Suspense>

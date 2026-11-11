@@ -21,6 +21,7 @@
       "mySessions": "Mes séances",
       "mentorSide": "Côté mentor",
       "requests": "Demandes reçues",
+      "requestsHeader": "Demandes reçues{count, plural, =0 {} one {, # nouvelle} other {, # nouvelles}}",
       "requestsCount": "{count, plural, =0 {Aucune demande à traiter} one {# demande à traiter} other {# demandes à traiter}}",
       "availability": "Mes disponibilités",
       "availabilityText": "Tes plages de chaque semaine",
@@ -46,12 +47,22 @@
       "localTime": "Heure de {city} ({zone})",
       "pickDay": "Choisis un jour en gras dans le calendrier.",
       "noSlots": "Ce mentor n’a pas de créneau ouvert dans les 30 prochains jours.",
-      "summary": "{date} · 30 min",
+      "summary": "{date} · {from} – {to}",
       "pickSlot": "Choisis un créneau",
       "continue": "Continuer",
       "about": "{gender, select, FEMALE {Sur quoi elle peut t’aider} MALE {Sur quoi il peut t’aider} other {Sur quoi ce mentor peut t’aider}}",
       "sessionsHeld": "{count, plural, =0 {Nouveau mentor} one {# séance tenue} other {# séances tenues}}",
-      "self": "C’est ton profil de mentor : les autres membres réservent tes créneaux ici."
+      "self": "C’est ton profil de mentor : les autres membres réservent tes créneaux ici.",
+      "mentorTitle": "Mentor",
+      "slotsTitle": "Choisir un créneau",
+      "work": "Son travail",
+      "portfolio": "Portfolio",
+      "nextSlots": "Prochains créneaux",
+      "freeSession": "Gratuit · 30 min",
+      "today": "Aujourd’hui",
+      "bookCta": "Réserver une séance",
+      "verifiedShort": "{gender, select, FEMALE {Vérifiée} MALE {Vérifié} other {Vérifié}}",
+      "slotTaken": "{time}, déjà réservé"
     },
     "book": {
       "title": "Réserver",
@@ -179,7 +190,6 @@
       "domains": "Domaines d’expertise",
       "domainsCount": "{count} / 3",
       "technologies": "Technologies maîtrisées",
-      "technologiesHint": "Sépare-les par des virgules : Node.js, PostgreSQL, Docker",
       "experience": "Expérience",
       "experienceOptions": {
         "3-5": "3 à 5 ans",
@@ -199,7 +209,7 @@
       "bio": "Présentation publique",
       "bioCount": "{count} / 280",
       "topics": "Sur quoi tu peux aider",
-      "topicsPlaceholder": "Concevoir une API, passer en production, choisir son hébergement.",
+      "topicsPlaceholder": "Concevoir une API\nPasser en production\nChoisir son hébergement",
       "submit": "Envoyer ma demande",
       "update": "Mettre à jour ma demande",
       "back": "Retour",
@@ -237,7 +247,11 @@
       "refusedTitle": "Demande non validée",
       "refusedText": "L’équipe KABAD n’a pas validé ta demande. Tu peux en envoyer une nouvelle en tenant compte du motif.",
       "refusedReason": "Motif : {reason}",
-      "retry": "Envoyer une nouvelle demande"
+      "retry": "Envoyer une nouvelle demande",
+      "technologiesCount": "{count} / {max}",
+      "technologiesOther": "Une autre technologie",
+      "technologiesAdd": "Ajouter",
+      "topicsHint": "Un sujet par ligne : ils s’affichent en liste sur ta fiche de mentor."
     },
     "history": {
       "metaTitle": "Mes séances",

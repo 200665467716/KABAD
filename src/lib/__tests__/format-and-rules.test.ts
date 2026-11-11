@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDuration, formatFCFA, initials } from "../format";
+import { formatClock, formatDuration, formatFCFA, initials } from "../format";
 import { charactersLeft, checkInvitationMessage, INVITATION_MAX_LENGTH } from "../invitation";
 import { averageMark, totalScore } from "../jury";
 
@@ -16,6 +16,14 @@ describe("format", () => {
     expect(formatDuration(60)).toBe(`1${NBSP}h`);
     expect(formatDuration(45)).toBe(`45${NBSP}min`);
     expect(formatDuration(65)).toBe(`1${NBSP}h${NBSP}05`);
+  });
+
+  it("writes the time of day the French way, in the member's time zone", () => {
+    const at = new Date("2026-11-05T15:00:00Z");
+    expect(formatClock(at, "fr", "Africa/Lome")).toBe(`15${NBSP}h${NBSP}00`);
+    expect(formatClock(at, "fr", "Europe/Paris")).toBe(`16${NBSP}h${NBSP}00`);
+    expect(formatClock(new Date("2026-11-05T09:30:00Z"), "fr", "Africa/Lome")).toBe(`09${NBSP}h${NBSP}30`);
+    expect(formatClock(at, "en", "Africa/Lome")).toMatch(/^3:00\sPM$/);
   });
 
   it("builds initials, including from African letters", () => {

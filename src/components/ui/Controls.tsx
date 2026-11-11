@@ -47,15 +47,17 @@ export function Segmented<T extends string>({
   );
 }
 
-export function ToggleChip({ pressed, onClick, children, icon }: { pressed: boolean; onClick: () => void; children: ReactNode; icon?: boolean }) {
+/** `disabled`: the chip cannot be picked (the limit of a choice is reached); it stays readable, in slate. */
+export function ToggleChip({ pressed, onClick, children, icon, disabled }: { pressed: boolean; onClick: () => void; children: ReactNode; icon?: boolean; disabled?: boolean }) {
   return (
     <button
       type="button"
       aria-pressed={pressed}
+      disabled={disabled}
       onClick={onClick}
       className={cn(
-        "inline-flex h-11 shrink-0 items-center gap-1 rounded-full border-2 border-line-strong px-4 text-sm font-extrabold whitespace-nowrap transition-colors",
-        pressed ? "bg-ink text-raised" : "bg-raised text-ink hover:bg-bg",
+        "inline-flex h-11 shrink-0 items-center gap-1 rounded-full border-2 border-line-strong px-4 text-sm font-extrabold whitespace-nowrap transition-colors disabled:border-dashed disabled:border-muted disabled:font-normal disabled:text-muted",
+        pressed ? "bg-ink text-raised" : "bg-raised text-ink enabled:hover:bg-bg",
       )}
     >
       {icon && <Icon name="plus" size={16} />}

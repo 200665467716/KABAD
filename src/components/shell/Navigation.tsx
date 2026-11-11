@@ -36,7 +36,7 @@ const sideItems: Item[] = [
 
 /** Screens that focus on one task show their own action bar instead of the tab bar. */
 const focused = [
-  /^\/mentorat\/(mentors\/[^/]+(\/reserver)?|seances\/.+|badge|disponibilites)$/,
+  /^\/mentorat\/(mentors\/[^/]+(\/(reserver|creneaux))?|seances\/.+|badge|disponibilites)$/,
   /^\/admin\/badges\/.+/,
   /^\/hackathons\/(organiser|missions\/.+|[^/]+\/(participer|soumettre|jury|instructeurs))$/,
   // A project channel writes at the bottom of the screen, like a conversation.

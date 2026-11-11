@@ -21,6 +21,7 @@
       "mySessions": "My sessions",
       "mentorSide": "As a mentor",
       "requests": "Requests received",
+      "requestsHeader": "Requests received{count, plural, =0 {} one {, # new} other {, # new}}",
       "requestsCount": "{count, plural, =0 {No request to answer} one {# request to answer} other {# requests to answer}}",
       "availability": "My availability",
       "availabilityText": "Your weekly time ranges",
@@ -46,12 +47,22 @@
       "localTime": "{city} time ({zone})",
       "pickDay": "Pick a day in bold in the calendar.",
       "noSlots": "This mentor has no open slot in the next 30 days.",
-      "summary": "{date} · 30 min",
+      "summary": "{date} · {from} – {to}",
       "pickSlot": "Pick a slot",
       "continue": "Continue",
       "about": "{gender, select, FEMALE {What she can help you with} MALE {What he can help you with} other {What this mentor can help you with}}",
       "sessionsHeld": "{count, plural, =0 {New mentor} one {# session held} other {# sessions held}}",
-      "self": "This is your mentor profile: other members book your slots here."
+      "self": "This is your mentor profile: other members book your slots here.",
+      "mentorTitle": "Mentor",
+      "slotsTitle": "Pick a slot",
+      "work": "Their work",
+      "portfolio": "Portfolio",
+      "nextSlots": "Next slots",
+      "freeSession": "Free · 30 min",
+      "today": "Today",
+      "bookCta": "Book a session",
+      "verifiedShort": "Verified",
+      "slotTaken": "{time}, already booked"
     },
     "book": {
       "title": "Book",
@@ -179,7 +190,6 @@
       "domains": "Areas of expertise",
       "domainsCount": "{count} / 3",
       "technologies": "Technologies you master",
-      "technologiesHint": "Separate them with commas: Node.js, PostgreSQL, Docker",
       "experience": "Experience",
       "experienceOptions": {
         "3-5": "3 to 5 years",
@@ -199,7 +209,7 @@
       "bio": "Public presentation",
       "bioCount": "{count} / 280",
       "topics": "What you can help with",
-      "topicsPlaceholder": "Designing an API, going to production, choosing hosting.",
+      "topicsPlaceholder": "Designing an API\nGoing to production\nChoosing your hosting",
       "submit": "Send my request",
       "update": "Update my request",
       "back": "Back",
@@ -237,7 +247,11 @@
       "refusedTitle": "Request not approved",
       "refusedText": "The KABAD team did not approve your request. You can send a new one taking the reason into account.",
       "refusedReason": "Reason: {reason}",
-      "retry": "Send a new request"
+      "retry": "Send a new request",
+      "technologiesCount": "{count} / {max}",
+      "technologiesOther": "Another technology",
+      "technologiesAdd": "Add",
+      "topicsHint": "One subject per line: they show as a list on your mentor sheet."
     },
     "history": {
       "metaTitle": "My sessions",

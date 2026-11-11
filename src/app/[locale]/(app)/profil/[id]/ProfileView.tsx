@@ -13,9 +13,20 @@ import { api, ApiError } from "@/lib/api";
 import type { Profile } from "@/lib/domain-types";
 import { initials } from "@/lib/format";
 
-/** A member's public profile. */
-export function ProfileView({ profile: m, isMe }: { profile: Profile; isMe: boolean }) {
+/** What the KABAD team checked to grant the mentor badge, shown on the public profile. */
+export type ProfileBadge = { jobTitle: string; topics: string[]; links: { github: string | null; linkedin: string | null; portfolio: string | null }; gender: "FEMALE" | "MALE" | null };
+
+/** A member's public profile. For a badged mentor, `badge` adds the job, the subjects and the links to their work. */
+export function ProfileView({ profile: m, isMe, badge }: { profile: Profile; isMe: boolean; badge?: ProfileBadge | null }) {
   const t = useTranslations("profile.public");
+  const tm = useTranslations("mentoring.profile");
+  const links = badge
+    ? [
+        { label: "GitHub", href: badge.links.github },
+        { label: "LinkedIn", href: badge.links.linkedin },
+        { label: tm("portfolio"), href: badge.links.portfolio },
+      ].filter((l): l is { label: string; href: string } => Boolean(l.href))
+    : [];
   const tl = useTranslations("profile.levels");
   const router = useRouter();
   const [invite, setInvite] = useState(false);
@@ -52,7 +63,7 @@ export function ProfileView({ profile: m, isMe }: { profile: Profile; isMe: bool
             <Avatar initials={initials(m.name)} size="xl" tone={m.verified ? "brand" : "neutral"} />
             <div className="grid min-w-0 gap-1">
               <h1 className="font-display text-xl font-extrabold">{m.name}</h1>
-              <p className="text-sm text-muted">{[m.headline, place, m.diaspora ? t("diaspora") : ""].filter(Boolean).join(" · ")}</p>
+              <p className="text-sm text-muted">{[badge?.jobTitle || m.headline, place, m.diaspora ? t("diaspora") : ""].filter(Boolean).join(" · ")}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -67,6 +78,33 @@ export function ProfileView({ profile: m, isMe }: { profile: Profile; isMe: bool
           </div>
           {m.bio && <p className="text-[15px] leading-[22px]">{m.bio}</p>}
         </Card>
+
+        {badge && (badge.topics.length > 0 || links.length > 0) && (
+          <Card className="gap-3.5">
+            {badge.topics.length > 0 && (
+              <div className="grid gap-2">
+                <Overline as="h2">{tm("about", { gender: badge.gender ?? "other" })}</Overline>
+                <ul className="m-0 grid list-disc gap-1 pl-5 text-[15px] leading-[22px]">
+                  {badge.topics.map((topic) => (
+                    <li key={topic}>{topic}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {links.length > 0 && (
+              <div className="grid gap-2">
+                <Overline as="h2">{tm("work")}</Overline>
+                <div className="flex flex-wrap gap-2">
+                  {links.map((l) => (
+                    <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center rounded-action border-2 border-line-strong bg-raised px-3 text-sm font-extrabold text-ink no-underline hover:bg-bg">
+                      {l.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
 
         {m.stats ? (
           <Card className="grid-cols-3 gap-3 px-4 py-3.5">

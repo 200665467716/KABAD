@@ -11,19 +11,31 @@ import { useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import type { BadgeRequestView } from "@/lib/domain-types";
-import { badgeRequestSchema } from "@/lib/schemas";
+import { badgeRequestSchema, TECH_CHOICES } from "@/lib/schemas";
 
 const DOMAINS = ["Backend", "Frontend", "Mobile", "Cloud et DevOps", "Data et IA", "Paiements et fintech", "Sécurité", "Produit et UX"] as const;
 const EXPERIENCE = ["3-5", "5-10", "10+"] as const;
 const STEP1 = ["domains", "technologies", "experience", "jobTitle", "company"];
 
 /** The mentor badge request in two steps: expertise, then links and presentation (screens B1 and B2). */
-export function BadgeForm({ initial, updating }: { initial: BadgeRequestView | null; updating: boolean }) {
+/** As many technologies as the profile allows. */
+const TECH_MAX = 12;
+
+/** `stack` is the member's profile: their technologies are picked from the start (B1). */
+export function BadgeForm({ initial, updating, stack }: { initial: BadgeRequestView | null; updating: boolean; stack: string[] }) {
   const t = useTranslations("mentoring");
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [domains, setDomains] = useState<string[]>(initial?.domains ?? []);
-  const [technologies, setTechnologies] = useState(initial?.technologies.join(", ") ?? "");
+  const [technologies, setTechnologies] = useState<string[]>(initial?.technologies ?? stack.slice(0, TECH_MAX));
+  const [otherTech, setOtherTech] = useState("");
+  // The chips: the usual choices, then what the member added.
+  const techChoices = [...TECH_CHOICES, ...technologies.filter((x) => !(TECH_CHOICES as readonly string[]).includes(x))];
+  const addTech = () => {
+    const name = otherTech.trim();
+    if (name && technologies.length < TECH_MAX && !technologies.some((x) => x.toLowerCase() === name.toLowerCase())) setTechnologies([...technologies, name]);
+    setOtherTech("");
+  };
   const [experience, setExperience] = useState<string>(initial?.experience ?? "");
   const [jobTitle, setJobTitle] = useState(initial?.jobTitle ?? "");
   const [company, setCompany] = useState(initial?.company ?? "");
@@ -37,7 +49,7 @@ export function BadgeForm({ initial, updating }: { initial: BadgeRequestView | n
 
   const input = () => ({
     domains,
-    technologies: technologies.split(",").map((s) => s.trim()).filter(Boolean),
+    technologies,
     experience,
     jobTitle,
     company,
@@ -114,7 +126,7 @@ export function BadgeForm({ initial, updating }: { initial: BadgeRequestView | n
                 {DOMAINS.map((d) => {
                   const on = domains.includes(d);
                   return (
-                    <ToggleChip key={d} pressed={on} onClick={() => setDomains(on ? domains.filter((x) => x !== d) : domains.length < 3 ? [...domains, d] : domains)}>
+                    <ToggleChip key={d} pressed={on} disabled={!on && domains.length >= 3} onClick={() => setDomains(on ? domains.filter((x) => x !== d) : [...domains, d])}>
                       {t(`badge.domainList.${d}`)}
                     </ToggleChip>
                   );
@@ -122,7 +134,40 @@ export function BadgeForm({ initial, updating }: { initial: BadgeRequestView | n
               </div>
               {errors.domains && <span className="text-sm font-extrabold text-danger">{errors.domains}</span>}
             </fieldset>
-            <TextField id="technologies" label={t("badge.technologies")} hint={t("badge.technologiesHint")} value={technologies} onChange={(e) => setTechnologies(e.target.value)} error={errors.technologies} />
+            <fieldset className="grid gap-2">
+              <legend className="mb-2 flex w-full justify-between text-sm font-extrabold">
+                {t("badge.technologies")} <span className="text-muted">{t("badge.technologiesCount", { count: technologies.length, max: TECH_MAX })}</span>
+              </legend>
+              <div className="flex flex-wrap gap-2">
+                {techChoices.map((x) => {
+                  const on = technologies.includes(x);
+                  return (
+                    <ToggleChip key={x} pressed={on} disabled={!on && technologies.length >= TECH_MAX} onClick={() => setTechnologies(on ? technologies.filter((y) => y !== x) : [...technologies, x])}>
+                      {x}
+                    </ToggleChip>
+                  );
+                })}
+              </div>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+                <TextField
+                  id="otherTech"
+                  label={t("badge.technologiesOther")}
+                  placeholder="PostgreSQL"
+                  maxLength={30}
+                  value={otherTech}
+                  onChange={(e) => setOtherTech(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    addTech();
+                  }}
+                />
+                <Button variant="secondary" icon="plus" onClick={addTech} disabled={!otherTech.trim() || technologies.length >= TECH_MAX}>
+                  {t("badge.technologiesAdd")}
+                </Button>
+              </div>
+              {errors.technologies && <span className="text-sm font-extrabold text-danger">{errors.technologies}</span>}
+            </fieldset>
             <fieldset className="grid gap-2">
               <legend className="mb-2 text-sm font-extrabold">{t("badge.experience")}</legend>
               <div className="grid grid-cols-3 gap-1 rounded-action border-2 border-line-strong bg-raised p-1">
@@ -160,7 +205,7 @@ export function BadgeForm({ initial, updating }: { initial: BadgeRequestView | n
               <TextField id="portfolioUrl" type="url" inputMode="url" label={t("badge.portfolio")} placeholder="https://…" value={portfolioUrl} onChange={(e) => setPortfolioUrl(e.target.value)} error={errors.portfolioUrl} />
             </fieldset>
             <TextArea id="bio" label={t("badge.bio")} rows={4} maxLength={280} counter={t("badge.bioCount", { count: bio.length })} value={bio} onChange={(e) => setBio(e.target.value)} error={errors.bio} />
-            <TextArea id="topics" label={t("badge.topics")} rows={3} maxLength={300} placeholder={t("badge.topicsPlaceholder")} value={topics} onChange={(e) => setTopics(e.target.value)} error={errors.topics} />
+            <TextArea id="topics" label={t("badge.topics")} hint={t("badge.topicsHint")} rows={3} maxLength={300} placeholder={t("badge.topicsPlaceholder")} value={topics} onChange={(e) => setTopics(e.target.value)} error={errors.topics} />
           </>
         )}
         {errors.form && (
