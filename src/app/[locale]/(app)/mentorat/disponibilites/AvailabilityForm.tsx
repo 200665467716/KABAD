@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import type { AvailabilityView } from "@/lib/domain-types";
+import { suggestRange } from "@/lib/slots";
 import { zoneChoices, zoneCity } from "@/lib/time-zones";
 
 type Range = { startMin: number; endMin: number };
@@ -36,10 +37,10 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
   const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string; field?: string } | null>(null);
 
   const setDay = (d: Weekday, ranges: Range[]) => setWeek((w) => ({ ...w, [d]: ranges }));
+  // The new range never overlaps the others; a full day offers none (src/lib/slots.ts).
   const addRange = (d: Weekday) => {
-    const last = week[d][week[d].length - 1];
-    const start = last ? Math.min(last.endMin + 60, 22 * 60) : 18 * 60;
-    setDay(d, [...week[d], { startMin: start, endMin: Math.min(start + 120, 24 * 60) }]);
+    const next = suggestRange(week[d]);
+    if (next) setDay(d, [...week[d], next]);
   };
   const zones = zoneChoices(timeZone);
 
@@ -113,10 +114,12 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
                           </button>
                         </div>
                       ))}
-                      <button type="button" onClick={() => addRange(d)} className="inline-flex h-10 items-center gap-1 justify-self-start rounded-full px-2 text-sm font-extrabold text-brand-text hover:bg-brand-soft" aria-label={t("availability.addRange", { day: dayName })}>
-                        <Icon name="plus" size={16} />
-                        {t("availability.addRange", { day: dayName })}
-                      </button>
+                      {suggestRange(week[d]) && (
+                        <button type="button" onClick={() => addRange(d)} className="inline-flex h-10 items-center gap-1 justify-self-start rounded-full px-2 text-sm font-extrabold text-brand-text hover:bg-brand-soft" aria-label={t("availability.addRange", { day: dayName })}>
+                          <Icon name="plus" size={16} />
+                          {t("availability.addRange", { day: dayName })}
+                        </button>
+                      )}
                     </>
                   ) : (
                     <span className="pt-2.5 text-sm text-muted">{t("availability.unavailable")}</span>

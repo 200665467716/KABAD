@@ -87,6 +87,8 @@ export async function requestBadge(userId: string, input: BadgeInput, prisma: Db
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true, seniorVerifiedAt: true } });
   if (user.seniorVerifiedAt) throw new DomainError("already", "Tu as déjà le badge mentor.", 409);
   return prisma.$transaction(async (tx) => {
+    // The member's row is locked: two sends at the same moment give one request, the second updates it.
+    await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
     const pending = await tx.mentorBadgeRequest.findFirst({ where: { userId, status: "PENDING" }, select: { id: true } });
     if (pending) {
       await tx.mentorBadgeRequest.update({ where: { id: pending.id }, data: data(input) });

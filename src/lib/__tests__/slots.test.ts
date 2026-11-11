@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayKey, freeSlots, isOfferedSlot, localDay, rangesProblem, zonedToUtc } from "../slots";
+import { dayKey, freeSlots, isOfferedSlot, localDay, rangesProblem, suggestRange, zonedToUtc } from "../slots";
 
 // Thursday 5 November 2026. Lomé is on UTC all year; Paris is on UTC+1 in November.
 const now = new Date("2026-11-01T00:00:00Z");
@@ -48,5 +48,29 @@ describe("rangesProblem", () => {
     expect(rangesProblem([{ weekday: 1, startMin: 1080, endMin: 1200 }, { weekday: 1, startMin: 1140, endMin: 1260 }])).toMatch(/chevauchent/);
     expect(rangesProblem([{ weekday: 1, startMin: 1085, endMin: 1200 }])).toMatch(/demie/);
     expect(rangesProblem([{ weekday: 8, startMin: 0, endMin: 60 }])).toMatch(/Jour/);
+  });
+});
+
+describe("suggestRange", () => {
+  const h = (n: number) => n * 60;
+  const ok = (day: Array<{ startMin: number; endMin: number }>) => rangesProblem([...day, suggestRange(day)!].map((r) => ({ weekday: 1, ...r })));
+
+  it("offers the evening on an empty day, then an hour after the last range", () => {
+    expect(suggestRange([])).toEqual({ startMin: h(18), endMin: h(20) });
+    expect(suggestRange([{ startMin: h(9), endMin: h(12) }])).toEqual({ startMin: h(13), endMin: h(15) });
+  });
+
+  it("never overlaps, even after a range that ends at midnight", () => {
+    // The old rule offered 22:00–24:00 here, on top of the evening range.
+    const evening = [{ startMin: h(20), endMin: h(24) }];
+    expect(suggestRange(evening)).toEqual({ startMin: h(18), endMin: h(20) });
+    expect(ok(evening)).toBeNull();
+    expect(ok([{ startMin: h(9), endMin: h(23) }])).toBeNull();
+    expect(ok([{ startMin: h(0), endMin: h(8) }, { startMin: h(10), endMin: h(24) }])).toBeNull();
+  });
+
+  it("offers nothing when the day is full", () => {
+    expect(suggestRange([{ startMin: 0, endMin: h(24) }])).toBeNull();
+    expect(suggestRange([{ startMin: 0, endMin: h(12) }, { startMin: h(12) + 30, endMin: h(24) }])).toBeNull();
   });
 });

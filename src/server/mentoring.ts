@@ -24,9 +24,9 @@ async function badgeOf(prisma: Tx, userIds: string[]) {
   const rows = await prisma.mentorBadgeRequest.findMany({
     where: { userId: { in: userIds }, status: "APPROVED" },
     orderBy: { reviewedAt: "desc" },
-    select: { userId: true, domains: true, technologies: true, topics: true },
+    select: { userId: true, domains: true, technologies: true, topics: true, jobTitle: true, company: true, experience: true, githubUrl: true, linkedinUrl: true, portfolioUrl: true },
   });
-  const out = new Map<string, { domains: string[]; technologies: string[]; topics: string }>();
+  const out = new Map<string, (typeof rows)[number]>();
   for (const r of rows) if (!out.has(r.userId)) out.set(r.userId, r);
   return out;
 }
@@ -40,20 +40,12 @@ async function slotsOf(prisma: Tx, mentorIds: string[], from: Date, to: Date) {
     }),
     prisma.mentoringBooking.findMany({ where: { mentorId: { in: mentorIds }, status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gte: from, lt: to } }, select: { mentorId: true, startsAt: true } }),
   ]);
-  const out = new Map<string, Date[]>();
+  // For each mentor: the slots still free, and those already booked (shown crossed out on the calendar).
+  const out = new Map<string, { free: Date[]; taken: Date[] }>();
   for (const m of mentors) {
-    out.set(
-      m.id,
-      freeSlots({
-        ranges: m.availability,
-        timeZone: m.timeZone,
-        from,
-        to,
-        now,
-        blocked: m.blockedDates.map((b) => b.day.toISOString().slice(0, 10)),
-        taken: taken.filter((t) => t.mentorId === m.id).map((t) => t.startsAt.getTime()),
-      }),
-    );
+    const booked = new Set(taken.filter((t) => t.mentorId === m.id).map((t) => t.startsAt.getTime()));
+    const open = freeSlots({ ranges: m.availability, timeZone: m.timeZone, from, to, now, blocked: m.blockedDates.map((b) => b.day.toISOString().slice(0, 10)) });
+    out.set(m.id, { free: open.filter((d) => !booked.has(d.getTime())), taken: open.filter((d) => booked.has(d.getTime())) });
   }
   return out;
 }
@@ -77,7 +69,7 @@ export async function listMentors(opts: { domain?: string; excludeId?: string } 
       ...u,
       domains: badges.get(u.id)?.domains ?? [],
       technologies: badges.get(u.id)?.technologies ?? [],
-      nextSlot: slots.get(u.id)?.[0]?.toISOString() ?? null,
+      nextSlot: slots.get(u.id)?.free[0]?.toISOString() ?? null,
       sessionsHeld: held.get(u.id) ?? 0,
     }))
     .filter((m) => !opts.domain || m.domains.includes(opts.domain))
@@ -91,15 +83,22 @@ export async function getMentor(mentorId: string, prisma: Db = db): Promise<Ment
   const from = new Date();
   const to = new Date(from.getTime() + BOOKING_WINDOW_DAYS * 86_400_000);
   const [badges, slots, held] = await Promise.all([badgeOf(prisma, [u.id]), slotsOf(prisma, [u.id], from, to), sessionsHeld(prisma, [u.id])]);
-  const all = slots.get(u.id) ?? [];
+  const all = slots.get(u.id)?.free ?? [];
+  const badge = badges.get(u.id);
   return {
     ...u,
-    domains: badges.get(u.id)?.domains ?? [],
-    technologies: badges.get(u.id)?.technologies ?? [],
-    topics: badges.get(u.id)?.topics ?? "",
+    domains: badge?.domains ?? [],
+    technologies: badge?.technologies ?? [],
+    topics: badge?.topics ?? "",
+    // What the KABAD team checked to grant the badge: shown on the mentor's sheet (M2).
+    jobTitle: badge?.jobTitle ?? "",
+    company: badge?.company ?? null,
+    experience: badge?.experience ?? "",
+    links: { github: badge?.githubUrl ?? null, linkedin: badge?.linkedinUrl ?? null, portfolio: badge?.portfolioUrl ?? null },
     nextSlot: all[0]?.toISOString() ?? null,
     sessionsHeld: held.get(u.id) ?? 0,
     slots: all.map((d) => d.toISOString()),
+    takenSlots: (slots.get(u.id)?.taken ?? []).map((d) => d.toISOString()),
   };
 }
 
@@ -109,14 +108,22 @@ export async function bookSlot(menteeId: string, input: { mentorId: string; star
   if (input.mentorId === menteeId) throw new DomainError("self", "Tu ne peux pas réserver tes propres créneaux.");
   const startsAt = new Date(input.startsAt);
   if (Number.isNaN(startsAt.getTime())) throw new DomainError("bad_slot", "Créneau invalide.", 400, "startsAt");
-  const [mentor, mentee, blocked, pending] = await Promise.all([
+  // The calendar shows 30 days: a request sent by hand for a later date is refused too.
+  if (startsAt.getTime() > Date.now() + BOOKING_WINDOW_DAYS * 86_400_000) throw new DomainError("too_far", `Tu peux réserver jusqu’à ${BOOKING_WINDOW_DAYS} jours à l’avance.`, 409, "startsAt");
+  const span = SESSION_MINUTES * 60_000;
+  const [mentor, mentee, blocked, pending, clash] = await Promise.all([
     prisma.user.findFirst({ where: { id: input.mentorId, ...mentorWhere }, select: { id: true, name: true, timeZone: true, availability: { select: { weekday: true, startMin: true, endMin: true } }, blockedDates: { select: { day: true } } } }),
     prisma.user.findUniqueOrThrow({ where: { id: menteeId }, select: { name: true } }),
     prisma.block.count({ where: { OR: [{ blockerId: menteeId, blockedId: input.mentorId }, { blockerId: input.mentorId, blockedId: menteeId }] } }),
     prisma.mentoringBooking.count({ where: { menteeId, status: "PENDING" } }),
+    // One person, one session at a time: asked or held, as a dev or as a mentor.
+    prisma.mentoringBooking.count({
+      where: { OR: [{ menteeId }, { mentorId: menteeId }], status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gt: new Date(startsAt.getTime() - span), lt: new Date(startsAt.getTime() + span) } },
+    }),
   ]);
   if (!mentor) throw notFound("Mentor introuvable.");
   if (blocked) throw forbidden("Tu ne peux pas réserver de séance avec ce mentor.");
+  if (clash) throw new DomainError("clash", "Tu as déjà une séance à cette heure. Choisis un autre créneau.", 409, "startsAt");
   if (pending >= MAX_PENDING_BOOKINGS) throw new DomainError("too_many", `Tu attends déjà ${MAX_PENDING_BOOKINGS} réponses. Attends qu’un mentor réponde avant d’en demander d’autres.`, 429);
   const offered = isOfferedSlot(startsAt, {
     ranges: mentor.availability,

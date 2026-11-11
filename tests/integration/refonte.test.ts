@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { DomainError } from "@/server/errors";
-import { answerBooking, bookSlot, getMentor, saveAvailability } from "@/server/mentoring";
+import { answerBooking, bookSlot, cancelBooking, getMentor, saveAvailability } from "@/server/mentoring";
+import { revokeBadge } from "@/server/admin";
 import { requestBadge, reviewBadge } from "@/server/badges";
 import { answerJoinRequest, getHackathon, getResults, publishResults, register, scoreSubmission, submitSolution } from "@/server/hackathons";
 import { createTestApp, joinTest, leaveTest, setStep } from "@/server/community-tests";
@@ -71,6 +72,51 @@ describe("mentorat par créneaux", () => {
     expect(meetingUrl).toBe(MEET);
     await refused(answerBooking("awa", id, { accept: false }, prisma), "answered");
   });
+
+  it("on réserve dans les 30 jours à venir, pas plus loin", async () => {
+    await awaOpensEveryDay();
+    const far = new Date(Date.now() + 45 * DAY);
+    far.setUTCHours(10, 0, 0, 0);
+    await refused(bookSlot("kossi", booking(far.toISOString()), prisma), "too_far");
+  });
+
+  it("un dev n’a pas deux séances à la même heure, même avec deux mentors", async () => {
+    const [slot] = await awaOpensEveryDay();
+    await saveAvailability("nadia", { timeZone: "Africa/Lome", meetingUrl: MEET, ranges: [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({ weekday, startMin: 9 * 60, endMin: 18 * 60 })), blocked: [] }, prisma);
+    await bookSlot("kossi", booking(slot), prisma);
+    await refused(bookSlot("kossi", { ...booking(slot), mentorId: "nadia" }, prisma), "clash");
+    // Another member takes Nadia's slot without trouble.
+    await bookSlot("yao", { ...booking(slot), mentorId: "nadia" }, prisma);
+  });
+
+  it("une séance annulée prévient l’autre membre, libère le créneau, et ne s’annule qu’une fois", async () => {
+    const [slot] = await awaOpensEveryDay();
+    const { id } = await bookSlot("kossi", booking(slot), prisma);
+    await answerBooking("awa", id, { accept: true }, prisma);
+    expect((await getMentor("awa", prisma)).takenSlots).toContain(slot);
+    await refused(cancelBooking("yao", id, prisma), "not_found");
+
+    await cancelBooking("kossi", id, prisma);
+    expect(await prisma.notification.count({ where: { userId: "awa", key: "bookingCancelled" } })).toBe(1);
+    const awa = await getMentor("awa", prisma);
+    expect(awa.slots).toContain(slot);
+    expect(awa.takenSlots).not.toContain(slot);
+    await refused(cancelBooking("awa", id, prisma), "closed");
+  });
+
+  it("un badge retiré annule les séances à venir, prévient chaque dev et arrête les missions d’instructeur", async () => {
+    const [slot] = await awaOpensEveryDay();
+    const { id } = await bookSlot("kossi", booking(slot), prisma);
+    await answerBooking("awa", id, { accept: true }, prisma);
+    const soon = new Date(Date.now() + 5 * DAY);
+    await prisma.hackathon.create({ data: { id: "h", title: "Fintech", organizerName: "FinLab", format: "ONLINE", startsAt: soon, endsAt: new Date(soon.getTime() + DAY), closesAt: soon, level: "Tous niveaux", stack: "Web", description: "…", publishedAt: new Date(), missions: { create: { mentorId: "awa", fee: 50_000, status: "ACCEPTED" } } } });
+
+    await revokeBadge("equipe", "awa", "Fausses informations", prisma);
+    expect((await prisma.mentoringBooking.findUniqueOrThrow({ where: { id } })).status).toBe("CANCELLED");
+    expect(await prisma.notification.count({ where: { userId: "kossi", key: "bookingCancelled" } })).toBe(1);
+    expect((await prisma.instructorMission.findFirstOrThrow({ where: { mentorId: "awa" } })).status).toBe("DECLINED");
+    await refused(getMentor("awa", prisma), "not_found");
+  });
 });
 
 describe("badge mentor", () => {
@@ -86,6 +132,24 @@ describe("badge mentor", () => {
     expect(kossi.seniorVerifiedAt).not.toBeNull();
     expect(kossi.role).toBe("SENIOR");
     await refused(reviewBadge("equipe", id, { approve: true }, prisma), "reviewed");
+  });
+
+  it("deux envois de la demande au même instant ne font qu’une demande", async () => {
+    const both = await Promise.allSettled([requestBadge("kossi", input, prisma), requestBadge("kossi", input, prisma)]);
+    expect(both.every((r) => r.status === "fulfilled")).toBe(true);
+    expect(await prisma.mentorBadgeRequest.count({ where: { userId: "kossi" } })).toBe(1);
+  });
+
+  it("la fiche du mentor reprend ce que l’équipe a vérifié : poste, expérience, sujets et liens", async () => {
+    const { id } = await requestBadge("kossi", { ...input, company: "FinLab", linkedinUrl: "https://www.linkedin.com/in/kossi" }, prisma);
+    await reviewBadge("equipe", id, { approve: true }, prisma);
+    expect(await getMentor("kossi", prisma)).toMatchObject({
+      jobTitle: "Lead backend",
+      company: "FinLab",
+      experience: "5-10",
+      topics: "Concevoir une API.",
+      links: { github: "https://github.com/kossi", linkedin: "https://www.linkedin.com/in/kossi", portfolio: null },
+    });
   });
 });
 

@@ -64,6 +64,34 @@ export function rangesProblem(ranges: WeeklyRange[]): string | null {
   return null;
 }
 
+/** The whole day, in minutes. */
+const DAY_MINUTES = 24 * 60;
+
+/**
+ * The range offered when a mentor adds one to a day (screen M8): two hours in the evening on an empty day,
+ * otherwise after the last range (an hour later when the day allows it), otherwise in the widest gap left.
+ * Null when no free hour is left: the new range never overlaps the others.
+ */
+export function suggestRange(day: Array<Pick<WeeklyRange, "startMin" | "endMin">>): { startMin: number; endMin: number } | null {
+  if (day.length === 0) return { startMin: 18 * 60, endMin: 20 * 60 };
+  const sorted = [...day].sort((a, b) => a.startMin - b.startMin);
+  const last = sorted[sorted.length - 1];
+  if (last.endMin + 60 <= DAY_MINUTES) {
+    const startMin = last.endMin + 120 <= DAY_MINUTES ? last.endMin + 60 : last.endMin;
+    return { startMin, endMin: Math.min(startMin + 120, DAY_MINUTES) };
+  }
+  // No room after the last range (it ends at midnight): the widest gap before it.
+  let best: { startMin: number; endMin: number } | null = null;
+  let from = 0;
+  for (const r of sorted) {
+    if (r.startMin - from >= 60 && (!best || r.startMin - from > best.endMin - best.startMin)) best = { startMin: from, endMin: r.startMin };
+    from = Math.max(from, r.endMin);
+  }
+  if (!best) return null;
+  // At most two hours, placed at the end of the gap, just before the next range.
+  return { startMin: Math.max(best.startMin, best.endMin - 120), endMin: best.endMin };
+}
+
 export type SlotQuery = {
   ranges: WeeklyRange[];
   timeZone: string;

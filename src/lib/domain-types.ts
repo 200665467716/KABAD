@@ -52,7 +52,21 @@ export type MentorCard = {
   sessionsHeld: number;
 };
 
-export type MentorDetail = MentorCard & { bio: string; topics: string; timeZone: string; gender: "FEMALE" | "MALE" | null; slots: string[] };
+export type MentorDetail = MentorCard & {
+  bio: string;
+  topics: string;
+  timeZone: string;
+  gender: "FEMALE" | "MALE" | null;
+  /** From the badge the KABAD team granted: the job, the experience and the links to the mentor's work. */
+  jobTitle: string;
+  company: string | null;
+  experience: string;
+  links: { github: string | null; linkedin: string | null; portfolio: string | null };
+  /** Free slots of the next 30 days. */
+  slots: string[];
+  /** Slots already booked by someone: shown crossed out, not selectable. */
+  takenSlots: string[];
+};
 
 export type BookingStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "CANCELLED";
 

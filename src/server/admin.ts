@@ -238,9 +238,17 @@ export async function reinstateMember(adminId: string, userId: string, prisma: D
 export async function revokeBadge(adminId: string, userId: string, reason: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
   await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: userId }, data: { seniorVerifiedAt: null, role: "JUNIOR" } });
-    await tx.mentoringBooking.updateMany({ where: { mentorId: userId, status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gt: new Date() } }, data: { status: "CANCELLED", answeredAt: new Date() } });
-    await pushNotifications(tx, [{ userId, actor: "KABAD", key: "badgeRevoked", params: { reason }, href: "/mentorat/badge", icon: "info", tone: "neutral" }]);
+    const now = new Date();
+    const mentor = await tx.user.update({ where: { id: userId }, data: { seniorVerifiedAt: null, role: "JUNIOR" }, select: { name: true } });
+    // The sessions to come are cancelled, and each dev is told: they would otherwise wait for a mentor who no longer is one.
+    const sessions = await tx.mentoringBooking.findMany({ where: { mentorId: userId, status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gt: now } }, select: { id: true, menteeId: true, startsAt: true, mentee: { select: { timeZone: true } } } });
+    await tx.mentoringBooking.updateMany({ where: { id: { in: sessions.map((b) => b.id) } }, data: { status: "CANCELLED", answeredAt: now } });
+    // An instructor is a badged mentor: the missions of hackathons not finished yet stop with the badge.
+    await tx.instructorMission.updateMany({ where: { mentorId: userId, status: { in: ["PROPOSED", "ACCEPTED"] }, hackathon: { endsAt: { gt: now } } }, data: { status: "DECLINED", answeredAt: now } });
+    await pushNotifications(tx, [
+      { userId, actor: "KABAD", key: "badgeRevoked", params: { reason }, href: "/mentorat/badge", icon: "info", tone: "neutral" },
+      ...sessions.map((b) => ({ userId: b.menteeId, actor: mentor.name, key: "bookingCancelled" as const, params: { at: b.startsAt.toISOString(), tz: b.mentee.timeZone }, href: `/mentorat/seances/${b.id}`, icon: "clock" as const, tone: "neutral" as const })),
+    ]);
     await logAction(tx, adminId, "badge:revoke", userId, reason);
   });
   return { ok: true };
