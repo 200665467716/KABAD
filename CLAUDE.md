@@ -23,15 +23,14 @@ KABAD est la plateforme d'échange des développeurs d'Afrique et de la diaspora
 - **Next.js 16** (App Router, Cache Components), React 19, TypeScript strict, Tailwind CSS 4. Cette version de Next.js diffère de ce que tu connais : lire `node_modules/next/dist/docs/` avant d'utiliser une API Next.js (voir `AGENTS.md`).
 - **Données** : PostgreSQL 16 + Prisma 7 (`prisma/schema.prisma`). Toute modification du schéma passe par une migration (`npm run db:migrate -- --name <nom>`), jamais par `db push`.
 - **Temps réel** : `realtime/server.mjs` (Socket.IO alimenté par `pg_notify`).
-- **Paiement** : XedoPay en sandbox (décision D2) ; utiliser le skill `xedopay-integration`.
+- **Argent** : KABAD ne garde ni ne verse d'argent (décision D12). Un hackathon annonce de 0 à 5 prix en texte libre, remis par l'organisateur selon le classement. Pas de paiement en ligne.
 - **Langues** : FR par défaut, EN partiel via next-intl (décision D1). Les pages vivent sous `src/app/[locale]` ; tout nouveau texte d'interface passe par `messages/fr.json` et `messages/en.json` (`useTranslations` / `getTranslations`). Liens, `useRouter`, `usePathname` et `redirect` viennent de `@/i18n/navigation`, jamais de `next/link` ou `next/navigation`, pour garder le préfixe `/en`.
 - **Design system** : charte « Motif » (canvas Design « KABAD — Refonte »). Tokens dans `src/app/globals.css` (encre, indigo, maïs, sable ; Unbounded pour les titres, Manrope pour le texte), composants dans `src/components/ui`. Règles : un seul bouton indigo et une seule carte à ombre décalée (`featured`) par écran, le maïs est réservé à Africa Rise-Up, cartes et champs bordés d'encre 2 px, zones tactiles de 44 px.
 - **Organisation** :
   - `src/server/*.ts` porte les règles métier, vérifiées côté serveur ;
   - `src/app/api/**` contient des routes fines qui valident l'entrée (Zod, `src/lib/schemas.ts`) puis appellent `src/server` ;
   - `src/lib` regroupe les règles partagées et pures (testées unitairement).
-- **Argent** (cagnottes, répartition 90/10, versements, remboursements) : uniquement dans la couche serveur, dans une transaction PostgreSQL, avec une clé d'idempotence. Le paiement réel reste en **sandbox**.
-- **Tâches différées** (relances, rappels, expirations, passage au jury, versements à 48 h) : jamais pendant une requête web. Elles vivent dans `src/server/jobs.ts`, idempotentes, et le worker (`worker/index.ts`, pg-boss) les planifie.
+- **Tâches différées** (relances, rappels, expirations, passage au jury, e-mails de notification) : jamais pendant une requête web. Elles vivent dans `src/server/jobs.ts`, idempotentes, et le worker (`worker/index.ts`, pg-boss) les planifie.
 - **Langue** : interface, messages de commit, commentaires et documentation en **français**, dans le style déjà présent (phrases courtes, termes simples). Respecter la densité de commentaires du fichier modifié.
 - **Ton** : l'interface, les e-mails et les erreurs tutoient le membre ; seules les conditions d'utilisation vouvoient. Un message d'erreur français est aussi la clé de sa traduction dans `src/server/error-messages.en.json` : changer l'un, c'est changer l'autre.
 - **Cible mobile** : Android d'entrée de gamme en 4G lente. LCP < 2,5 s, JS initial < 200 Ko gzip, images WebP, pas de vidéo chargée sans action, 360 à 1 920 px, WCAG 2.1 AA.

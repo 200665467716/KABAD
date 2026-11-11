@@ -94,6 +94,11 @@ F5 et les niveaux 2 et 3 de F2 ne figurent pas dans le cahier des charges : le m
   - Les hackathons restent relus et publiés par l'équipe KABAD.
   - Migration `hackathons_sans_mentorat` : la colonne `mentoringMinutes` disparaît ; les anciens versements « MENTOR » restent dans l'historique.
 
+- [x] D12. Retrait des cagnottes (9 novembre, fait le 11 novembre).
+  - KABAD ne garde ni ne verse d'argent : plus de cagnotte, de contribution, de partage 90/10 ni de versement Mobile Money. D2 (XedoPay) et les niveaux d'argent de D6 n'ont plus d'objet.
+  - Un hackathon annonce de 0 à 5 prix en texte libre. Ils sont donnés dans l'ordre du classement, et chaque équipe primée est notifiée du prix qu'elle a gagné. L'organisateur les remet lui-même.
+  - Retirés : page publique `/soutenir`, écran `/admin/versements`, tâche `payout-announce`, numéro Mobile Money de la soumission. Migration `retrait_cagnottes`.
+
 ## P0 — Recevable, en ligne, stable (objectif : 2 novembre)
 
 - [ ] R9. Désactivation des salons vocaux (D3), par interrupteur et sans suppression de code.

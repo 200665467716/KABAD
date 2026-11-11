@@ -3,6 +3,7 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { ReactNode } from "react";
 import { LogoMark } from "@/components/ui/Logo";
+import { CONTACT_EMAIL } from "@/lib/contact";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("legal.terms");
@@ -18,10 +19,10 @@ function Part({ title, id, children }: { title: string; id?: string; children: R
   );
 }
 
-/** Date of the working draft shown under the title. */
-const VERSION = new Date(Date.UTC(2026, 9, 22));
+/** Date of the version shown under the title. */
+const VERSION = new Date(Date.UTC(2026, 10, 11));
 
-/* Draft written from the rules the app enforces; to be reviewed by a lawyer before launch. */
+/* Written from the rules the app enforces; to be reviewed by a lawyer before a public launch. */
 export default async function TermsPage() {
   const t = await getTranslations("legal.terms");
   const format = await getFormatter();
@@ -47,9 +48,10 @@ export default async function TermsPage() {
       <Part title={t("data.title")} id="donnees">
         <ul className="grid list-disc gap-1 pl-5">
           <li>{t("data.kept")}</li>
-          <li>{t("data.voice")}</li>
-          <li>{t("data.momo")}</li>
           <li>{t("data.account")}</li>
+          <li>
+            {t.rich("data.contact", { email: CONTACT_EMAIL, mail: (c) => <a href={`mailto:${CONTACT_EMAIL}`}>{c}</a> })}
+          </li>
         </ul>
       </Part>
       <Part title={t("prizes.title")}>

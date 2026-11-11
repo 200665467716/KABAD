@@ -101,7 +101,6 @@ export type BadgeRequestView = {
 /* Hackathons */
 
 export type HackathonFormat = "ONLINE" | "ONSITE" | "HYBRID";
-export type PrizeKind = "CAGNOTTE" | "SPONSORISE" | "LOT";
 
 export type HackathonSummary = {
   id: string;
@@ -117,19 +116,15 @@ export type HackathonSummary = {
   status: "OPEN" | "JURY" | "DONE";
   level: string;
   stack: string;
-  prizeKind: PrizeKind | null;
+  /** 0 to 5 prizes in free text, in the order of the ranking. */
   prizes: string[];
-  sponsorName: string | null;
   instructors: number;
   /** Instructors the organizer wants to recruit. */
   instructorCount: number;
   /** False while the KABAD team has not published it: only its author and the team see it. */
   published: boolean;
-  pot: number;
   teams: number;
   participants: number;
-  contributors: number;
-  companies: number;
   resultsAt: string | null;
   winner: { team: string; captain: string } | null;
 };
@@ -144,7 +139,7 @@ export type TeamView = {
   captainId: string;
   members: TeamPerson[];
   requests: Array<{ id: string; user: { id: string; name: string; city: string }; createdAt: string }>;
-  submission: { projectName: string; repoUrl: string; demoUrl: string | null; explanation: string; payoutOperator: string | null; payoutPhone: string | null; updatedAt: string } | null;
+  submission: { projectName: string; repoUrl: string; demoUrl: string | null; explanation: string; updatedAt: string } | null;
 };
 
 export type OpenTeam = { id: string; name: string; lookingFor: string | null; members: number; requested: boolean };
@@ -172,10 +167,10 @@ export type MissionView = {
 };
 
 export type RankingRow = { teamId: string; team: string; captainId: string; captain: string; mark: number };
+/** A row of the published ranking, with the prize the team won, if any. */
+export type ResultRow = RankingRow & { prize: string | null };
 
-export type PayoutView = { role: "WINNER" | "MENTOR" | "PLATFORM"; amount: number; beneficiary: string | null; operator: string | null; phone: string | null; reference: string | null; status: "PENDING" | "SENT"; sentAt: string | null };
-
-export type HackathonResults = HackathonSummary & { ranking: RankingRow[]; payouts: PayoutView[]; publishedAt: string | null };
+export type HackathonResults = HackathonSummary & { ranking: ResultRow[]; publishedAt: string | null };
 
 export type JuryItem = {
   hackathonTitle: string;
@@ -183,8 +178,6 @@ export type JuryItem = {
   scored: number;
   submission: { id: string; index: number; projectName: string; repoUrl: string; demoUrl: string | null; explanation: string } | null;
 };
-
-export type ContributionView = { name: string; amount: number; createdAt: string };
 
 /* Africa Rise-Up */
 

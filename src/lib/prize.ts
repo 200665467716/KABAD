@@ -1,18 +1,12 @@
 /**
- * Money prizes (decision D6, simplified on 7 November 2026: hackathons and mentoring are independent).
- * Amounts are whole F CFA; rounding never creates or loses money: the remainder goes to KABAD.
- * 90 % to the winning team, 10 % to KABAD. Half of KABAD's share (5 % of the pot) is set aside
- * to top up future pots.
+ * Prix d'un hackathon (décision D12) : l'organisateur annonce de 0 à 5 prix en texte libre.
+ * Ils sont attribués dans l'ordre du classement : le premier prix à la première équipe, etc.
+ * KABAD ne garde ni ne verse d'argent.
  */
-export const WINNER_SHARE = 0.9;
+export const MAX_PRIZES = 5;
 
-export type PrizeSplit = { winner: number; platform: number; reserve: number };
-
-export function splitPrize(total: number): PrizeSplit {
-  if (!Number.isInteger(total) || total < 0) {
-    throw new RangeError("Le montant doit être un nombre entier positif de F CFA.");
-  }
-  const winner = Math.floor(total * WINNER_SHARE);
-  const platform = total - winner;
-  return { winner, platform, reserve: Math.floor(platform / 2) };
+/** The prize of the team ranked `place` (1 = first), or null when there is none for that place. */
+export function prizeFor(prizes: readonly string[], place: number): string | null {
+  if (!Number.isInteger(place) || place < 1 || place > MAX_PRIZES) return null;
+  return prizes[place - 1] ?? null;
 }

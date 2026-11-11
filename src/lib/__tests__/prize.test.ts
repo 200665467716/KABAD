@@ -1,21 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { splitPrize } from "../prize";
+import { MAX_PRIZES, prizeFor } from "../prize";
 
-describe("splitPrize (D6)", () => {
-  it("donne 90 % à l'équipe gagnante et 10 % à KABAD, dont la moitié en réserve", () => {
-    expect(splitPrize(250_000)).toEqual({ winner: 225_000, platform: 25_000, reserve: 12_500 });
+describe("prix d’un hackathon (D12)", () => {
+  const prizes = ["Un ordinateur portable", "Un an d’hébergement", "Des livres"];
+
+  it("donne les prix dans l’ordre du classement", () => {
+    expect(prizeFor(prizes, 1)).toBe("Un ordinateur portable");
+    expect(prizeFor(prizes, 2)).toBe("Un an d’hébergement");
+    expect(prizeFor(prizes, 3)).toBe("Des livres");
   });
 
-  it("ne perd ni ne crée un franc à l'arrondi", () => {
-    for (const total of [0, 1, 7, 99, 1_001, 333_333]) {
-      const s = splitPrize(total);
-      expect(s.winner + s.platform).toBe(total);
-    }
-    expect(splitPrize(7)).toEqual({ winner: 6, platform: 1, reserve: 0 });
+  it("ne donne rien au-delà des prix annoncés", () => {
+    expect(prizeFor(prizes, 4)).toBeNull();
+    expect(prizeFor([], 1)).toBeNull();
   });
 
-  it("refuse un montant négatif ou décimal", () => {
-    expect(() => splitPrize(-1)).toThrow(RangeError);
-    expect(() => splitPrize(10.5)).toThrow(RangeError);
+  it("refuse une place qui n’existe pas", () => {
+    expect(prizeFor(prizes, 0)).toBeNull();
+    expect(prizeFor(prizes, 1.5)).toBeNull();
+    expect(prizeFor(["a", "b", "c", "d", "e", "f"], MAX_PRIZES + 1)).toBeNull();
   });
 });

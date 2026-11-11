@@ -4,28 +4,27 @@
       "metaTitle": "Terms and community charter",
       "homeLabel": "KABAD, home",
       "title": "Terms of use and community charter",
-      "version": "Working draft of {date}, to be approved before opening to the public.",
+      "version": "Version of {date}.",
       "charter": {
         "title": "The charter",
         "respect": "We treat others with respect, whatever their country, language or level.",
-        "abuse": "No harassment, hate speech, scams or spam, in messages or in voice rooms.",
-        "code": "In a challenge, the code you submit is your own. The mentor helps you learn, not with the solution.",
+        "abuse": "No harassment, hate speech, scams or spam, in messages or in groups.",
+        "code": "In a hackathon, the code you submit is your team’s own. An instructor helps you learn, not with the solution.",
         "honesty": "Level and experience must be declared honestly: the mentor badge depends on them."
       },
       "moderation": {
         "title": "What we do when there is a problem",
-        "text": "Every member can report a profile, a message, a conversation, an invitation or a room, and block someone. The KABAD team reviews reports: it can dismiss them, remove a message, close a room, warn or suspend an account. Every decision is recorded."
+        "text": "Every member can report a profile, a message, a conversation or an invitation, and block someone. The KABAD team reviews reports: it can dismiss them, remove a message, warn or suspend an account. Every decision is recorded."
       },
       "data": {
         "title": "Your data",
-        "kept": "We keep what the service needs: your profile, your messages, your pairings, your solutions and your test reports.",
-        "voice": "Voice rooms are not recorded.",
-        "momo": "Your Mobile Money number is only used to pay out your winnings, and is only shown to the team.",
-        "account": "From “My account”, you can download all your data and delete your account at any time."
+        "kept": "We keep what the service needs: your profile, your messages, your mentoring sessions, your solutions and your test reports.",
+        "account": "From “My account”, you can download all your data and delete your account at any time.",
+        "contact": "For any question about your data, write to <mail>{email}</mail>."
       },
       "prizes": {
-        "title": "Challenges and prize pools",
-        "text": "A prize pool is shared between the winning team (90%) and KABAD (10%), after the results are published and a 48-hour dispute period. The jury is made up of three verified seniors; a juror never scores someone they mentor."
+        "title": "Hackathons and their prizes",
+        "text": "The organizer of a hackathon announces its prizes and hands them over to the teams, in the order of the ranking. KABAD neither holds nor pays out any money. The jury is made up of three verified mentors; a juror never scores someone they have mentored."
       },
       "backToSignup": "Back to sign-up"
     }

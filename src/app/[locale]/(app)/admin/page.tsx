@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { Link } from "@/i18n/navigation";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { Card } from "@/components/ui/Display";
-import { formatFCFA } from "@/lib/format";
 import { dashboard } from "@/server/admin";
 import { adminUser } from "@/server/admin-page";
 import { AdminNav } from "./AdminNav";
@@ -47,7 +46,6 @@ async function DashboardData() {
           <Tile label={t("openReports")} value={n(d.openReports)} href="/admin/signalements" alert={d.openReports > 0} />
           <Tile label={t("toPublish")} value={n(d.toPublish)} href="/admin/hackathons" alert={d.toPublish > 0} />
           <Tile label={t("juryHackathons")} value={n(d.juryHackathons)} href="/admin/hackathons" />
-          <Tile label={t("payouts", { count: d.pendingPayouts.count })} value={formatFCFA(d.pendingPayouts.amount)} href="/admin/versements" />
         </div>
       </section>
       <section className="grid gap-3" aria-labelledby="a-activity">

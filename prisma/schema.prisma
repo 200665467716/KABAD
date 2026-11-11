@@ -1,4 +1,4 @@
-// KABAD data model: members, mentor badges, mentoring by time slots, hackathons and their prize pots,
+// KABAD data model: members, mentor badges, mentoring by time slots, hackathons and their prizes,
 // community tests, messaging and Africa Rise-Up projects.
 
 generator client {
@@ -91,7 +91,6 @@ model User {
   teamRequests         TeamJoinRequest[]
   missions             InstructorMission[]
   scores               JuryScore[]
-  payouts              Payout[]
   testApps             TestApp[]
   testSeats            TestParticipant[]
   testReports          TestReport[]
@@ -389,15 +388,8 @@ model MentoringBooking {
 }
 
 /**
- * Hackathons (the former code challenges) and their prize pots
+ * Hackathons (the former code challenges) and their prizes
  */
-
-/// How the winner is rewarded (decision D6). LOT: a physical prize; CAGNOTTE and SPONSORISE: money.
-enum PrizeKind {
-  CAGNOTTE
-  SPONSORISE
-  LOT
-}
 
 enum HackathonStatus {
   OPEN
@@ -434,12 +426,9 @@ model Hackathon {
   rulesUrl         String?         @db.VarChar(200)
   status           HackathonStatus @default(OPEN)
   resultsAt        DateTime?
-  prizeKind        PrizeKind?
-  /// Prizes in order: ["Un ordinateur portable", "Un an d’hébergement"]. For LOT and to announce money prizes.
+  /// 0 to 5 prizes in free text, in the order of the ranking: the first goes to the first team, and so on (D12).
+  /// KABAD holds no money: the organizer hands the prizes over.
   prizes           String[]        @default([])
-  sponsorName      String?         @db.VarChar(120)
-  /// Amount committed by the sponsor, in F CFA. Paid contributions add to it.
-  sponsorAmount    Int             @default(0)
   /// Instructor missions offered to KABAD mentors.
   missionText      String?         @db.VarChar(600)
   instructorFee    Int?
@@ -452,8 +441,6 @@ model Hackathon {
   teams         Team[]
   submissions   Submission[]
   missions      InstructorMission[]
-  contributions Contribution[]
-  payouts       Payout[]
 
   @@index([status, startsAt])
 }
@@ -532,8 +519,6 @@ model Submission {
   repoUrl        String      @db.VarChar(200)
   demoUrl        String?     @db.VarChar(200)
   explanation    String      @db.VarChar(800)
-  payoutOperator String?     @db.VarChar(30)
-  payoutPhone    String?     @db.VarChar(30)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
   scores         JuryScore[]
@@ -578,61 +563,6 @@ model InstructorMission {
 
   @@unique([hackathonId, mentorId])
   @@index([mentorId, status])
-}
-
-enum ContributionStatus {
-  PENDING
-  PAID
-  FAILED
-}
-
-/// A sponsor's payment. Counted in the pot only once PAID.
-model Contribution {
-  id          String             @id @default(cuid())
-  hackathonId String
-  hackathon   Hackathon          @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
-  amount      Int
-  displayName String             @db.VarChar(80)
-  email       String             @db.VarChar(200)
-  anonymous   Boolean            @default(false)
-  company     Boolean            @default(false)
-  status      ContributionStatus @default(PENDING)
-  createdAt   DateTime           @default(now())
-  paidAt      DateTime?
-
-  @@index([hackathonId, status])
-}
-
-enum PayoutRole {
-  WINNER
-  MENTOR
-  PLATFORM
-}
-
-enum PayoutStatus {
-  PENDING
-  SENT
-}
-
-/// The split of a pot (90/10 or 60/30/10, decision D6), sent by Mobile Money after the 48 h contest period.
-model Payout {
-  id            String       @id @default(cuid())
-  hackathonId   String
-  hackathon     Hackathon    @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
-  role          PayoutRole
-  beneficiaryId String?
-  beneficiary   User?        @relation(fields: [beneficiaryId], references: [id], onDelete: SetNull)
-  amount        Int
-  operator      String?      @db.VarChar(30)
-  phone         String?      @db.VarChar(30)
-  reference     String?      @db.VarChar(60)
-  status        PayoutStatus @default(PENDING)
-  createdAt     DateTime     @default(now())
-  /// The team was told the transfer can be sent, once the contest period is over (worker).
-  notifiedAt    DateTime?
-  sentAt        DateTime?
-
-  @@unique([hackathonId, role])
 }
 
 /**

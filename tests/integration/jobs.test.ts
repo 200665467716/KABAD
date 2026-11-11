@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { announcePayableTransfers, closeEndedHackathons, expireInvitations, lapseUnansweredBookings, mailNotifications, nudgeMentors, remindRiseEvents, remindSessions } from "@/server/jobs";
+import { closeEndedHackathons, expireInvitations, lapseUnansweredBookings, mailNotifications, nudgeMentors, remindRiseEvents, remindSessions } from "@/server/jobs";
 import { makeUsers, prisma, resetDb } from "./helpers";
 
 const MIN = 60_000;
@@ -57,7 +57,7 @@ describe("Africa Rise-Up", () => {
   });
 });
 
-describe("hackathons et versements", () => {
+describe("hackathons", () => {
   it("un hackathon terminé passe au jury et prévient ses participants", async () => {
     await prisma.hackathon.create({ data: { id: "h", title: "Fintech", organizerName: "FinLab", format: "ONLINE", startsAt: new Date(now.getTime() - 2 * DAY), endsAt: new Date(now.getTime() - MIN), closesAt: new Date(now.getTime() - 3 * DAY), level: "Tous niveaux", stack: "Web", description: "…", publishedAt: now } });
     await prisma.team.create({ data: { hackathonId: "h", name: "Baobab", captainId: "kossi", members: { create: { userId: "kossi", hackathonId: "h" } } } });
@@ -65,14 +65,6 @@ describe("hackathons et versements", () => {
     expect(await closeEndedHackathons(now, prisma)).toBe(0);
     expect((await prisma.hackathon.findUniqueOrThrow({ where: { id: "h" } })).status).toBe("JURY");
     expect(await notes("kossi")).toBe(1);
-  });
-
-  it("annonce à l’équipe KABAD les versements à faire après 48 h de contestation", async () => {
-    await prisma.hackathon.create({ data: { id: "h", title: "Fintech", organizerName: "FinLab", format: "ONLINE", startsAt: now, endsAt: now, closesAt: now, level: "Tous niveaux", stack: "Web", description: "…", status: "DONE", resultsAt: new Date(now.getTime() - 49 * HOUR) } });
-    await prisma.payout.create({ data: { hackathonId: "h", role: "WINNER", beneficiaryId: "kossi", amount: 60_000 } });
-    expect(await announcePayableTransfers(now, prisma)).toBe(1);
-    expect(await announcePayableTransfers(now, prisma)).toBe(0);
-    expect(await notes("equipe")).toBe(1);
   });
 });
 

@@ -9,9 +9,9 @@ import { Alert } from "@/components/ui/Display";
 import { ToggleChip } from "@/components/ui/Controls";
 import { Select, TextArea, TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
+import { MAX_PRIZES } from "@/lib/prize";
 
 type Format = "ONLINE" | "ONSITE" | "HYBRID";
-type Prize = "NONE" | "LOT" | "SPONSORISE" | "CAGNOTTE";
 const SIZES = { solo: [1, 1], soloOrTeam: [1, 5], range25: [2, 5], range34: [3, 4] } as const;
 const LEVELS = ["Tous niveaux", "Débutant", "Intermédiaire", "Avancé"] as const;
 
@@ -36,10 +36,7 @@ export function OrganizeForm({ defaultOrganizer }: { defaultOrganizer: string })
     level: LEVELS[0] as string,
     stack: "",
     description: "",
-    prize: "NONE" as Prize,
     prizes: [""] as string[],
-    sponsorName: "",
-    sponsorAmount: "",
     rulesUrl: "",
     missionText: "",
     instructorFee: "",
@@ -71,10 +68,8 @@ export function OrganizeForm({ defaultOrganizer }: { defaultOrganizer: string })
           stack: f.stack,
           description: f.description,
           rulesUrl: f.rulesUrl,
-          prizeKind: f.prize === "NONE" ? undefined : f.prize,
-          prizes: f.prize === "NONE" ? [] : f.prizes.map((p) => p.trim()).filter(Boolean),
-          sponsorName: f.prize === "SPONSORISE" ? f.sponsorName : undefined,
-          sponsorAmount: f.prize === "SPONSORISE" ? Number(f.sponsorAmount || 0) : undefined,
+          // Empty lines are dropped: no prize at all is allowed.
+          prizes: f.prizes.map((p) => p.trim()).filter(Boolean),
           missionText: f.missionText || undefined,
           instructorFee: f.instructorFee ? Number(f.instructorFee) : undefined,
           instructorCount: f.instructorFee ? Number(f.instructorCount || 0) : 0,
@@ -148,35 +143,21 @@ export function OrganizeForm({ defaultOrganizer }: { defaultOrganizer: string })
       ) : (
         <div className="grid gap-4">
           <TextArea id="description" label={t("challenge")} rows={4} value={f.description} maxLength={2000} onChange={(e) => set("description", e.target.value)} error={err("description")} />
-          <Select id="prize" label={t("prizeKind")} value={f.prize} onChange={(e) => set("prize", e.target.value as Prize)}>
-            {(["NONE", "LOT", "SPONSORISE", "CAGNOTTE"] as const).map((k) => (
-              <option key={k} value={k}>
-                {t(`prizeKinds.${k}`)}
-              </option>
+          <fieldset className="grid gap-2">
+            <legend className="mb-1 text-sm font-extrabold">{t("prizes")}</legend>
+            <p className="mb-1 text-[13px] text-muted">{t("prizesHint")}</p>
+            {f.prizes.map((p, i) => (
+              <div key={i} className="grid grid-cols-[32px_minmax(0,1fr)] items-center gap-2">
+                <span className="grid size-8 place-items-center rounded-full bg-ink font-display text-sm font-extrabold text-accent">{i + 1}</span>
+                <TextField id={`prize-${i}`} label={t("prizeLabel", { rank: i + 1 })} className="[&>label]:sr-only" value={p} maxLength={120} onChange={(e) => set("prizes", f.prizes.map((x, j) => (j === i ? e.target.value : x)))} />
+              </div>
             ))}
-          </Select>
-          {f.prize !== "NONE" && (
-            <fieldset className="grid gap-2">
-              <legend className="mb-2 text-sm font-extrabold">{t("prizes")}</legend>
-              {f.prizes.map((p, i) => (
-                <div key={i} className="grid grid-cols-[32px_minmax(0,1fr)] items-center gap-2">
-                  <span className="grid size-8 place-items-center rounded-full bg-ink font-display text-sm font-extrabold text-accent">{i + 1}</span>
-                  <TextField id={`prize-${i}`} label={t("prizeLabel", { rank: i + 1 })} className="[&>label]:sr-only" value={p} maxLength={120} onChange={(e) => set("prizes", f.prizes.map((x, j) => (j === i ? e.target.value : x)))} />
-                </div>
-              ))}
-              {f.prizes.length < 5 && (
-                <Button size="sm" variant="secondary" icon="plus" className="justify-self-start" onClick={() => set("prizes", [...f.prizes, ""])}>
-                  {t("addPrize")}
-                </Button>
-              )}
-            </fieldset>
-          )}
-          {f.prize === "SPONSORISE" && (
-            <div className="grid grid-cols-2 gap-3">
-              <TextField id="sponsorName" label={t("sponsor")} value={f.sponsorName} maxLength={120} onChange={(e) => set("sponsorName", e.target.value)} />
-              <TextField id="sponsorAmount" type="number" min={0} label={t("sponsorAmount")} value={f.sponsorAmount} onChange={(e) => set("sponsorAmount", e.target.value)} />
-            </div>
-          )}
+            {f.prizes.length < MAX_PRIZES && (
+              <Button size="sm" variant="secondary" icon="plus" className="justify-self-start" onClick={() => set("prizes", [...f.prizes, ""])}>
+                {t("addPrize")}
+              </Button>
+            )}
+          </fieldset>
           <TextField id="rulesUrl" type="url" label={t("rules")} hint={t("optional")} placeholder="https://" value={f.rulesUrl} onChange={(e) => set("rulesUrl", e.target.value)} error={err("rulesUrl")} />
           <div className="grid gap-3 rounded-lg border-2 border-dashed border-line-strong p-4">
             <p className="font-extrabold">{t("instructorsTitle")}</p>

@@ -20,7 +20,7 @@ const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000);
 
 export async function dashboard(adminId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
-  const [members, newMembers, mentors, pendingBadges, unverified, suspended, messages7d, openReports, upcomingSessions, held, openHackathons, juryHackathons, toPublish, riseProjects, pendingPayouts] = await Promise.all([
+  const [members, newMembers, mentors, pendingBadges, unverified, suspended, messages7d, openReports, upcomingSessions, held, openHackathons, juryHackathons, toPublish, riseProjects] = await Promise.all([
     prisma.user.count({ where: { isAdmin: false } }),
     prisma.user.count({ where: { isAdmin: false, createdAt: { gte: daysAgo(7) } } }),
     prisma.user.count({ where: { seniorVerifiedAt: { not: null } } }),
@@ -35,7 +35,6 @@ export async function dashboard(adminId: string, prisma: Db = db) {
     prisma.hackathon.count({ where: { status: "JURY" } }),
     prisma.hackathon.count({ where: { publishedAt: null } }),
     prisma.riseProject.count(),
-    prisma.payout.aggregate({ where: { status: "PENDING" }, _sum: { amount: true }, _count: { _all: true } }),
   ]);
   return {
     members,
@@ -52,7 +51,6 @@ export async function dashboard(adminId: string, prisma: Db = db) {
     juryHackathons,
     toPublish,
     riseProjects,
-    pendingPayouts: { count: pendingPayouts._count._all, amount: pendingPayouts._sum.amount ?? 0 },
   };
 }
 

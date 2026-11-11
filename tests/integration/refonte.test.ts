@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { DomainError } from "@/server/errors";
 import { answerBooking, bookSlot, getMentor, saveAvailability } from "@/server/mentoring";
 import { requestBadge, reviewBadge } from "@/server/badges";
-import { answerJoinRequest, getHackathon, publishResults, register, scoreSubmission, submitSolution } from "@/server/hackathons";
+import { answerJoinRequest, getHackathon, getResults, publishResults, register, scoreSubmission, submitSolution } from "@/server/hackathons";
 import { createTestApp, joinTest, leaveTest, setStep } from "@/server/community-tests";
 import { leaveGroup, listConversations } from "@/server/messaging";
 import { addPost, createProject, joinProject } from "@/server/rise";
@@ -128,18 +128,48 @@ describe("hackathons", () => {
     await refused(scoreSubmission("awa", "h", { submissionId: sub.id, works: 4, code: 4, tests: 4, explain: 4 }, prisma), "forbidden");
   });
 
-  it("inscription sans mentorat exigé ; le gain se partage 90/10, une seule fois", async () => {
-    await hackathon({ prizeKind: "SPONSORISE", sponsorAmount: 100_000, jurors: { create: [{ userId: "nadia" }, { userId: "ibrahim" }, { userId: "aicha" }] } });
+  it("inscription sans mentorat exigé ; les prix suivent le classement et chaque équipe primée apprend le sien, une seule fois", async () => {
+    await hackathon({ prizes: ["Un ordinateur portable", "Un an d’hébergement"], jurors: { create: [{ userId: "nadia" }, { userId: "ibrahim" }, { userId: "aicha" }] } });
     // Kossi has never had a mentoring session: hackathons and mentoring are independent.
+    const marks = { kossi: 5, yao: 4, fatou: 3 };
+    for (const who of Object.keys(marks)) {
+      await register(who, "h", { mode: "solo" }, prisma);
+      await submitSolution(who, "h", { projectName: `Projet ${who}`, repoUrl: `https://github.com/${who}/r`, explanation: "x".repeat(40) }, prisma);
+    }
+    await prisma.hackathon.update({ where: { id: "h" }, data: { status: "JURY" } });
+    for (const sub of await prisma.submission.findMany({ include: { team: true } })) {
+      const m = marks[sub.team.captainId as keyof typeof marks];
+      for (const j of ["nadia", "ibrahim", "aicha"]) await scoreSubmission(j, "h", { submissionId: sub.id, works: m, code: m, tests: m, explain: m }, prisma);
+    }
+    const results = await Promise.allSettled([publishResults("equipe", "h", prisma), publishResults("equipe", "h", prisma)]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+
+    // Two prizes for three teams: the first two win one, the third only gets the results.
+    expect((await getResults("h", prisma)).ranking.map((r) => [r.captainId, r.prize])).toEqual([
+      ["kossi", "Un ordinateur portable"],
+      ["yao", "Un an d’hébergement"],
+      ["fatou", null],
+    ]);
+    const note = async (userId: string) => {
+      const rows = await prisma.notification.findMany({ where: { userId, key: { in: ["teamWonPrize", "teamWon", "resultsPublished"] } } });
+      expect(rows).toHaveLength(1);
+      return [rows[0].key, rows[0].params];
+    };
+    expect(await note("kossi")).toEqual(["teamWonPrize", { place: 1, prize: "Un ordinateur portable" }]);
+    expect(await note("yao")).toEqual(["teamWonPrize", { place: 2, prize: "Un an d’hébergement" }]);
+    expect(await note("fatou")).toEqual(["resultsPublished", null]);
+  });
+
+  it("sans prix annoncé, la première équipe apprend qu’elle a gagné", async () => {
+    await hackathon({ jurors: { create: [{ userId: "nadia" }, { userId: "ibrahim" }, { userId: "aicha" }] } });
     await register("kossi", "h", { mode: "solo" }, prisma);
-    await submitSolution("kossi", "h", { projectName: "Momo", repoUrl: "https://github.com/k/r", explanation: "x".repeat(40), payoutOperator: "Wave", payoutPhone: "+22890000000" }, prisma);
+    await submitSolution("kossi", "h", { projectName: "Momo", repoUrl: "https://github.com/k/r", explanation: "x".repeat(40) }, prisma);
     await prisma.hackathon.update({ where: { id: "h" }, data: { status: "JURY" } });
     const sub = await prisma.submission.findFirstOrThrow();
     for (const j of ["nadia", "ibrahim", "aicha"]) await scoreSubmission(j, "h", { submissionId: sub.id, works: 4, code: 4, tests: 4, explain: 4 }, prisma);
-    const results = await Promise.allSettled([publishResults("equipe", "h", prisma), publishResults("equipe", "h", prisma)]);
-    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
-    const payouts = Object.fromEntries((await prisma.payout.findMany()).map((p) => [p.role, p.amount]));
-    expect(payouts).toEqual({ WINNER: 90_000, PLATFORM: 10_000 });
+    await publishResults("equipe", "h", prisma);
+    expect(await prisma.notification.count({ where: { userId: "kossi", key: "teamWon" } })).toBe(1);
+    expect((await getResults("h", prisma)).ranking[0].prize).toBeNull();
   });
 });
 

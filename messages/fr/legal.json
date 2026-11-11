@@ -4,28 +4,27 @@
       "metaTitle": "Conditions et charte de la communauté",
       "homeLabel": "KABAD, accueil",
       "title": "Conditions d’utilisation et charte de la communauté",
-      "version": "Version de travail du {date}, à faire valider avant l’ouverture au public.",
+      "version": "Version du {date}.",
       "charter": {
         "title": "La charte",
         "respect": "On s’adresse aux autres avec respect, quels que soient leur pays, leur langue ou leur niveau.",
-        "abuse": "Pas de harcèlement, de propos haineux, d’arnaque ni de spam, dans les messages comme dans les salons vocaux.",
-        "code": "Dans un défi, le code soumis est le vôtre. L’aide du mentor porte sur l’apprentissage, pas sur la solution.",
+        "abuse": "Pas de harcèlement, de propos haineux, d’arnaque ni de spam, dans les messages comme dans les groupes.",
+        "code": "Dans un hackathon, le code soumis est celui de votre équipe. L’aide d’un instructeur porte sur l’apprentissage, pas sur la solution.",
         "honesty": "Le niveau et l’expérience se déclarent honnêtement : le badge mentor en dépend."
       },
       "moderation": {
         "title": "Ce que nous faisons en cas de problème",
-        "text": "Chaque membre peut signaler un profil, un message, une conversation, une invitation ou un salon, et bloquer quelqu’un. L’équipe KABAD examine les signalements : elle peut classer, retirer un message, fermer un salon, avertir ou suspendre un compte. Chaque décision est enregistrée."
+        "text": "Chaque membre peut signaler un profil, un message, une conversation ou une invitation, et bloquer quelqu’un. L’équipe KABAD examine les signalements : elle peut classer, retirer un message, avertir ou suspendre un compte. Chaque décision est enregistrée."
       },
       "data": {
         "title": "Vos données",
-        "kept": "Nous gardons ce qui sert au service : votre profil, vos messages, vos binômes, vos solutions et vos rapports de test.",
-        "voice": "Les salons vocaux ne sont pas enregistrés.",
-        "momo": "Votre numéro Mobile Money n’est utilisé que pour vous verser un gain, et n’est montré qu’à l’équipe.",
-        "account": "Depuis « Mon compte », vous téléchargez toutes vos données et vous supprimez votre compte à tout moment."
+        "kept": "Nous gardons ce qui sert au service : votre profil, vos messages, vos séances de mentorat, vos solutions et vos rapports de test.",
+        "account": "Depuis « Mon compte », vous téléchargez toutes vos données et vous supprimez votre compte à tout moment.",
+        "contact": "Pour toute question sur vos données, écrivez à <mail>{email}</mail>."
       },
       "prizes": {
-        "title": "Les défis et les cagnottes",
-        "text": "Une cagnotte est partagée entre l’équipe gagnante (90 %) et KABAD (10 %), après la publication des résultats et 48 heures de contestation. Le jury est composé de trois seniors vérifiés ; un juré ne note jamais une personne qu’il accompagne."
+        "title": "Les hackathons et leurs prix",
+        "text": "L’organisateur d’un hackathon annonce ses prix et les remet lui-même aux équipes, dans l’ordre du classement. KABAD ne garde et ne verse aucune somme d’argent. Le jury est composé de trois mentors vérifiés ; un juré ne note jamais une personne qu’il a accompagnée."
       },
       "backToSignup": "Retour à l’inscription"
     }
