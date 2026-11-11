@@ -59,12 +59,17 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
 
-  # Scheduled tasks: session and event reminders, expirations, hackathons moving to the jury (pg-boss).
+  # Scheduled tasks: session and event reminders, expirations, hackathons moving to the jury,
+  # and the e-mails of the important notifications (pg-boss).
   worker:
     image: ${KABAD_REGISTRY:-ghcr.io/200665467716}/kabad-worker:${KABAD_TAG:-main}
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://kabad:${POSTGRES_PASSWORD}@db:5432/kabad
+      # The worker sends the notification e-mails: same mail settings as the web app.
+      APP_URL: ${APP_URL:?APP_URL manquant}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     depends_on:
       migrate: { condition: service_completed_successfully }
 

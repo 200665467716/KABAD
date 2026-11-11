@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 async function AccountData() {
   const user = await pageUser("/compte");
-  return <AccountSettings email={user.email} hasPassword={user.passwordHash !== null} verified={user.emailVerifiedAt !== null} profileId={user.id} blocked={await listBlocked(user.id)} />;
+  return <AccountSettings email={user.email} hasPassword={user.passwordHash !== null} verified={user.emailVerifiedAt !== null} profileId={user.id} blocked={await listBlocked(user.id)} emailNotifications={user.emailNotifications} />;
 }
 
 export default async function AccountPage() {

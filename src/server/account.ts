@@ -86,6 +86,12 @@ export async function setLocale(userId: string, locale: "fr" | "en", prisma: Db 
 }
 
 /** Always answers the same way, so the form does not reveal which addresses have an account. */
+/** What the member chooses for their account: e-mail notifications on or off. */
+export async function setPreferences(userId: string, input: { emailNotifications?: boolean }, prisma: Db = db) {
+  await prisma.user.update({ where: { id: userId }, data: { emailNotifications: input.emailNotifications } });
+  return { ok: true };
+}
+
 export async function requestPasswordReset(email: string, prisma: Db = db) {
   const u = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() }, select: { id: true, name: true, email: true, locale: true, suspendedAt: true } });
   if (!u || u.suspendedAt) return;

@@ -204,7 +204,7 @@ export async function answerBooking(mentorId: string, bookingId: string, input: 
     const when = { at: b.startsAt.toISOString(), tz: b.mentee.timeZone };
     await pushNotifications(tx, [
       input.accept
-        ? { userId: b.menteeId, actor: b.mentor.name, key: "bookingAccepted", params: when, href: `/mentorat/seances/${b.id}`, icon: "check", tone: "success" }
+        ? { userId: b.menteeId, actor: b.mentor.name, key: "bookingAccepted", params: { ...when, link: meetingUrl ?? "" }, href: `/mentorat/seances/${b.id}`, icon: "check", tone: "success" }
         : { userId: b.menteeId, actor: b.mentor.name, key: input.reason ? "bookingDeclinedReason" : "bookingDeclined", params: { ...when, ...(input.reason ? { reason: input.reason } : {}) }, href: `/mentorat/seances/${b.id}`, icon: "clock", tone: "neutral" },
     ]);
     return { status: input.accept ? "ACCEPTED" : "DECLINED", meetingUrl };

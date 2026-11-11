@@ -5,7 +5,11 @@
  */
 import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
-import { pushNotifications, type NotificationInput } from "./notifications";
+import { mailLocale, notificationMail } from "./emails";
+import { mailConfigured, sendMail } from "./mailer";
+import { notificationSentence, pushNotifications, type NotificationInput } from "./notifications";
+import { isMeetLink } from "@/lib/mentoring";
+import type { NotificationKey } from "@/lib/notification-text";
 import { CONTEST_HOURS } from "./hackathons";
 
 const HOUR = 3600_000;
@@ -58,8 +62,8 @@ export async function remindSessions(now = new Date(), prisma: Db = db) {
       const minutes = Math.max(1, Math.round((r.startsAt.getTime() - now.getTime()) / 60_000));
       const href = `/mentorat/seances/${r.id}`;
       return [
-        { userId: r.menteeId, actor: r.mentor.name, key: "sessionSoonMentee" as const, params: { topic: r.topic, minutes }, href, icon: "clock" as const, tone: "brand" as const },
-        { userId: r.mentorId, actor: r.mentee.name, key: "sessionSoonMentor" as const, params: { topic: r.topic, minutes }, href, icon: "clock" as const, tone: "brand" as const },
+        { userId: r.menteeId, actor: r.mentor.name, key: "sessionSoonMentee" as const, params: { topic: r.topic, minutes, link: r.meetingUrl ?? "" }, href, icon: "clock" as const, tone: "brand" as const },
+        { userId: r.mentorId, actor: r.mentee.name, key: "sessionSoonMentor" as const, params: { topic: r.topic, minutes, link: r.meetingUrl ?? "" }, href, icon: "clock" as const, tone: "brand" as const },
       ];
     });
     await pushNotifications(tx, notes);
@@ -123,6 +127,65 @@ export async function expireInvitations(now = new Date(), prisma: Db = db) {
   return count;
 }
 
+/*
+ * Notifications par e-mail : ce qu'un membre ne doit pas manquer quand l'app est fermée.
+ * Le worker les envoie, jamais une requête web. Chaque notification est d'abord réservée
+ * (emailedAt posé seulement s'il est encore vide) : deux workers n'envoient pas deux fois.
+ * Si l'envoi échoue, la réservation est rendue et l'e-mail repart au passage suivant.
+ */
+export const EMAILED_KEYS: NotificationKey[] = [
+  "bookingRequested",
+  "bookingAccepted",
+  "bookingDeclined",
+  "bookingDeclinedReason",
+  "bookingCancelled",
+  "bookingLapsed",
+  "bookingNudge",
+  "sessionSoonMentee",
+  "sessionSoonMentor",
+  "badgeGranted",
+  "badgeRefused",
+  "badgeRevoked",
+  "invitationReceived",
+  "invitationAccepted",
+  "missionProposed",
+  "hackathonPublished",
+  "resultsPublished",
+  "teamWonPrize",
+  "warning",
+];
+/** An e-mail that could not leave for a day is dropped: it would arrive too late to be useful. */
+export const MAIL_MAX_AGE_HOURS = 24;
+const MAIL_BATCH = 50;
+
+export async function mailNotifications(now = new Date(), prisma: Db = db, send: typeof sendMail = sendMail) {
+  if (!mailConfigured()) return 0;
+  const waiting = await prisma.notification.findMany({
+    where: { emailedAt: null, key: { in: EMAILED_KEYS }, createdAt: { gt: new Date(now.getTime() - MAIL_MAX_AGE_HOURS * HOUR) } },
+    orderBy: { createdAt: "asc" },
+    take: MAIL_BATCH,
+    include: { user: { select: { email: true, name: true, locale: true, emailVerifiedAt: true, emailNotifications: true, suspendedAt: true } } },
+  });
+  let sent = 0;
+  for (const n of waiting) {
+    const { count } = await prisma.notification.updateMany({ where: { id: n.id, emailedAt: null }, data: { emailedAt: now } });
+    if (!count) continue; // another worker took it
+    // Handled without an e-mail: address not confirmed, e-mails switched off, or account suspended.
+    if (!n.user.emailVerifiedAt || !n.user.emailNotifications || n.user.suspendedAt) continue;
+    const locale = mailLocale(n.user.locale);
+    const link = (n.params as Record<string, unknown> | null)?.link;
+    const mail = notificationMail(locale, n.user.name, notificationSentence(n, locale), n.href, typeof link === "string" && isMeetLink(link) ? link : undefined);
+    try {
+      await send(n.user.email, mail.subject, mail.text);
+      sent++;
+    } catch (e) {
+      console.error("[e-mail]", n.id, e instanceof Error ? e.message : e);
+      await prisma.notification.updateMany({ where: { id: n.id }, data: { emailedAt: null } });
+    }
+  }
+  return sent;
+}
+
 /** Every task with how often it runs (cron, server time). */
 export const JOBS = {
   "mentoring-lapse": { cron: "*/5 * * * *", run: lapseUnansweredBookings },
@@ -132,4 +195,5 @@ export const JOBS = {
   "hackathon-close": { cron: "*/5 * * * *", run: closeEndedHackathons },
   "payout-announce": { cron: "0 * * * *", run: announcePayableTransfers },
   "invitation-expire": { cron: "30 3 * * *", run: expireInvitations },
+  "notification-mail": { cron: "* * * * *", run: mailNotifications },
 } as const;

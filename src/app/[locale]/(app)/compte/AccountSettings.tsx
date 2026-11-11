@@ -7,7 +7,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { Page } from "@/components/shell/TopBar";
 import { Button, ButtonLink, buttonClass } from "@/components/ui/Button";
 import { Alert, Avatar, Card, Overline } from "@/components/ui/Display";
-import { TextField } from "@/components/ui/Field";
+import { Checkbox, TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
 import { initials } from "@/lib/format";
 import { disconnectRealtime } from "@/lib/realtime-client";
@@ -24,11 +24,26 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 type Blocked = { id: string; name: string; city: string; since: string };
 
-export function AccountSettings({ email, hasPassword, verified, profileId, blocked }: { email: string; hasPassword: boolean; verified: boolean; profileId: string; blocked: Blocked[] }) {
+export function AccountSettings({
+  email,
+  hasPassword,
+  verified,
+  profileId,
+  blocked,
+  emailNotifications,
+}: {
+  email: string;
+  hasPassword: boolean;
+  verified: boolean;
+  profileId: string;
+  blocked: Blocked[];
+  emailNotifications: boolean;
+}) {
   const t = useTranslations("profile.account");
   const router = useRouter();
   const [msg, setMsg] = useState<{ key: string; tone: "success" | "danger"; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [mails, setMails] = useState(emailNotifications);
 
   async function run(key: string, call: () => Promise<unknown>, ok: string, after?: () => void) {
     setBusy(key);
@@ -88,6 +103,19 @@ export function AccountSettings({ email, hasPassword, verified, profileId, block
           </div>
         )}
         {note("verify")}
+        <Checkbox
+          checked={mails}
+          disabled={busy !== null}
+          onChange={(e) => {
+            const on = e.target.checked;
+            setMails(on);
+            run("mails", () => api("/api/me/preferences", { method: "PUT", body: { emailNotifications: on } }), on ? t("mailsOn") : t("mailsOff"));
+          }}
+        >
+          {t("mails")}
+        </Checkbox>
+        <p className="text-[13px] text-muted">{t("mailsHint")}</p>
+        {note("mails")}
       </Section>
 
       <Section title={hasPassword ? t("changePassword") : t("choosePassword")}>

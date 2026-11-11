@@ -41,6 +41,8 @@ model User {
   emailVerifiedAt  DateTime?
   /// Set by a KABAD admin. A suspended member cannot sign in; their sessions are closed.
   suspendedAt      DateTime?
+  /// The member receives the important notifications by e-mail too (sessions, badge, invitations).
+  emailNotifications Boolean @default(true)
   suspensionReason String?   @db.VarChar(300)
   name             String
   /// SENIOR once the mentor badge is granted, JUNIOR otherwise.
@@ -821,9 +823,12 @@ model Notification {
   icon      String    @db.VarChar(20)
   tone      String    @db.VarChar(20)
   readAt    DateTime?
+  /// Set when the worker has handled the e-mail of this notification (sent, or not wanted).
+  emailedAt DateTime?
   createdAt DateTime  @default(now())
 
   @@index([userId, createdAt])
+  @@index([emailedAt, createdAt])
 }
 
 /// Fixed-window counters shared by every web instance.

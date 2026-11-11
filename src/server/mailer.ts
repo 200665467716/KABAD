@@ -1,5 +1,5 @@
 /*
- * Account e-mails (address check, password reset). SMTP_URL configures the server, for example
+ * E-mails: account (address check, password reset) and notifications (sent by the worker). SMTP_URL configures the server, for example
  * smtps://user:password@smtp.example.org:465. Without it, in development only, the e-mail is printed
  * in the terminal so the link can be opened; in production nothing is sent and the caller is told.
  */

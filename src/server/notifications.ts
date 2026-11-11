@@ -4,6 +4,7 @@
  */
 import { createTranslator } from "next-intl";
 import type { Prisma } from "@/generated/prisma/client";
+import enMessages from "../../messages/en/notifications.json";
 import frMessages from "../../messages/fr/notifications.json";
 import { messageValues, type NotificationKey, type NotificationParams } from "@/lib/notification-text";
 import { db, type Db } from "./db";
@@ -16,6 +17,14 @@ export type NotificationTone = "brand" | "success" | "accent" | "neutral";
 export type NotificationInput = { userId: string; actor: string; key: NotificationKey; params?: NotificationParams; href: string; icon: NotificationIcon; tone: NotificationTone };
 
 const french = createTranslator({ locale: "fr", messages: frMessages, namespace: "notifications.kinds" });
+const english = createTranslator({ locale: "en", messages: enMessages, namespace: "notifications.kinds" });
+
+/** The full sentence of a notification ("Awa Diop a accepté ta séance…"), in French or in English. */
+export function notificationSentence(n: { actor: string; key: string | null; params: unknown; text: string }, locale: "fr" | "en"): string {
+  const say = locale === "en" ? english : french;
+  const text = n.key && say.has(n.key as NotificationKey) ? say(n.key as NotificationKey, messageValues(n.params as NotificationParams | null, locale)) : n.text;
+  return `${n.actor}${/^[\s:]/.test(text) ? "" : " "}${text}`;
+}
 
 export async function pushNotifications(tx: Prisma.TransactionClient, items: NotificationInput[]) {
   if (items.length === 0) return;

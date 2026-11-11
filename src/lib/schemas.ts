@@ -109,6 +109,7 @@ export const profileSchema = z.object({
 });
 
 export const localeSchema = z.object({ locale: z.enum(["fr", "en"]) });
+export const preferencesSchema = z.object({ emailNotifications: z.boolean().optional() });
 
 /* Mentoring by time slots */
 

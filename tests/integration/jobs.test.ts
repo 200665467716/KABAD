@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { announcePayableTransfers, closeEndedHackathons, expireInvitations, lapseUnansweredBookings, nudgeMentors, remindRiseEvents, remindSessions } from "@/server/jobs";
+import { announcePayableTransfers, closeEndedHackathons, expireInvitations, lapseUnansweredBookings, mailNotifications, nudgeMentors, remindRiseEvents, remindSessions } from "@/server/jobs";
 import { makeUsers, prisma, resetDb } from "./helpers";
 
 const MIN = 60_000;
@@ -84,3 +84,65 @@ describe("invitations", () => {
     expect(await prisma.invitation.count()).toBe(1);
   });
 });
+
+describe("notifications par e-mail", () => {
+  type Sent = { to: string; subject: string; text: string };
+  const outbox = () => {
+    const sent: Sent[] = [];
+    return { sent, send: async (to: string, subject: string, text: string) => void sent.push({ to, subject, text }) };
+  };
+  const note = (data: Record<string, unknown> = {}) =>
+    prisma.notification.create({
+      data: { userId: "kossi", actor: "Awa Diop", key: "bookingAccepted", params: { at: new Date(now.getTime() + DAY).toISOString(), tz: "Africa/Lome", link: "https://meet.google.com/abc-defg-hij" }, text: "a accepté ta séance.", href: "/mentorat/seances/s1", icon: "check", tone: "success", ...data },
+    });
+  beforeEach(() => prisma.user.updateMany({ data: { emailVerifiedAt: now } }));
+
+  it("envoie la séance acceptée avec le lien Google Meet, dans la langue du membre, une seule fois", async () => {
+    await note();
+    const box = outbox();
+    expect(await mailNotifications(now, prisma, box.send)).toBe(1);
+    expect(await mailNotifications(now, prisma, box.send)).toBe(0);
+    expect(box.sent).toHaveLength(1);
+    expect(box.sent[0].to).toBe("kossi@test.kabad");
+    expect(box.sent[0].subject).toMatch(/^KABAD · Awa Diop a accepté ta séance du /);
+    expect(box.sent[0].text).toContain("Lien Google Meet : https://meet.google.com/abc-defg-hij");
+    expect(box.sent[0].text).toContain("/mentorat/seances/s1");
+
+    await prisma.user.update({ where: { id: "kossi" }, data: { locale: "en" } });
+    await note();
+    await mailNotifications(now, prisma, box.send);
+    expect(box.sent[1].text).toContain("Google Meet link : https://meet.google.com/abc-defg-hij");
+    expect(box.sent[1].text).toContain("/en/mentorat/seances/s1");
+  });
+
+  it("n’envoie rien si le membre a coupé les e-mails, n’a pas confirmé son adresse, ou si la notification n’en vaut pas un", async () => {
+    await prisma.user.update({ where: { id: "kossi" }, data: { emailNotifications: false } });
+    await prisma.user.update({ where: { id: "yao" }, data: { emailVerifiedAt: null } });
+    await note();
+    await note({ userId: "yao" });
+    await note({ userId: "awa", key: "testJoined", params: { title: "Kalo" } });
+    await note({ userId: "awa", createdAt: new Date(now.getTime() - 25 * HOUR) }); // trop ancienne
+    const box = outbox();
+    expect(await mailNotifications(now, prisma, box.send)).toBe(0);
+    expect(box.sent).toHaveLength(0);
+    // Réactiver les e-mails ne fait pas repartir les anciennes notifications.
+    await prisma.user.update({ where: { id: "kossi" }, data: { emailNotifications: true } });
+    expect(await mailNotifications(now, prisma, box.send)).toBe(0);
+  });
+
+  it("deux passages en même temps n’envoient qu’un e-mail, et un envoi raté repart au passage suivant", async () => {
+    await note();
+    const box = outbox();
+    const counts = await Promise.all([mailNotifications(now, prisma, box.send), mailNotifications(now, prisma, box.send)]);
+    expect(counts[0] + counts[1]).toBe(1);
+
+    await note({ userId: "awa" });
+    const failing = async () => {
+      throw new Error("SMTP indisponible");
+    };
+    expect(await mailNotifications(now, prisma, failing)).toBe(0);
+    expect(await mailNotifications(now, prisma, box.send)).toBe(1);
+    expect(box.sent.map((m) => m.to)).toEqual(["kossi@test.kabad", "awa@test.kabad"]);
+  });
+});
+

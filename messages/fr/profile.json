@@ -126,7 +126,11 @@
       "deleteConfirm": "Écris SUPPRIMER pour confirmer",
       "deleteButton": "Supprimer définitivement",
       "deleted": "Compte supprimé.",
-      "failed": "L’action n’a pas abouti. Réessaie."
+      "failed": "L’action n’a pas abouti. Réessaie.",
+      "mails": "Recevoir les notifications importantes par e-mail",
+      "mailsHint": "Séance acceptée ou refusée, rappel une heure avant, décision sur ton badge, invitation reçue.",
+      "mailsOn": "Notifications par e-mail activées.",
+      "mailsOff": "Notifications par e-mail coupées."
     },
     "members": {
       "title": "Membres",

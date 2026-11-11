@@ -126,7 +126,11 @@
       "deleteConfirm": "Type SUPPRIMER to confirm",
       "deleteButton": "Delete for good",
       "deleted": "Account deleted.",
-      "failed": "That didn’t work. Try again."
+      "failed": "That didn’t work. Try again.",
+      "mails": "Receive important notifications by e-mail",
+      "mailsHint": "Session accepted or declined, reminder one hour before, decision on your badge, invitation received.",
+      "mailsOn": "E-mail notifications are on.",
+      "mailsOff": "E-mail notifications are off."
     },
     "members": {
       "title": "Members",
