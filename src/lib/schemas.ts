@@ -276,6 +276,9 @@ export const jurySchema = z.object({ jurorIds: z.array(id).length(3, "Choisis ex
 
 /* Africa Rise-Up */
 
+/** A Google Meet link, required: "meet.google.com/abc-defg-hij" is completed with https://. */
+const meetLink = z.string().max(200).transform(normalizeMeetLink).refine(isMeetLink, MEET_LINK_MESSAGE);
+
 export const RISE_DOMAINS = ["WATER", "HEALTH", "AGRICULTURE", "EDUCATION", "ENERGY", "FINANCE", "OTHER"] as const;
 
 export const riseProjectSchema = z.object({
@@ -294,8 +297,14 @@ export const riseEventSchema = z.object({
   agenda: trimmed(5, 600, "Indique l’ordre du jour.", "600 caractères au plus."),
   startsAt: z.iso.datetime({ offset: true, message: "Indique la date et l’heure." }),
   minutes: z.number().int().min(15, "15 minutes au moins.").max(240, "4 heures au plus."),
-  meetingUrl: z.union([z.literal(""), z.url({ protocol: /^https$/, message: "Le lien de visio doit commencer par https://." }).max(200)]).optional(),
+  meetingUrl: meetLink,
   notify: z.boolean().default(true),
+});
+
+/** A room opened right now in a project channel: a Google Meet link, and a subject if the member gives one. */
+export const riseRoomSchema = z.object({
+  title: z.string().trim().max(100, "100 caractères au plus.").optional(),
+  meetingUrl: meetLink,
 });
 
 export const joinSchema = z.object({ skill: z.string().trim().max(30).optional() });

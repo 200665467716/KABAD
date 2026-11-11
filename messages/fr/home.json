@@ -35,7 +35,7 @@
       "live": "En direct",
       "next": "Événement {when}",
       "stats": "{count, plural, one {# dev} other {# devs}}",
-      "joinRoom": "Rejoindre le salon",
+      "joinRoom": "Rejoindre la visio",
       "open": "Voir le projet",
       "empty": "Aucun projet pour l’instant. Lance le premier.",
       "create": "Lancer un projet",

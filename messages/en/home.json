@@ -36,7 +36,7 @@
       "next": "Event {when}",
       "stats": "{count, plural, one {# dev} other {# devs}}",
       "countries": "{count, plural, one {# country} other {# countries}}",
-      "joinRoom": "Join the room",
+      "joinRoom": "Join the call",
       "open": "See the project",
       "empty": "No project yet. Launch the first one.",
       "create": "Launch a project"

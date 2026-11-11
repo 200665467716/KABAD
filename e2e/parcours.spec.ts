@@ -112,13 +112,24 @@ test("le jury note une solution sur 20", async ({ browser }) => {
   await page.context().close();
 });
 
-test("Africa Rise-Up : rejoindre un projet puis écrire dans sa discussion", async ({ browser }) => {
+test("Africa Rise-Up : rejoindre un projet, écrire dans sa discussion, puis lancer un salon sur Google Meet", async ({ browser }) => {
   const page = await signIn(browser, "kossi.mensah@exemple.tg", "/rise-up/prix-recoltes");
   await page.getByRole("button", { name: /Rejoindre le projet/ }).click();
   const text = `Je peux brancher la passerelle SMS (${Date.now()})`;
   await page.getByRole("textbox").first().fill(text);
   await page.getByRole("button", { name: /Publier/ }).click();
   await expect(page.getByText(text)).toBeVisible();
+
+  // A room is a Google Meet call opened now: another service is refused, then the room shows as live.
+  await page.getByRole("button", { name: "Lancer un salon" }).click();
+  await page.getByLabel("Lien Google Meet").fill("https://zoom.us/j/1");
+  await page.getByRole("button", { name: "Ouvrir le salon" }).click();
+  await expect(page.getByText(/Colle un lien Google Meet/)).toBeVisible();
+  await page.getByLabel("Lien Google Meet").fill("meet.google.com/abc-defg-hij");
+  await page.getByRole("button", { name: "Ouvrir le salon" }).click();
+  await expect(page.getByText("Salon en direct")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Rejoindre la visio" })).toHaveAttribute("href", "https://meet.google.com/abc-defg-hij");
+  await expect(page.getByRole("button", { name: "Lancer un salon" })).toHaveCount(0);
   await page.context().close();
 });
 

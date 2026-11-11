@@ -5,8 +5,9 @@ import { useState, type FormEvent } from "react";
 import { RiseSymbol } from "@/components/features/rise/RiseSymbol";
 import { Page } from "@/components/shell/TopBar";
 import { Button, ButtonLink } from "@/components/ui/Button";
-import { Segmented } from "@/components/ui/Controls";
+import { Segmented, Sheet } from "@/components/ui/Controls";
 import { Alert, Avatar, AvatarGroup, Badge, Overline, Tag, TagList } from "@/components/ui/Display";
+import { TextField } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Link, useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
@@ -37,7 +38,9 @@ export function ProjectView({ project: p, viewerId, now }: { project: RiseProjec
   }
 
   const others = Math.max(0, p.members - p.avatars.length);
+  const live = p.event?.live ?? false;
   return (
+    <>
     <Page className="flex-1">
       <section className="grid gap-2.5 rounded-xl border-2 border-line-strong bg-accent p-4 text-on-accent shadow-pop">
         <div className="flex items-start justify-between gap-3">
@@ -62,7 +65,7 @@ export function ProjectView({ project: p, viewerId, now }: { project: RiseProjec
         </div>
       </section>
 
-      {p.event && <EventStrip event={p.event} t={t} format={format} />}
+      {p.event && <EventStrip event={p.event} isMember={p.isMember} t={t} format={format} />}
 
       {!p.isMember && (
         <Button size="lg" block disabled={busy} onClick={() => membership(true)}>
@@ -91,6 +94,8 @@ export function ProjectView({ project: p, viewerId, now }: { project: RiseProjec
 
       {tab === "talk" && (
         <div className="grid gap-3">
+          {/* A room is a video call opened now for the project's members. One at a time. */}
+          {p.isMember && !live && <RoomButton projectId={p.id} />}
           {p.posts.map((post) => (
             <article key={post.id} className="grid gap-2 rounded-lg border-2 border-line-strong bg-raised p-3.5">
               <div className="flex items-center gap-2.5">
@@ -105,7 +110,7 @@ export function ProjectView({ project: p, viewerId, now }: { project: RiseProjec
             </article>
           ))}
           {p.posts.length === 0 && <p className="py-4 text-center text-muted">{t("project.noPosts")}</p>}
-          {p.isMember ? <Composer projectId={p.id} /> : <p className="text-sm text-muted">{t("project.joinToWrite")}</p>}
+          {!p.isMember && <p className="text-sm text-muted">{t("project.joinToWrite")}</p>}
         </div>
       )}
 
@@ -199,25 +204,95 @@ export function ProjectView({ project: p, viewerId, now }: { project: RiseProjec
         </div>
       )}
     </Page>
+    {/* R2: the writing zone stays at the bottom of the channel. */}
+    {tab === "talk" && p.isMember && (
+      <div className="sticky bottom-0 z-10 border-t-2 border-line-strong bg-raised">
+        <div className="mx-auto w-full max-w-[960px] px-4 pt-2.5 pb-[max(12px,env(safe-area-inset-bottom,0px))] lg:px-10">
+          <Composer projectId={p.id} dock />
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
-function EventStrip({ event, t, format }: { event: RiseEventView; t: ReturnType<typeof useTranslations<"rise">>; format: ReturnType<typeof useFormatter> }) {
+/** R2: the band of the live room (ink, maize button), or the next event. */
+function EventStrip({ event, isMember, t, format }: { event: RiseEventView; isMember: boolean; t: ReturnType<typeof useTranslations<"rise">>; format: ReturnType<typeof useFormatter> }) {
+  const page = `/rise-up/${event.projectId}/evenements/${event.id}`;
+  const direct = event.live && isMember && event.meetingUrl;
   return (
-    <Link href={`/rise-up/${event.projectId}/evenements/${event.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg bg-ink px-4 py-3 text-raised no-underline">
-      <span className="grid min-w-0 gap-0.5">
+    <div className="grid items-center gap-2.5 rounded-lg bg-ink px-4 py-3 text-raised sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3">
+      <Link href={page} className="grid min-w-0 gap-0.5 text-raised no-underline">
         <span className="flex items-center gap-1.5 text-[11px] font-extrabold tracking-[0.12em] uppercase">
           {event.live ? <span aria-hidden="true" className="size-1.5 rounded-full bg-live" /> : null}
           <span className={event.live ? "text-live" : "text-[var(--grey-light)]"}>{event.live ? t("project.liveRoom") : `${t("project.nextEvent")} · ${format.dateTime(new Date(event.startsAt), { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}`}</span>
         </span>
         <b className="truncate text-sm">{event.title}</b>
-      </span>
-      <span className="inline-flex h-11 items-center rounded-md bg-header px-4 text-sm font-extrabold text-on-header">{event.live ? t("project.openEvent") : t("project.seeEvent")}</span>
-    </Link>
+      </Link>
+      {direct ? (
+        <a href={event.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-accent px-4 text-sm font-extrabold text-on-accent no-underline">
+          <Icon name="video" size={18} />
+          {t("project.openEvent")}
+        </a>
+      ) : (
+        <Link href={page} className="inline-flex h-11 items-center justify-center rounded-md bg-header px-4 text-sm font-extrabold text-on-header no-underline">
+          {t("project.seeEvent")}
+        </Link>
+      )}
+    </div>
   );
 }
 
-function Composer({ projectId, parentId, label, placeholder }: { projectId: string; parentId?: string; label?: string; placeholder?: string }) {
+/** « Lancer un salon » : the member pastes a Google Meet link, the other members are told at once. */
+function RoomButton({ projectId }: { projectId: string }) {
+  const t = useTranslations("rise.room");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<{ field?: string; text: string } | null>(null);
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/api/rise/${projectId}/rooms`, { body: { title: String(data.get("title") ?? "").trim() || undefined, meetingUrl: String(data.get("meetingUrl") ?? "") } });
+      setOpen(false);
+      router.refresh();
+    } catch (err) {
+      setError({ field: err instanceof ApiError ? err.field : undefined, text: err instanceof ApiError ? err.message : t("error") });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <Button variant="secondary" icon="video" className="justify-self-start" onClick={() => setOpen(true)}>
+        {t("open")}
+      </Button>
+      <Sheet open={open} onClose={() => setOpen(false)} title={t("title")}>
+        <form onSubmit={submit} noValidate className="grid gap-4">
+          <p className="text-sm font-medium text-muted">{t("text")}</p>
+          <TextField id="room-title" name="title" label={t("subject")} hint={t("optional")} placeholder={t("subjectPlaceholder")} maxLength={100} error={error?.field === "title" ? error.text : undefined} />
+          <TextField id="room-link" name="meetingUrl" type="url" inputMode="url" label={t("link")} hint={t("linkHint")} placeholder="meet.google.com/abc-defg-hij" error={error?.field === "meetingUrl" ? error.text : undefined} />
+          {error && !["title", "meetingUrl"].includes(error.field ?? "") && (
+            <Alert tone="danger" role="alert">
+              {error.text}
+            </Alert>
+          )}
+          <Button type="submit" variant="ink" block disabled={busy}>
+            {busy ? t("starting") : t("start")}
+          </Button>
+        </form>
+      </Sheet>
+    </>
+  );
+}
+
+/** `dock`: the compact form pinned at the bottom of the channel (one line, the label is read by screen readers). */
+function Composer({ projectId, parentId, label, placeholder, dock }: { projectId: string; parentId?: string; label?: string; placeholder?: string; dock?: boolean }) {
   const t = useTranslations("rise.project");
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -239,21 +314,21 @@ function Composer({ projectId, parentId, label, placeholder }: { projectId: stri
     }
   }
   return (
-    <form onSubmit={send} className="grid gap-2">
-      <label htmlFor={`composer-${parentId ?? projectId}`} className="text-sm font-extrabold">
+    <form onSubmit={send} className={dock ? "grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2" : "grid gap-2"}>
+      <label htmlFor={`composer-${parentId ?? projectId}`} className={dock ? "sr-only" : "text-sm font-extrabold"}>
         {label ?? t("composerLabel")}
       </label>
       <textarea
         id={`composer-${parentId ?? projectId}`}
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        rows={3}
+        rows={dock ? 1 : 3}
         maxLength={2000}
-        placeholder={placeholder ?? t("composerPlaceholder")}
-        className="w-full resize-y rounded-md border-2 border-line-strong bg-raised px-3.5 py-2.5 text-base text-ink"
+        placeholder={placeholder ?? (dock ? t("composerShort") : t("composerPlaceholder"))}
+        className={dock ? "max-h-32 min-h-11 w-full resize-none rounded-md border-2 border-line-strong bg-raised px-3.5 py-2 text-base text-ink [field-sizing:content]" : "w-full resize-y rounded-md border-2 border-line-strong bg-raised px-3.5 py-2.5 text-base text-ink"}
       />
-      {error && <span className="text-sm font-extrabold text-danger">{error}</span>}
-      <Button type="submit" variant="ink" disabled={busy || !body.trim()} className="justify-self-end">
+      {error && <span className={dock ? "order-last col-span-2 text-sm font-extrabold text-danger" : "text-sm font-extrabold text-danger"}>{error}</span>}
+      <Button type="submit" variant="ink" disabled={busy || !body.trim()} className={dock ? undefined : "justify-self-end"}>
         {busy ? t("sending") : t("send")}
       </Button>
     </form>

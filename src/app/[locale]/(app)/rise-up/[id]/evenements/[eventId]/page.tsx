@@ -11,6 +11,7 @@ import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 import { getEvent } from "@/server/rise";
 import { CalendarButton } from "./CalendarButton";
+import { CloseRoomButton } from "./CloseRoomButton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("rise.event");
@@ -18,11 +19,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Screen R4. Decision D7: there is no audio room inside KABAD; a project event is held on an
- * external video link, shown to the project's members, and marked "live" while it runs.
+ * Screen R4. There is no audio room inside KABAD: a project event or room is held on a Google Meet link,
+ * shown to the project's members, and marked "live" while it runs. Its author can close a live room.
  */
-const serverNow = () => Date.now();
-
 async function EventData({ params }: { params: Promise<{ id: string; eventId: string }> }) {
   const { id, eventId } = await params;
   const user = await pageUser(`/rise-up/${id}/evenements/${eventId}`);
@@ -30,7 +29,7 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
   if (!e) notFound();
   const [t, format] = await Promise.all([getTranslations("rise.event"), getFormatter()]);
   const start = new Date(e.startsAt);
-  const ended = start.getTime() + e.minutes * 60_000 <= serverNow();
+  const ended = e.ended;
   return (
     <>
       <TopBar back={`/rise-up/${id}`} title={e.projectName} />
@@ -48,12 +47,15 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
             {e.projectName}
           </Link>
         </section>
-        <section className="grid gap-2" aria-labelledby="agenda">
-          <Overline as="h3" id="agenda">
-            {t("agenda")}
-          </Overline>
-          <p className="text-[15px] leading-[22px] whitespace-pre-line">{e.agenda}</p>
-        </section>
+        {/* A room opened on the spot has no agenda. */}
+        {e.agenda && (
+          <section className="grid gap-2" aria-labelledby="agenda">
+            <Overline as="h3" id="agenda">
+              {t("agenda")}
+            </Overline>
+            <p className="text-[15px] leading-[22px] whitespace-pre-line">{e.agenda}</p>
+          </section>
+        )}
         {e.createdBy && <p className="text-[13px] text-muted">{t("by", { name: e.createdBy.name })}</p>}
         {!e.isMember && <p className="text-sm text-muted">{t("membersOnly")}</p>}
       </Page>
@@ -64,7 +66,7 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
               <ButtonLink href={e.meetingUrl} target="_blank" rel="noreferrer" size="lg" block icon="video" variant={e.live ? "primary" : "secondary"}>
                 {t("join")}
               </ButtonLink>
-              <CalendarButton title={e.title} description={e.agenda} url={e.meetingUrl} startsAt={e.startsAt} minutes={e.minutes} label={t("calendar")} />
+              {e.live ? e.canClose && <CloseRoomButton projectId={id} eventId={eventId} /> : <CalendarButton title={e.title} description={e.agenda} url={e.meetingUrl} startsAt={e.startsAt} minutes={e.minutes} label={t("calendar")} />}
             </>
           ) : (
             <ButtonLink href={`/rise-up/${id}`} size="lg" block>

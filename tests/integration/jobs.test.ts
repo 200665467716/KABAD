@@ -49,7 +49,7 @@ describe("mentorat", () => {
 describe("Africa Rise-Up", () => {
   it("rappelle un événement à chaque membre du projet", async () => {
     await prisma.riseProject.create({ data: { id: "p", name: "Forages", domain: "WATER", summary: "s", problem: "p", initiatorId: "yao", members: { create: [{ userId: "yao" }, { userId: "kossi" }] } } });
-    await prisma.riseEvent.create({ data: { projectId: "p", title: "Point d’étape", agenda: "…", startsAt: new Date(now.getTime() + 30 * MIN), minutes: 60, meetingUrl: "https://meet.jit.si/x" } });
+    await prisma.riseEvent.create({ data: { projectId: "p", title: "Point d’étape", agenda: "…", startsAt: new Date(now.getTime() + 30 * MIN), minutes: 60, meetingUrl: "https://meet.google.com/abc-defg-hij" } });
     expect(await remindRiseEvents(now, prisma)).toBe(1);
     expect(await remindRiseEvents(now, prisma)).toBe(0);
     expect(await notes("yao")).toBe(1);

@@ -39,7 +39,8 @@ const focused = [
   /^\/mentorat\/(mentors\/[^/]+(\/reserver)?|seances\/.+|badge|disponibilites)$/,
   /^\/admin\/badges\/.+/,
   /^\/hackathons\/(organiser|missions\/.+|[^/]+\/(participer|soumettre|jury|instructeurs))$/,
-  /^\/rise-up\/(nouveau|[^/]+\/evenements\/.+)$/,
+  // A project channel writes at the bottom of the screen, like a conversation.
+  /^\/rise-up\/.+/,
   /^\/tests\/(nouveau|[^/]+\/(rapport|rapports))$/,
   /^\/messages\/(?!$).+/,
   /^\/profil\/modifier$/,

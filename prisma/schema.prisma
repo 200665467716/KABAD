@@ -730,10 +730,14 @@ model RiseEvent {
   agenda      String      @db.VarChar(600)
   startsAt    DateTime
   minutes     Int
-  /// Meet, Jitsi or any video link. Empty: KABAD creates a Jitsi room.
+  /// A Google Meet link, required: KABAD hosts no video call.
   meetingUrl  String      @db.VarChar(200)
+  /// False when the author chose not to notify the members: no reminder either.
+  remind      Boolean     @default(true)
   /// A reminder is sent to the members one hour before.
   remindedAt  DateTime?
+  /// Set when the author closes a live room before its planned end.
+  endedAt     DateTime?
   createdAt   DateTime    @default(now())
 
   @@index([projectId, startsAt])

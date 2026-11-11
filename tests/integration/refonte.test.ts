@@ -5,7 +5,8 @@ import { requestBadge, reviewBadge } from "@/server/badges";
 import { answerJoinRequest, getHackathon, getResults, publishResults, register, scoreSubmission, submitSolution } from "@/server/hackathons";
 import { createTestApp, joinTest, leaveTest, setStep } from "@/server/community-tests";
 import { leaveGroup, listConversations } from "@/server/messaging";
-import { addPost, createProject, joinProject } from "@/server/rise";
+import { addPost, closeRoom, createEvent, createProject, getEvent, getProject, joinProject, openRoom } from "@/server/rise";
+import { remindRiseEvents } from "@/server/jobs";
 import { sendVerificationEmail, verifyEmailCode } from "@/server/account";
 import { updateProfile } from "@/server/members";
 import { makeUsers, prisma, resetDb } from "./helpers";
@@ -223,6 +224,51 @@ describe("Africa Rise-Up", () => {
     await addPost("kossi", id, { body: "Bonjour" }, prisma);
     const p = await prisma.riseProject.findUniqueOrThrow({ where: { id }, include: { conversation: { include: { members: true } } } });
     expect(p.conversation?.members.map((m) => m.userId).sort()).toEqual(["kossi", "yao"]);
+  });
+
+  it("deux appuis sur « Rejoindre » au même instant : un seul membre, pas d’erreur", async () => {
+    const { id } = await createProject("yao", { name: "Forages au Sahel", domain: "WATER", summary: "Une carte des forages.", problem: "x".repeat(40), skills: [] }, prisma);
+    const both = await Promise.allSettled([joinProject("kossi", id, {}, prisma), joinProject("kossi", id, {}, prisma)]);
+    expect(both.every((r) => r.status === "fulfilled")).toBe(true);
+    expect(await prisma.riseMember.count({ where: { projectId: id, userId: "kossi" } })).toBe(1);
+  });
+
+  it("un salon : un membre l’ouvre sur un lien Meet, les autres sont prévenus ; un seul salon à la fois ; son auteur le ferme", async () => {
+    const { id } = await createProject("yao", { name: "Forages au Sahel", domain: "WATER", summary: "Une carte des forages.", problem: "x".repeat(40), skills: [] }, prisma);
+    const meet = "https://meet.google.com/abc-defg-hij";
+    await refused(openRoom("kossi", id, { meetingUrl: meet }, prisma), "forbidden");
+    await joinProject("kossi", id, {}, prisma);
+    await joinProject("fatou", id, {}, prisma);
+
+    const room = await openRoom("kossi", id, { meetingUrl: meet }, prisma);
+    expect(await prisma.notification.count({ where: { key: "roomLive", userId: { in: ["yao", "fatou"] } } })).toBe(2);
+    expect(await prisma.notification.count({ where: { key: "roomLive", userId: "kossi" } })).toBe(0);
+    await refused(openRoom("fatou", id, { meetingUrl: meet }, prisma), "room_open");
+
+    // Live for the members, with the link; a visitor sees the room but not its link.
+    expect((await getProject("fatou", id, prisma)).event).toMatchObject({ live: true, title: "Salon de discussion", meetingUrl: meet });
+    expect((await getProject("aicha", id, prisma)).event).toMatchObject({ live: true, meetingUrl: "" });
+
+    // Its author or the initiator closes it; another member does not.
+    await refused(closeRoom("fatou", id, room.id, prisma), "forbidden");
+    await closeRoom("kossi", id, room.id, prisma);
+    expect((await getEvent("kossi", id, room.id, prisma)).live).toBe(false);
+    expect((await getProject("fatou", id, prisma)).event).toBeNull();
+    await refused(closeRoom("yao", id, room.id, prisma), "not_live");
+    await openRoom("fatou", id, { title: "Point capteurs", meetingUrl: meet }, prisma);
+  });
+
+  it("« prévenir les membres » décoché : ni notification, ni rappel une heure avant", async () => {
+    const { id } = await createProject("yao", { name: "Forages au Sahel", domain: "WATER", summary: "Une carte des forages.", problem: "x".repeat(40), skills: [] }, prisma);
+    await joinProject("kossi", id, {}, prisma);
+    const before = await prisma.notification.count({ where: { userId: "kossi" } });
+    const startsAt = new Date(Date.now() + 30 * 60_000).toISOString();
+    await createEvent("yao", id, { title: "Point discret", agenda: "Entre nous.", startsAt, minutes: 30, meetingUrl: "https://meet.google.com/abc-defg-hij", notify: false }, prisma);
+    expect(await remindRiseEvents(new Date(), prisma)).toBe(0);
+    await createEvent("yao", id, { title: "Point d’étape", agenda: "Avancement.", startsAt, minutes: 30, meetingUrl: "https://meet.google.com/abc-defg-hij", notify: true }, prisma);
+    expect(await remindRiseEvents(new Date(), prisma)).toBe(1);
+    // One notification when the event is scheduled, one reminder: both for the second event only.
+    expect((await prisma.notification.count({ where: { userId: "kossi" } })) - before).toBe(2);
   });
 });
 

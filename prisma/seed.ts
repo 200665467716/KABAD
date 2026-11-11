@@ -291,10 +291,10 @@ async function main() {
   await db.riseEvent.createMany({
     data: [
       // Running now: the project shows "Salon en direct".
-      { projectId: "forages-sahel", createdById: "yao", title: "Choisir les capteurs de niveau", agenda: "Comparer trois capteurs, leur prix et leur autonomie.", startsAt: minutesAgo(15), minutes: 60, meetingUrl: "https://meet.jit.si/kabad-riseup-capteurs" },
-      { projectId: "forages-sahel", createdById: "yao", title: "Point d’étape mensuel", agenda: "Avancement de la carte, retours des villages, prochaines tâches.", startsAt: at(12, 18, 0), minutes: 60, meetingUrl: "https://meet.jit.si/kabad-riseup-point" },
+      { projectId: "forages-sahel", createdById: "yao", title: "Choisir les capteurs de niveau", agenda: "Comparer trois capteurs, leur prix et leur autonomie.", startsAt: minutesAgo(15), minutes: 60, meetingUrl: "https://meet.google.com/rsu-capt-eur" },
+      { projectId: "forages-sahel", createdById: "yao", title: "Point d’étape mensuel", agenda: "Avancement de la carte, retours des villages, prochaines tâches.", startsAt: at(12, 18, 0), minutes: 60, meetingUrl: "https://meet.google.com/rsu-poin-tet" },
       { projectId: "forages-sahel", createdById: "fatou", title: "Atelier capteurs avec Niamey", agenda: "Installation des premiers capteurs avec l’équipe de Niamey.", startsAt: at(20, 15, 0), minutes: 90, meetingUrl: "https://meet.google.com/abc-defg-hij" },
-      { projectId: "dossier-medical", createdById: "nadia", title: "Atelier sécurité des données", agenda: "Qui peut lire quoi : les règles d’accès au dossier.", startsAt: nextWeekday(4, 18, 0), minutes: 60, meetingUrl: "https://meet.jit.si/kabad-riseup-securite" },
+      { projectId: "dossier-medical", createdById: "nadia", title: "Atelier sécurité des données", agenda: "Qui peut lire quoi : les règles d’accès au dossier.", startsAt: nextWeekday(4, 18, 0), minutes: 60, meetingUrl: "https://meet.google.com/rsu-secu-rit" },
     ],
   });
 

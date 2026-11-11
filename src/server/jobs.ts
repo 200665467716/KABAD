@@ -74,7 +74,8 @@ export async function remindSessions(now = new Date(), prisma: Db = db) {
 export async function remindRiseEvents(now = new Date(), prisma: Db = db) {
   return prisma.$transaction(async (tx) => {
     const rows = await tx.riseEvent.findMany({
-      where: { remindedAt: null, startsAt: { gt: now, lte: new Date(now.getTime() + HOUR) } },
+      // No reminder when the author chose not to notify the members, nor for an event closed early.
+      where: { remind: true, remindedAt: null, endedAt: null, startsAt: { gt: now, lte: new Date(now.getTime() + HOUR) } },
       include: { project: { select: { name: true, members: { select: { userId: true } } } } },
     });
     if (rows.length === 0) return 0;

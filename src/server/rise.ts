@@ -4,11 +4,12 @@
  *   the project comes with its members' chat;
  * - members join and leave freely; the initiator cannot leave a project that still has members;
  * - the discussion feed holds posts and their replies; only members write;
- * - members schedule events (checkpoint, workshop…) held on an external video link (decision D7);
- *   the other members are notified, and an event is "live" while it runs.
+ * - members schedule events (checkpoint, workshop…) held on a Google Meet link, which is required;
+ *   the other members are notified, and an event is "live" while it runs;
+ * - a member opens a room at any time: an event that starts now, on a Google Meet link. One room at a
+ *   time per project; its author or the project's initiator closes it.
  */
-import { randomBytes } from "node:crypto";
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
 import { joinCommunityGroup, leaveCommunityGroup, openCommunityGroup } from "./messaging";
@@ -17,12 +18,14 @@ import type { RiseDomain, RiseEventView, RisePostView, RiseProjectDetail, RisePr
 
 type Tx = Db | Prisma.TransactionClient;
 
-const isLive = (e: { startsAt: Date; minutes: number }, now = Date.now()) => e.startsAt.getTime() <= now && now < e.startsAt.getTime() + e.minutes * 60_000;
+/** How long a room opened on the spot stays "live" unless it is closed before. */
+export const ROOM_MINUTES = 60;
 
-/** A private Jitsi room for a project event when its author gives no video link. */
-const jitsiRoom = () => `https://meet.jit.si/kabad-riseup-${randomBytes(9).toString("base64url")}`;
+type Timed = { startsAt: Date; minutes: number; endedAt: Date | null };
+const isOver = (e: Timed, now = Date.now()) => e.endedAt !== null || e.startsAt.getTime() + e.minutes * 60_000 <= now;
+const isLive = (e: Timed, now = Date.now()) => e.startsAt.getTime() <= now && !isOver(e, now);
 
-const toEvent = (e: { id: string; title: string; agenda: string; startsAt: Date; minutes: number; meetingUrl: string; projectId: string; project: { name: string } }): RiseEventView => ({
+const toEvent = (e: Timed & { id: string; title: string; agenda: string; meetingUrl: string; projectId: string; project: { name: string } }): RiseEventView => ({
   id: e.id,
   title: e.title,
   agenda: e.agenda,
@@ -34,7 +37,7 @@ const toEvent = (e: { id: string; title: string; agenda: string; startsAt: Date;
   projectName: e.project.name,
 });
 
-const eventSelect = { id: true, title: true, agenda: true, startsAt: true, minutes: true, meetingUrl: true, projectId: true, project: { select: { name: true } } } as const;
+const eventSelect = { id: true, title: true, agenda: true, startsAt: true, minutes: true, endedAt: true, meetingUrl: true, projectId: true, project: { select: { name: true } } } as const;
 
 /** The event running now, otherwise the next one, for each project. */
 async function currentEvents(prisma: Tx, projectIds: string[]) {
@@ -43,8 +46,7 @@ async function currentEvents(prisma: Tx, projectIds: string[]) {
   const out = new Map<string, RiseEventView>();
   const now = Date.now();
   for (const e of rows) {
-    const ended = e.startsAt.getTime() + e.minutes * 60_000 <= now;
-    if (ended) continue;
+    if (isOver(e, now)) continue;
     const current = out.get(e.projectId);
     if (!current || (!current.live && isLive(e, now))) out.set(e.projectId, toEvent(e));
   }
@@ -58,6 +60,8 @@ type SummaryRow = Prisma.RiseProjectGetPayload<{ include: typeof summaryInclude 
 
 function toSummary(p: SummaryRow, events: Map<string, RiseEventView>, viewerId: string | null): RiseProjectSummary {
   const countries = new Set(p.members.map((m) => m.user.country).filter(Boolean));
+  const isMember = viewerId !== null && p.members.some((m) => m.user.id === viewerId);
+  const event = events.get(p.id) ?? null;
   return {
     id: p.id,
     name: p.name,
@@ -67,8 +71,9 @@ function toSummary(p: SummaryRow, events: Map<string, RiseEventView>, viewerId: 
     members: p.members.length,
     countries: countries.size,
     avatars: p.members.slice(0, 3).map((m) => ({ id: m.user.id, name: m.user.name })),
-    event: events.get(p.id) ?? null,
-    isMember: viewerId !== null && p.members.some((m) => m.user.id === viewerId),
+    // The video link is for the project's members only.
+    event: event && { ...event, meetingUrl: isMember ? event.meetingUrl : "" },
+    isMember,
   };
 }
 
@@ -114,7 +119,7 @@ export async function getProject(viewerId: string | null, id: string, prisma: Db
     // The chat is for members only.
     conversationId: summary.isMember ? p.conversationId : null,
     posts: posts.map((x) => ({ id: x.id, body: x.body, createdAt: x.createdAt.toISOString(), author: x.author, replies: x._count.replies })),
-    events: upcoming.filter((e) => e.startsAt.getTime() + e.minutes * 60_000 > Date.now()).map(toEvent),
+    events: upcoming.filter((e) => !isOver(e)).map((e) => ({ ...toEvent(e), meetingUrl: summary.isMember ? e.meetingUrl : "" })),
     people: p.members.map((m) => ({ id: m.user.id, name: m.user.name, city: m.user.city, skill: m.skill, initiator: m.user.id === p.initiatorId })),
   };
 }
@@ -138,13 +143,19 @@ export async function joinProject(userId: string, projectId: string, input: { sk
   const p = await prisma.riseProject.findUnique({ where: { id: projectId }, select: { id: true, name: true, initiatorId: true, conversationId: true } });
   if (!p) throw notFound("Projet introuvable.");
   if (await memberOf(prisma, projectId, userId)) return { ok: true };
-  return prisma.$transaction(async (tx) => {
-    await tx.riseMember.create({ data: { projectId, userId, skill: input.skill ?? "" } });
-    if (p.conversationId) await joinCommunityGroup(tx, p.conversationId, userId);
-    const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
-    await pushNotifications(tx, [{ userId: p.initiatorId, actor: me.name, key: "riseJoined", params: { title: p.name }, href: `/rise-up/${projectId}`, icon: "users", tone: "accent" }]);
-    return { ok: true };
-  });
+  try {
+    return await prisma.$transaction(async (tx) => {
+      await tx.riseMember.create({ data: { projectId, userId, skill: input.skill ?? "" } });
+      if (p.conversationId) await joinCommunityGroup(tx, p.conversationId, userId);
+      const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+      await pushNotifications(tx, [{ userId: p.initiatorId, actor: me.name, key: "riseJoined", params: { title: p.name }, href: `/rise-up/${projectId}`, icon: "users", tone: "accent" }]);
+      return { ok: true };
+    });
+  } catch (e) {
+    // Two taps on « Rejoindre » at once: the second one finds the member already there.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { ok: true };
+    throw e;
+  }
 }
 
 export async function leaveProject(userId: string, projectId: string, prisma: Db = db) {
@@ -183,14 +194,15 @@ export async function getThread(viewerId: string | null, projectId: string, post
 
 /* Events */
 
-export async function createEvent(userId: string, projectId: string, input: { title: string; agenda: string; startsAt: string; minutes: number; meetingUrl?: string; notify: boolean }, prisma: Db = db) {
+export async function createEvent(userId: string, projectId: string, input: { title: string; agenda: string; startsAt: string; minutes: number; meetingUrl: string; notify: boolean }, prisma: Db = db) {
   if (!(await memberOf(prisma, projectId, userId))) throw forbidden("Seuls les membres du projet programment un événement.");
   const startsAt = new Date(input.startsAt);
   if (Number.isNaN(startsAt.getTime()) || startsAt.getTime() < Date.now()) throw new DomainError("past", "Choisis une date à venir.", 400, "startsAt");
   return prisma.$transaction(async (tx) => {
     const p = await tx.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { name: true, members: { select: { userId: true, user: { select: { timeZone: true } } } } } });
     const e = await tx.riseEvent.create({
-      data: { projectId, createdById: userId, title: input.title, agenda: input.agenda, startsAt, minutes: input.minutes, meetingUrl: input.meetingUrl || jitsiRoom() },
+      // « Prévenir les membres » décoché : ni notification maintenant, ni rappel une heure avant.
+      data: { projectId, createdById: userId, title: input.title, agenda: input.agenda, startsAt, minutes: input.minutes, meetingUrl: input.meetingUrl, remind: input.notify },
     });
     if (input.notify) {
       await pushNotifications(
@@ -202,13 +214,53 @@ export async function createEvent(userId: string, projectId: string, input: { ti
   });
 }
 
+/**
+ * Opens a room in the project's channel: a video call that starts now, on the member's Google Meet link.
+ * The other members are told at once. One room at a time per project.
+ */
+export async function openRoom(userId: string, projectId: string, input: { title?: string; meetingUrl: string }, prisma: Db = db) {
+  if (!(await memberOf(prisma, projectId, userId))) throw forbidden("Seuls les membres du projet ouvrent un salon.");
+  return prisma.$transaction(async (tx) => {
+    // The project row is locked: two members opening a room at the same moment get one room.
+    await tx.$queryRaw`SELECT 1 FROM "RiseProject" WHERE "id" = ${projectId} FOR UPDATE`;
+    const now = new Date();
+    const recent = await tx.riseEvent.findMany({ where: { projectId, endedAt: null, startsAt: { lte: now, gte: new Date(now.getTime() - 6 * 3600_000) } }, select: { startsAt: true, minutes: true, endedAt: true } });
+    if (recent.some((e) => isLive(e, now.getTime()))) throw new DomainError("room_open", "Un salon est déjà ouvert dans ce canal. Rejoins-le.", 409);
+    const p = await tx.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { name: true, members: { select: { userId: true } } } });
+    const title = input.title || "Salon de discussion";
+    const e = await tx.riseEvent.create({ data: { projectId, createdById: userId, title, agenda: "", startsAt: now, minutes: ROOM_MINUTES, meetingUrl: input.meetingUrl, remind: false } });
+    await pushNotifications(
+      tx,
+      p.members.filter((m) => m.userId !== userId).map((m) => ({ userId: m.userId, actor: p.name, key: "roomLive", params: { title }, href: `/rise-up/${projectId}/evenements/${e.id}`, icon: "radio", tone: "accent" })),
+    );
+    return { id: e.id };
+  });
+}
+
+/** Closes a live room or event before its planned end. Its author and the project's initiator may do it. */
+export async function closeRoom(userId: string, projectId: string, eventId: string, prisma: Db = db) {
+  const e = await prisma.riseEvent.findUnique({ where: { id: eventId }, select: { projectId: true, createdById: true, startsAt: true, minutes: true, endedAt: true, project: { select: { initiatorId: true } } } });
+  if (!e || e.projectId !== projectId) throw notFound("Événement introuvable.");
+  if (e.createdById !== userId && e.project.initiatorId !== userId) throw forbidden("Seul son auteur ou l’initiateur du projet ferme un salon.");
+  if (!isLive(e)) throw new DomainError("not_live", "Ce salon n’est pas en cours.", 409);
+  await prisma.riseEvent.updateMany({ where: { id: eventId, endedAt: null }, data: { endedAt: new Date() } });
+  return { ok: true };
+}
+
 export async function getEvent(viewerId: string | null, projectId: string, eventId: string, prisma: Db = db) {
-  const e = await prisma.riseEvent.findUnique({ where: { id: eventId }, select: { ...eventSelect, createdBy: { select: { id: true, name: true } } } });
+  const e = await prisma.riseEvent.findUnique({ where: { id: eventId }, select: { ...eventSelect, createdBy: { select: { id: true, name: true } }, project: { select: { name: true, initiatorId: true } } } });
   if (!e || e.projectId !== projectId) throw notFound("Événement introuvable.");
   const isMember = viewerId !== null && (await memberOf(prisma, projectId, viewerId)) !== null;
   const view = toEvent(e);
   // The video link is for the project's members.
-  return { ...view, meetingUrl: isMember ? view.meetingUrl : "", isMember, createdBy: e.createdBy };
+  return {
+    ...view,
+    meetingUrl: isMember ? view.meetingUrl : "",
+    isMember,
+    ended: isOver(e),
+    canClose: view.live && viewerId !== null && (e.createdBy?.id === viewerId || e.project.initiatorId === viewerId),
+    createdBy: e.createdBy,
+  };
 }
 
 /** Upcoming events of the member's projects, for the home screen. */
@@ -219,5 +271,5 @@ export async function myUpcomingEvents(userId: string, prisma: Db = db): Promise
     orderBy: { startsAt: "asc" },
     take: 10,
   });
-  return rows.filter((e) => e.startsAt.getTime() + e.minutes * 60_000 > Date.now()).map(toEvent);
+  return rows.filter((e) => !isOver(e)).map(toEvent);
 }

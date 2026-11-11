@@ -69,11 +69,11 @@ export function EventForm({ projectId, projectName, others }: { projectId: strin
           </div>
         </fieldset>
         <TextArea id="agenda" name="agenda" label={t("agenda")} rows={3} maxLength={600} placeholder={t("agendaPlaceholder")} error={fieldError("agenda")} />
-        <TextField id="meetingUrl" name="meetingUrl" type="url" label={t("url")} placeholder="https://" hint={t("urlHint")} error={fieldError("meetingUrl")} />
+        <TextField id="meetingUrl" name="meetingUrl" type="url" inputMode="url" label={t("url")} placeholder="meet.google.com/abc-defg-hij" hint={t("urlHint")} error={fieldError("meetingUrl")} />
         {others > 0 && (
           <Checkbox checked={notify} onChange={(e) => setNotify(e.target.checked)}>
-            <b>{t("notify", { count: others })}</b>
-            <span className="block text-[13px] text-muted">{t("notifyHint")}</span>
+            <b>{t("notify")}</b>
+            <span className="block text-[13px] text-muted">{t("notifyHint", { count: others })}</span>
           </Checkbox>
         )}
         {error && !["title", "startsAt", "agenda", "meetingUrl"].includes(error.field ?? "") && (

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isMeetLink, normalizeMeetLink, sessionBucket } from "../mentoring";
+import { riseEventSchema, riseRoomSchema } from "../schemas";
 
 describe("lien Google Meet du mentor", () => {
   it("accepte un lien meet.google.com, avec ou sans https://", () => {
@@ -30,3 +31,17 @@ describe("historique des séances", () => {
   });
 });
 
+
+describe("lien Google Meet d’un événement ou d’un salon Rise-Up", () => {
+  const room = { meetingUrl: "meet.google.com/abc-defg-hij" };
+
+  it("est obligatoire et complété avec https://", () => {
+    expect(riseRoomSchema.parse(room).meetingUrl).toBe("https://meet.google.com/abc-defg-hij");
+    expect(riseRoomSchema.safeParse({ meetingUrl: "" }).success).toBe(false);
+  });
+
+  it("refuse Jitsi et les autres services", () => {
+    expect(riseRoomSchema.safeParse({ meetingUrl: "https://meet.jit.si/kabad" }).success).toBe(false);
+    expect(riseEventSchema.safeParse({ title: "Point", agenda: "Avancement", startsAt: "2026-12-01T10:00:00Z", minutes: 30, meetingUrl: "https://zoom.us/j/1" }).success).toBe(false);
+  });
+});
