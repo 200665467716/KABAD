@@ -8,6 +8,7 @@
  */
 import { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
+import { avatarUrl } from "@/lib/avatar";
 import { attachmentProblem, groupPhotoProblem, safeFileName, sniffMime, type AttachmentKind } from "@/lib/attachments";
 import { DomainError, forbidden, notFound } from "./errors";
 import { pushNotifications } from "./notifications";
@@ -71,7 +72,7 @@ export async function listConversations(userId: string, prisma: Db = db): Promis
       where: { members: { some: { userId } } },
       orderBy: { lastMessageAt: "desc" },
       include: {
-        members: { include: { user: { select: { id: true, name: true } } } },
+        members: { include: { user: { select: { id: true, name: true, photoAt: true } } } },
         messages: { orderBy: { createdAt: "desc" }, take: 1, include: { author: { select: { name: true } } } },
       },
     }),
@@ -87,7 +88,8 @@ export async function listConversations(userId: string, prisma: Db = db): Promis
       kind: c.kind,
       title: c.kind === "GROUP" ? (c.name ?? "Groupe") : (other?.name ?? "Conversation"),
       theme: c.theme,
-      photo: photoUrl(c),
+      // A group shows its own photo; a direct conversation shows the other member's.
+      photo: other ? avatarUrl(other) : photoUrl(c),
       otherId: other?.id ?? null,
       memberCount: c.members.length,
       isOwner: c.createdById === userId,
@@ -158,9 +160,11 @@ export async function getConversation(userId: string, conversationId: string, op
   const c = await prisma.conversation.findUniqueOrThrow({
     where: { id: conversationId },
     include: {
-      members: { include: { user: { select: { id: true, name: true, role: true, city: true } } }, orderBy: { joinedAt: "asc" } },
-      testApp: { select: { id: true } },
+      members: { include: { user: { select: { id: true, name: true, role: true, city: true, photoAt: true } } }, orderBy: { joinedAt: "asc" } },
+      // T4: the testers' group shows the tasks to tick and the install link.
+      testApp: { select: { id: true, url: true, steps: true, platforms: true, ownerId: true, participants: { where: { userId }, select: { doneSteps: true } } } },
       project: { select: { id: true } },
+      team: { select: { hackathonId: true } },
     },
   });
   const rows = await prisma.message.findMany({
@@ -180,10 +184,13 @@ export async function getConversation(userId: string, conversationId: string, op
     title: c.kind === "GROUP" ? (c.name ?? "Groupe") : (other?.name ?? "Conversation"),
     theme: c.theme,
     photo: photoUrl(c),
-    other: other ? { id: other.id, name: other.name, role: other.role, city: other.city } : null,
+    other: other ? { id: other.id, name: other.name, role: other.role, city: other.city, photo: avatarUrl(other) } : null,
     isOwner: c.createdById === userId,
-    linked: c.testApp ? { kind: "test", id: c.testApp.id } : c.project ? { kind: "rise", id: c.project.id } : null,
-    members: c.members.map((x) => ({ id: x.user.id, name: x.user.name, owner: x.role === "OWNER" })),
+    linked: c.testApp ? { kind: "test", id: c.testApp.id } : c.project ? { kind: "rise", id: c.project.id } : c.team ? { kind: "team", id: c.team.hackathonId } : null,
+    test: c.testApp
+      ? { id: c.testApp.id, url: c.testApp.url, steps: c.testApp.steps, platforms: c.testApp.platforms, ownerId: c.testApp.ownerId, doneSteps: c.testApp.participants[0]?.doneSteps ?? null }
+      : null,
+    members: c.members.map((x) => ({ id: x.user.id, name: x.user.name, owner: x.role === "OWNER", photo: avatarUrl(x.user) })),
     lastReadAt: m.lastReadAt.toISOString(),
     hasMore: rows.length > limit,
     messages: rows.slice(0, limit).reverse().map((row) => masked(toChat(row), mine)),
@@ -279,10 +286,10 @@ export async function areContacts(a: string, b: string, prisma: Db | Prisma.Tran
 export async function listContacts(userId: string, prisma: Db = db) {
   const rows = await prisma.contact.findMany({
     where: { userId },
-    include: { contact: { select: { id: true, name: true, city: true, role: true, stack: true } } },
+    include: { contact: { select: { id: true, name: true, city: true, role: true, stack: true, photoAt: true } } },
     orderBy: { contact: { name: "asc" } },
   });
-  return rows.map((r) => r.contact);
+  return rows.map(({ contact: { photoAt, ...c } }) => ({ ...c, photo: avatarUrl({ id: c.id, photoAt }) }));
 }
 
 export async function listInvitations(userId: string, prisma: Db = db) {
@@ -396,9 +403,10 @@ export async function answerInvitation(userId: string, invitationId: string, acc
 
 /* Private groups */
 
-/** The group of an app to test or of a Rise-Up project follows it: its members change only from there. */
+/** The group of an app to test, of a Rise-Up project or of a hackathon team follows it: its members change only from there. */
 async function assertPrivateGroup(prisma: Db | Prisma.TransactionClient, conversationId: string) {
-  const c = await prisma.conversation.findUnique({ where: { id: conversationId }, select: { testApp: { select: { id: true } }, project: { select: { id: true } } } });
+  const c = await prisma.conversation.findUnique({ where: { id: conversationId }, select: { testApp: { select: { id: true } }, project: { select: { id: true } }, team: { select: { id: true } } } });
+  if (c?.team) throw new DomainError("community_group", "Ce groupe est la discussion d’une équipe de hackathon : on le rejoint ou on le quitte depuis l’équipe.", 409);
   if (c?.testApp) throw new DomainError("community_group", "Ce groupe suit l’application à tester : on le rejoint ou on le quitte depuis l’annonce.", 409);
   if (c?.project) throw new DomainError("community_group", "Ce groupe suit le projet Rise-Up : on le rejoint ou on le quitte depuis le projet.", 409);
 }
@@ -586,7 +594,7 @@ export async function leaveGroup(userId: string, conversationId: string, prisma:
 }
 
 /*
- * Community groups: the chat of an Africa Rise-Up project or of an app's testers.
+ * Community groups: the chat of an Africa Rise-Up project, of an app's testers or of a hackathon team.
  * Members join by joining the project or the test, not through contacts, so the size limit of private groups does not apply.
  */
 
@@ -614,6 +622,18 @@ export async function joinCommunityGroup(tx: Prisma.TransactionClient, conversat
 export async function leaveCommunityGroup(tx: Prisma.TransactionClient, conversationId: string, userId: string) {
   const { count } = await tx.conversationMember.deleteMany({ where: { conversationId, userId } });
   if (count) await notify(tx, { t: "conversation", conversationId, recipients: [userId] });
+}
+
+/** The group passes to another of its members: a hackathon team whose captain left. */
+export async function handOverCommunityGroup(tx: Prisma.TransactionClient, conversationId: string, ownerId: string) {
+  await tx.conversationMember.updateMany({ where: { conversationId, role: "OWNER" }, data: { role: "MEMBER" } });
+  await tx.conversationMember.updateMany({ where: { conversationId, userId: ownerId }, data: { role: "OWNER" } });
+  await tx.conversation.update({ where: { id: conversationId }, data: { createdById: ownerId } });
+}
+
+/** The group disappears with what it followed: a hackathon team left by its last member. */
+export async function closeCommunityGroup(tx: Prisma.TransactionClient, conversationId: string) {
+  await tx.conversation.deleteMany({ where: { id: conversationId } });
 }
 
 /* Reports and blocks */

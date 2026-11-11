@@ -62,6 +62,14 @@ export function groupPhotoProblem(mime: string | null, size: number): string | n
   return null;
 }
 
+/** A profile photo follows the same limits as a group photo: an image already reduced by the browser. */
+export function profilePhotoProblem(mime: string | null, size: number): string | null {
+  if (size === 0) return "Le fichier est vide.";
+  if (!mime || !mime.startsWith("image/")) return "Ta photo est une image PNG, JPEG ou WebP.";
+  if (size > GROUP_PHOTO_MAX_BYTES) return "Ta photo fait 300 Ko au plus.";
+  return null;
+}
+
 /** A file name safe to show and to send back in a download header. */
 export function safeFileName(name: string, mime: string): string {
   const ext: Record<string, string> = { "application/pdf": "pdf", "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "m4a" };

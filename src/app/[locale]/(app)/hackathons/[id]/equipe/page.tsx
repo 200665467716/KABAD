@@ -6,9 +6,11 @@ import { getFormatter, getLocale, getTranslations } from "next-intl/server";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink } from "@/components/ui/Button";
 import { Alert, Avatar, Badge, Card, Overline, Tag } from "@/components/ui/Display";
+import { ActionButton } from "@/components/features/hackathons/ActionButton";
+import { TeamDiscussionButton } from "@/components/features/hackathons/TeamDiscussionButton";
 import { TeamPanel } from "@/components/features/hackathons/TeamPanel";
 import { redirect } from "@/i18n/navigation";
-import { initials } from "@/lib/format";
+import { initials, teamTitle } from "@/lib/format";
 import { getHackathon } from "@/server/hackathons";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
@@ -38,13 +40,13 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <>
-      <TopBar back={`/hackathons/${id}`} title={team.solo ? t("titleSolo") : t("title")} />
+      <TopBar back={`/hackathons/${id}`} title={team.solo ? t("titleSolo") : t("title")} actions={team.solo ? undefined : <TeamDiscussionButton teamId={team.id} conversationId={team.conversationId} label={t("discussion")} />} />
       <Page narrow>
         <Card featured className="gap-3">
           <div className="flex items-center gap-3">
             <Avatar initials={initials(team.name)} size="lg" square tone="brand" />
             <div className="grid min-w-0">
-              <h2 className="truncate font-display text-lg font-extrabold">{team.name}</h2>
+              <h2 className="truncate font-display text-lg font-extrabold">{team.solo ? team.name : teamTitle(team.name, t("teamWord"))}</h2>
               <span className="text-[13px] text-muted">{team.solo ? h.title : t("count", { title: h.title, count: team.members.length, max: h.teamMax })}</span>
             </div>
           </div>
@@ -89,10 +91,23 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
                 {m.skill && <Tag>{m.skill}</Tag>}
               </li>
             ))}
+            {/* H3: teammates the captain invited, until they answer. */}
+            {team.invites.map((i) => (
+              <li key={i.id} className="flex items-center gap-3 px-3.5 py-3">
+                <Avatar initials={initials(i.user.name)} tone="neutral" />
+                <span className="grid min-w-0 flex-1">
+                  <b className="truncate">{i.user.name}</b>
+                  <span className="truncate text-[13px] text-muted">{t("inviteSent")}</span>
+                </span>
+                <ActionButton url={`/api/team-requests/${i.id}`} method="DELETE" variant="ghost" size="sm">
+                  {t("inviteCancel")}
+                </ActionButton>
+              </li>
+            ))}
           </ul>
         </section>
 
-        <TeamPanel team={team} meId={user.id} hackathonId={id} canChange={canChange} full={team.members.length >= h.teamMax} />
+        <TeamPanel team={team} meId={user.id} hackathonId={id} canChange={canChange} full={team.members.length >= h.teamMax} placesLeft={Math.max(0, h.teamMax - team.members.length - team.invites.length)} />
       </Page>
       {(canSubmit || team.submission) && (
         <ActionBar>

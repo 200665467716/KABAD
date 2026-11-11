@@ -7,6 +7,7 @@ import { Page, TopBar } from "@/components/shell/TopBar";
 import { Alert } from "@/components/ui/Display";
 import { RegisterForm } from "@/components/features/hackathons/RegisterForm";
 import { redirect } from "@/i18n/navigation";
+import { avatarUrl } from "@/lib/avatar";
 import { getHackathon } from "@/server/hackathons";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
@@ -39,7 +40,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       {top}
-      <RegisterForm h={h} />
+      <RegisterForm h={h} me={{ name: user.name, photo: avatarUrl(user) }} />
     </>
   );
 }

@@ -169,7 +169,7 @@ Le canevas « KABAD — Refonte » a évolué : nouvelle landing page, écrans d
 
 - [x] Landing page L1 (7 novembre).
 - [x] Lot 1, socle et règles : mot de passe, code e-mail à 10 min, focus, erreurs, désactivé, feuilles de confirmation, consentement, squelettes, notifications, A2e, A3e, A7e.
-- [ ] Lots 2 à 4 : écrans absents (M2, T4, discussion d'équipe, photo de groupe), parcours à reprendre, textes.
+- [x] Lots 2 à 4 : écrans absents (M2, T4, discussion d'équipe, photo de groupe), parcours à reprendre, textes (11 novembre). Restent l'accueil B2, le profil P1 et « Paramètres », les états vides et l'écran hors connexion.
 
 ## Mise à jour du 11 novembre (branche `dev/modifications`)
 
@@ -186,8 +186,23 @@ Décisions du jour (Emmerson) : Google Meet pour le mentorat seulement ; genre s
 - [x] Messagerie : non-lus des pièces jointes, blocage dans un groupe commun, gros groupes (notifications par lots), vidéo MP4 refusée comme note vocale, invitations simultanées ; photo et renommage des groupes ; maquettes MS1, MS3, MS5, A6.
 - [x] Mentorat : fiche du mentor M2 séparée du calendrier, informations du badge sur le profil public, créneaux pris barrés (M3), « Demandes reçues » dans l'en-tête (M1), badge en puces (B1) ; réservation à 30 jours, pas deux séances à la même heure, retrait de badge qui prévient les devs, plages sans chevauchement.
 - [ ] Logo de la CADEV dans le bandeau de la landing : fichier du logo à fournir.
-- [ ] Encore ouverts côté maquettes (hors tests d'apps et hackathons, mis de côté) : accueil B2, profil P1 et écran « Paramètres », plages en pastilles (M8), états vides et écran hors connexion, code e-mail en 6 cases.
+- [ ] Encore ouverts côté maquettes : accueil B2, profil P1 et écran « Paramètres », états vides et écran hors connexion.
 - Tests : 41 unitaires, 67 d'intégration, 111 e2e.
+
+## Mise à jour du 11 novembre au soir (branche `dev/main`)
+
+Les manques relevés dans `docs/etat-et-plan-de-test.md` pour l'inscription, les tests d'apps, Africa Rise-Up, les hackathons, le mentorat et la messagerie sont traités. Le salon audio intégré reste retiré (D3).
+
+- [x] Inscription : code e-mail en 6 cases (A3, A3e), carrés d'icône en A3 et A8, un seul œil pour les deux champs en A9.
+- [x] Tests d'apps : écran T4 dans le groupe de testeurs (consignes épinglées à cocher, « Installer l'app », « auteur de l'app », « Joindre une capture », « Écrire un retour… ») ; formulaire T3 avec une seule zone pour les tâches et 10 min par défaut ; « 1 testeur », « 2 tâches sur 3 faites ».
+- [x] Africa Rise-Up : ombre vedette sur le projet en direct, textes des champs de R3.
+- [x] Hackathons : organisation en 3 étapes (H6, H7 avec « Pas de prix pour ce hackathon », H8 instructeurs, puis « Proposer le hackathon ») ; discussion de chaque équipe dans la messagerie (H4) ; dépôt vérifié public à l'envoi et `https://` ajouté tout seul (H5, H5e) ; invitation de coéquipiers par le chef d'équipe et « Demander » sur chaque équipe (H3).
+- [x] Mentorat : plages en pastilles (M8) ; note de la séance par le dev, de 1 à 5, une fois, avec la moyenne sur la fiche du mentor (sans maquette, à faire relire).
+- [x] Messagerie : confirmation avant de retirer un membre d'un groupe ; photo de profil des membres.
+- [x] Correction : sur téléphone, un champ de date rempli élargissait la page à l'étape 1 de « Organiser ».
+- [ ] À trancher : champs en plus de T3 (présentation, objectif, questions de contrôle) et de H6 (clôture, niveau, technos), gardés pour l'instant.
+- Migrations : `photo_de_profil`, `discussion_et_invitations_d_equipe`, `evaluation_des_seances`.
+- Tests : 48 unitaires, 77 d'intégration, 112 e2e.
 
 ## P1 — Les « Must » manquants et Africa Rise-Up (objectif : 11 novembre)
 

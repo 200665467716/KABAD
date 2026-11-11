@@ -11,6 +11,7 @@ import { BookingSummary } from "@/components/features/mentoring/BookingSummary";
 import { orNotFound } from "@/server/messaging";
 import { getBooking } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
+import { RateSession, Stars } from "./RateSession";
 import { CopyLink, SessionActions } from "./SessionActions";
 import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
@@ -82,6 +83,19 @@ async function SessionData({ params }: { params: Promise<{ id: string }> }) {
               <CopyLink url={b.meetingUrl} />
             </div>
           </section>
+        )}
+
+        {/* After the session: the dev rates it once; both then read the mark. */}
+        {b.canRate && <RateSession id={b.id} mentor={first} />}
+        {b.rating !== null && (
+          <Card className="gap-2">
+            <Overline as="h3">{mentor ? t("ratingFrom", { name: first }) : t("ratingMine")}</Overline>
+            <p className="flex items-center gap-2 font-extrabold text-brand-text">
+              <Stars value={b.rating} />
+              <span className="text-ink">{t("ratingValue", { rating: b.rating })}</span>
+            </p>
+            {b.ratingComment && <p className="text-sm whitespace-pre-line">« {b.ratingComment} »</p>}
+          </Card>
         )}
 
         {b.status === "PENDING" && !mentor && (

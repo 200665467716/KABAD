@@ -18,6 +18,8 @@ export type MemberCard = {
   level: Level;
   /** Holds the mentor badge granted by the KABAD team. */
   verified: boolean;
+  /** Address of the profile photo, or null: the screens then show the initials. */
+  photo: string | null;
 };
 
 export type Recommendation = MemberCard & { why: string };
@@ -62,6 +64,8 @@ export type MentorDetail = MentorCard & {
   company: string | null;
   experience: string;
   links: { github: string | null; linkedin: string | null; portfolio: string | null };
+  /** Average of the marks given by the devs after their sessions; null while nobody has rated. */
+  rating: { average: number; count: number } | null;
   /** Free slots of the next 30 days. */
   slots: string[];
   /** Slots already booked by someone: shown crossed out, not selectable. */
@@ -85,6 +89,11 @@ export type BookingView = {
   mentor: BookingPerson;
   mentee: BookingPerson;
   iAm: "MENTOR" | "MENTEE";
+  /** The mark the dev gave after the session (1 to 5) and their word for the mentor; null while not rated. */
+  rating: number | null;
+  ratingComment: string | null;
+  /** True for the dev, once the confirmed session is over and not rated yet. */
+  canRate: boolean;
 };
 
 export type AvailabilityView = { timeZone: string; meetingUrl: string; ranges: WeeklyRange[]; blocked: Array<{ day: string; reason: string | null }> };
@@ -153,6 +162,10 @@ export type TeamView = {
   captainId: string;
   members: TeamPerson[];
   requests: Array<{ id: string; user: { id: string; name: string; city: string }; createdAt: string }>;
+  /** Members the captain invited, who have not answered yet. Seen by the captain only. */
+  invites: Array<{ id: string; user: { id: string; name: string; city: string }; createdAt: string }>;
+  /** The team's discussion in the messaging; null for a solo entry or a team created before discussions existed. */
+  conversationId: string | null;
   submission: { projectName: string; repoUrl: string; demoUrl: string | null; explanation: string; updatedAt: string } | null;
 };
 
@@ -168,6 +181,8 @@ export type HackathonDetail = HackathonSummary & {
   amJuror: boolean;
   myTeam: TeamView | null;
   openTeams: OpenTeam[];
+  /** Teams whose captain invited the viewer, who has not answered yet. */
+  invitations: Array<{ id: string; team: string; captain: string; members: number }>;
   published: boolean;
   canEdit: boolean;
 };

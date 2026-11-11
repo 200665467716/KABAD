@@ -96,7 +96,14 @@
       "tooLong": "Un message fait {max} caractères au plus.",
       "voiceSending": "Message vocal…",
       "uploadFailed": "Le fichier n’a pas été envoyé. Réessaie.",
-      "groupInfo": "Infos du groupe"
+      "groupInfo": "Infos du groupe",
+      "pinned": "Épinglé · consignes",
+      "pinnedLabel": "Consignes épinglées",
+      "installApp": "Installer l’app",
+      "appAuthor": "{name} · auteur de l’app",
+      "attachCapture": "Joindre une capture",
+      "placeholderTest": "Écrire un retour…",
+      "taskError": "La tâche n’a pas été enregistrée. Réessaie."
     },
     "add": {
       "title": "Ajouter des participants",
@@ -134,7 +141,11 @@
       "photoSending": "Envoi…",
       "noTheme": "Aucun thème",
       "save": "Enregistrer",
-      "saving": "Enregistrement…"
+      "saving": "Enregistrement…",
+      "removeTitle": "Retirer {name} du groupe ?",
+      "removeText": "{name} ne verra plus les messages du groupe. Tu pourras l’ajouter à nouveau.",
+      "openTeam": "Voir mon équipe",
+      "linkedTeam": "Ce groupe est la discussion de ton équipe de hackathon : on y entre en rejoignant l’équipe et on en sort en la quittant."
     },
     "group": {
       "metaTitle": "Nouveau groupe",

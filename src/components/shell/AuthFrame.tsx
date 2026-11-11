@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Band } from "../ui/Band";
-import { Icon } from "../ui/Icon";
+import { Icon, type IconName } from "../ui/Icon";
 import { LogoMark } from "../ui/Logo";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
@@ -16,6 +16,7 @@ export function AuthFrame({
   steps = 5,
   skip,
   heading,
+  icon,
   title,
   lead,
   children,
@@ -28,6 +29,8 @@ export function AuthFrame({
   skip?: string;
   /** The word in the indigo header: "Inscription", "Ton profil", "Connexion"… */
   heading?: ReactNode;
+  /** The indigo square above the title (A3, A8). Without it, a screen outside the steps shows the logo. */
+  icon?: IconName;
   title: ReactNode;
   lead?: ReactNode;
   children: ReactNode;
@@ -62,7 +65,13 @@ export function AuthFrame({
           <Band />
         </header>
         <main className="grid flex-1 content-start gap-6 px-4 pt-6 pb-4 lg:px-8">
-          {!step && <LogoMark size={56} />}
+          {icon ? (
+            <span className="grid size-16 place-items-center rounded-lg bg-brand text-on-brand">
+              <Icon name={icon} className="size-[30px]" />
+            </span>
+          ) : (
+            !step && <LogoMark size={56} />
+          )}
           <div className="grid gap-2">
             <h1 className="font-display text-2xl font-extrabold uppercase">{title}</h1>
             {lead && <p className="text-[15px] leading-[22px] text-[var(--slate-deep)] dark:text-muted">{lead}</p>}

@@ -12,12 +12,13 @@ import { api, ApiError } from "@/lib/api";
 import type { Level } from "@/lib/domain-types";
 import { COUNTRIES, GOALS, LEVELS, TECH_CHOICES } from "@/lib/schemas";
 import { zoneChoices, zoneCity } from "@/lib/time-zones";
+import { ProfilePhoto } from "./ProfilePhoto";
 
 type Goal = (typeof GOALS)[number];
 type Initial = { country: string; city: string; level: Level; headline: string; bio: string; profileLink: string; stack: string[]; goals: string[]; gender: "FEMALE" | "MALE" | null; timeZone: string };
 const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
-export function ProfileEditor({ initial }: { initial: Initial }) {
+export function ProfileEditor({ initial, name, photo }: { initial: Initial; name: string; photo: string | null }) {
   const t = useTranslations("profile.edit");
   const tl = useTranslations("profile.levels");
   const tg = useTranslations("auth.goals");
@@ -59,6 +60,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
   return (
     <form onSubmit={submit} noValidate className="contents">
       <Page narrow>
+        <ProfilePhoto name={name} initial={photo} />
         <div className="grid grid-cols-2 gap-2.5">
           <Select id="country" name="country" label={t("country")} defaultValue={initial.country}>
             <option value="">{t("countryPlaceholder")}</option>

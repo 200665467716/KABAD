@@ -3,6 +3,7 @@ import { INVITATION_MAX_LENGTH } from "./invitation";
 import { isMeetLink, MEET_LINK_MESSAGE, normalizeMeetLink } from "./mentoring";
 import { PASSWORD_NO_DIGIT, PASSWORD_TOO_SHORT, passwordRules } from "./password";
 import { MAX_PRIZES } from "./prize";
+import { normalizeRepoUrl, REPO_URL } from "./repo";
 
 /** A new password: 8 characters at least, with at least one digit (src/lib/password.ts). */
 function newPassword() {
@@ -131,6 +132,8 @@ export const bookingSchema = z.object({
 });
 
 export const answerBookingSchema = z.object({ accept: z.boolean(), reason: z.string().trim().max(300).optional() });
+export const RATING_COMMENT_MAX = 300;
+export const rateSessionSchema = z.object({ rating: z.number().int().min(1, "Choisis une note de 1 à 5.").max(5, "Choisis une note de 1 à 5."), comment: z.string().trim().max(RATING_COMMENT_MAX, "300 caractères au plus.").optional() });
 
 const minuteOfDay = z.number().int().min(0).max(24 * 60);
 export const availabilitySchema = z.object({
@@ -167,7 +170,8 @@ export const SUBMISSION_MAX = 800;
 
 export const submissionSchema = z.object({
   projectName: trimmed(2, 60, "Donne le nom du projet.", "60 caractères au plus."),
-  repoUrl: z.string().trim().regex(/^https:\/\/(github\.com|gitlab\.com|codeberg\.org)\/[\w.-]+\/[\w.-]+\/?$/, "Indique l’adresse d’un dépôt public GitHub, GitLab ou Codeberg."),
+  // "github.com/equipe/projet" is completed with https:// before it is checked (H5).
+  repoUrl: z.string().transform(normalizeRepoUrl).pipe(z.string().regex(REPO_URL, "Indique l’adresse d’un dépôt public GitHub, GitLab ou Codeberg.")),
   demoUrl: z.union([z.literal(""), z.url({ protocol: /^https$/, message: "La démo doit être une adresse https." }).max(200)]).optional(),
   explanation: trimmed(40, SUBMISSION_MAX, "Décris ce que fait ta solution (40 caractères au moins).", `${SUBMISSION_MAX} caractères au plus.`),
   teamAgrees: z.literal(true, "Confirme que toute l’équipe a relu la soumission."),
@@ -180,12 +184,15 @@ export const registerSchema = z.discriminatedUnion("mode", [
     teamName: trimmed(2, 40, "Donne un nom à ton équipe.", "40 caractères au plus."),
     lookingFor: z.string().trim().max(80).optional(),
     skill: z.string().trim().max(30).optional(),
+    // Contacts invited when the team is created (H3).
+    invite: z.array(id).max(9).default([]),
     rules: z.literal(true, "Accepte le règlement du hackathon."),
   }),
   z.object({ mode: z.literal("join"), teamId: id, skill: z.string().trim().max(30).optional(), rules: z.literal(true, "Accepte le règlement du hackathon.") }),
 ]);
 
 export const answerJoinSchema = z.object({ accept: z.boolean() });
+export const teamInviteSchema = z.object({ memberIds: z.array(id).min(1, "Choisis au moins un membre.").max(9) });
 export const teamUpdateSchema = z.object({ lookingFor: z.string().trim().max(80).nullable().optional() });
 
 export const hackathonSchema = z.object({
@@ -207,6 +214,8 @@ export const hackathonSchema = z.object({
   missionText: z.string().trim().max(600).optional(),
   instructorFee: z.number().int().min(0).max(10_000_000).optional(),
   instructorCount: z.number().int().min(0).max(20).optional(),
+  // H8: the mentors the mission is offered to, chosen at the last step.
+  mentorIds: z.array(id).max(20).default([]),
 });
 
 export const missionsSchema = z.object({ mentorIds: z.array(id).min(1, "Choisis au moins un mentor.").max(20) });

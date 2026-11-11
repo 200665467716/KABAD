@@ -53,7 +53,8 @@ export function SubmissionForm({ hackathonId, heading, initial }: { hackathonId:
           <h2 className="font-display text-2xl font-extrabold uppercase">{t("heading")}</h2>
         </div>
         <TextField id="projectName" name="projectName" label={t("projectName")} defaultValue={initial?.projectName} maxLength={60} error={err("projectName")} />
-        <TextField id="repoUrl" name="repoUrl" type="url" label={t("repo")} placeholder="https://github.com/…" defaultValue={initial?.repoUrl} error={err("repoUrl")} />
+        {/* H5: "https://" may be left out, the server adds it; H5e: a private or unknown repository is refused under the field. */}
+        <TextField id="repoUrl" name="repoUrl" type="text" inputMode="url" autoCapitalize="none" spellCheck={false} label={t("repo")} placeholder="github.com/[equipe]/[projet]" defaultValue={initial?.repoUrl.replace(/^https:\/\//, "")} error={err("repoUrl")} />
         <TextField id="demoUrl" name="demoUrl" type="url" label={t("demo")} hint={t("optional")} placeholder="https://" defaultValue={initial?.demoUrl ?? ""} error={err("demoUrl")} />
         <TextArea id="explanation" label={t("explanation")} rows={5} value={explain} maxLength={SUBMISSION_MAX} onChange={(e) => setExplain(e.target.value)} counter={`${explain.length} / ${SUBMISSION_MAX}`} error={err("explanation")} />
         <Checkbox name="agree">{t("agree")}</Checkbox>

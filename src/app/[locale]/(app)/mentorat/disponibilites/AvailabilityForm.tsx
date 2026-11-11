@@ -28,6 +28,8 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
     for (const r of initial.ranges) w[r.weekday as Weekday].push({ startMin: r.startMin, endMin: r.endMin });
     return w;
   });
+  // The pill whose hours are being changed, if any (M8).
+  const [editing, setEditing] = useState<{ day: Weekday; index: number } | null>(null);
   const [blocked, setBlocked] = useState(initial.blocked.map((b) => ({ day: b.day, reason: b.reason ?? "" })));
   const [newDay, setNewDay] = useState("");
   const [newReason, setNewReason] = useState("");
@@ -40,7 +42,10 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
   // The new range never overlaps the others; a full day offers none (src/lib/slots.ts).
   const addRange = (d: Weekday) => {
     const next = suggestRange(week[d]);
-    if (next) setDay(d, [...week[d], next]);
+    if (!next) return;
+    setDay(d, [...week[d], next]);
+    // The new pill opens at once, so its hours can be set.
+    setEditing({ day: d, index: week[d].length });
   };
   const zones = zoneChoices(timeZone);
 
@@ -77,54 +82,83 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
             const on = week[d].length > 0;
             const dayName = t(`availability.weekdays.${d}`);
             return (
-              <div key={d} className="grid grid-cols-[48px_auto_minmax(0,1fr)] items-start gap-3 border-line py-2.5 [&+&]:border-t-2">
-                <span className="pt-2.5 text-sm font-extrabold">{t(`availability.short.${d}`)}</span>
+              <div key={d} className="grid grid-cols-[48px_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 border-line py-2.5 [&+&]:border-t-2">
+                <span className="text-sm font-extrabold">{t(`availability.short.${d}`)}</span>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={on}
                   aria-label={t("availability.availableOn", { day: dayName })}
-                  onClick={() => setDay(d, on ? [] : [{ startMin: 18 * 60, endMin: 20 * 60 }])}
-                  className={cn("relative mt-2 h-6.5 w-11 shrink-0 rounded-full border-2 border-line-strong", on ? "border-brand bg-brand" : "bg-raised")}
+                  onClick={() => {
+                    setEditing(null);
+                    setDay(d, on ? [] : [{ startMin: 18 * 60, endMin: 20 * 60 }]);
+                  }}
+                  className={cn("relative h-6.5 w-11 shrink-0 rounded-full border-2 border-line-strong", on ? "border-brand bg-brand" : "bg-raised")}
                 >
                   <span className={cn("absolute top-[3px] size-4 rounded-full transition-[left]", on ? "left-[21px] bg-on-brand" : "left-[3px] bg-ink")} />
                 </button>
-                <div className="grid gap-2">
+                {/* M8: each range is a pill; touching it opens its hours just below. */}
+                <div className="flex min-h-11 flex-wrap items-center justify-end gap-1.5">
                   {on ? (
                     <>
-                      {week[d].map((r, i) => (
-                        <div key={i} className="flex flex-wrap items-center gap-1.5">
-                          <select aria-label={`${dayName} ${t("availability.from")}`} value={r.startMin} onChange={(e) => setDay(d, week[d].map((x, j) => (j === i ? { ...x, startMin: Number(e.target.value) } : x)))} className="h-10 rounded-md border-2 border-line-strong bg-raised px-2 text-sm font-bold tabular">
-                            {TIMES.slice(0, -1).map((m) => (
-                              <option key={m} value={m}>
-                                {hm(m)}
-                              </option>
-                            ))}
-                          </select>
-                          <span className="text-sm text-muted">{t("availability.to")}</span>
-                          <select aria-label={`${dayName} ${t("availability.to")}`} value={r.endMin} onChange={(e) => setDay(d, week[d].map((x, j) => (j === i ? { ...x, endMin: Number(e.target.value) } : x)))} className="h-10 rounded-md border-2 border-line-strong bg-raised px-2 text-sm font-bold tabular">
-                            {TIMES.slice(1).map((m) => (
-                              <option key={m} value={m}>
-                                {m === 24 * 60 ? "24:00" : hm(m)}
-                              </option>
-                            ))}
-                          </select>
-                          <button type="button" aria-label={t("availability.removeRange", { range: `${hm(r.startMin)} – ${hm(r.endMin)}` })} onClick={() => setDay(d, week[d].filter((_, j) => j !== i))} className="inline-grid size-10 place-items-center rounded-full text-muted hover:bg-bg">
-                            <Icon name="close" size={18} />
+                      {week[d].map((r, i) => {
+                        const open = editing?.day === d && editing.index === i;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            aria-expanded={open}
+                            aria-label={t("availability.editRange", { day: dayName, range: `${hm(r.startMin)} – ${hm(r.endMin)}` })}
+                            onClick={() => setEditing(open ? null : { day: d, index: i })}
+                            className={cn("inline-flex h-9 items-center rounded-md px-2.5 text-[13px] font-extrabold tabular", open ? "bg-brand text-on-brand" : "bg-[var(--mist)] text-[var(--indigo)]")}
+                          >
+                            {hm(r.startMin)} – {r.endMin === 24 * 60 ? "24:00" : hm(r.endMin)}
                           </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {suggestRange(week[d]) && (
-                        <button type="button" onClick={() => addRange(d)} className="inline-flex h-10 items-center gap-1 justify-self-start rounded-full px-2 text-sm font-extrabold text-brand-text hover:bg-brand-soft" aria-label={t("availability.addRange", { day: dayName })}>
-                          <Icon name="plus" size={16} />
-                          {t("availability.addRange", { day: dayName })}
+                        <button type="button" onClick={() => addRange(d)} className="inline-grid size-11 place-items-center rounded-full text-ink hover:bg-bg" aria-label={t("availability.addRange", { day: dayName })}>
+                          <Icon name="plus" size={20} />
                         </button>
                       )}
                     </>
                   ) : (
-                    <span className="pt-2.5 text-sm text-muted">{t("availability.unavailable")}</span>
+                    <span className="text-[13px] font-semibold text-subtle">{t("availability.unavailable")}</span>
                   )}
                 </div>
+                {on && editing?.day === d && week[d][editing.index] && (
+                  <div className="col-span-3 flex flex-wrap items-center justify-end gap-1.5 rounded-md bg-bg p-2">
+                    <select aria-label={`${dayName} ${t("availability.from")}`} value={week[d][editing.index].startMin} onChange={(e) => setDay(d, week[d].map((x, j) => (j === editing.index ? { ...x, startMin: Number(e.target.value) } : x)))} className="h-10 rounded-md border-2 border-line-strong bg-raised px-2 text-sm font-bold tabular">
+                      {TIMES.slice(0, -1).map((m) => (
+                        <option key={m} value={m}>
+                          {hm(m)}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-sm text-muted">{t("availability.to")}</span>
+                    <select aria-label={`${dayName} ${t("availability.to")}`} value={week[d][editing.index].endMin} onChange={(e) => setDay(d, week[d].map((x, j) => (j === editing.index ? { ...x, endMin: Number(e.target.value) } : x)))} className="h-10 rounded-md border-2 border-line-strong bg-raised px-2 text-sm font-bold tabular">
+                      {TIMES.slice(1).map((m) => (
+                        <option key={m} value={m}>
+                          {m === 24 * 60 ? "24:00" : hm(m)}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={t("availability.removeRange", { range: `${hm(week[d][editing.index].startMin)} – ${hm(week[d][editing.index].endMin)}` })}
+                      onClick={() => {
+                        setDay(d, week[d].filter((_, j) => j !== editing.index));
+                        setEditing(null);
+                      }}
+                    >
+                      {t("availability.remove")}
+                    </Button>
+                    <Button variant="ink" size="sm" onClick={() => setEditing(null)}>
+                      {t("availability.done")}
+                    </Button>
+                  </div>
+                )}
               </div>
             );
           })}

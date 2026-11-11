@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
+import { CodeBoxes } from "@/components/features/auth/CodeBoxes";
 import { AuthFrame } from "@/components/shell/AuthFrame";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Display";
@@ -106,6 +107,7 @@ export function VerifyEmail({ token, email, verified }: { token: string; email: 
       back="/inscription"
       heading={t("heading")}
       step={2}
+      icon="mail"
       title={t("title")}
       lead={
         <>
@@ -133,16 +135,7 @@ export function VerifyEmail({ token, email, verified }: { token: string; email: 
         </form>
       ) : (
         <form id="verify-code" onSubmit={submitCode} noValidate className="grid gap-5">
-          <TextField
-            id="code"
-            name="code"
-            label={t("code")}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            error={codeError}
-            inputClassName="h-16 text-center font-display text-3xl tracking-[0.4em]"
-          />
+          <CodeBoxes name="code" legend={t("code")} digitLabel={(n) => t("digit", { n })} error={codeError} />
           <div className={codeError ? "grid gap-2 rounded-action border-2 border-danger bg-raised p-4" : "grid gap-2 rounded-action border-2 border-dashed border-line-strong bg-raised p-4"}>
             <p className="font-extrabold">{codeError ? t("newCode") : t("nothing")}</p>
             <p className="text-sm text-muted">{t("nothingHelp")}</p>

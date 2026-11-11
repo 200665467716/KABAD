@@ -28,6 +28,16 @@ test("l’inscription enchaîne les cinq étapes ; sans e-mail confirmé, on ne 
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
   // Step 2: the code sent by e-mail (checked in the integration tests). The member can come back to it later.
   await expect(page.getByRole("heading", { name: "Confirme ton e-mail" })).toBeVisible();
+  // A3: six boxes, one per digit; typing moves on, and a pasted code fills them all.
+  await page.getByLabel("Chiffre 1").pressSequentially("12");
+  await expect(page.getByLabel("Chiffre 2")).toHaveValue("2");
+  await expect(page.getByLabel("Chiffre 3")).toBeFocused();
+  await page.getByLabel("Chiffre 3").press("Backspace");
+  await expect(page.getByLabel("Chiffre 2")).toHaveValue("");
+  await page.getByLabel("Chiffre 1").fill("000000");
+  await expect(page.getByLabel("Chiffre 6")).toHaveValue("0");
+  await page.getByRole("button", { name: "Vérifier" }).click();
+  await expect(page.getByText("Ce code est incorrect ou a expiré.")).toBeVisible();
   await page.goto("/inscription/profil");
   await page.getByLabel("Pays").selectOption({ index: 1 });
   await page.getByLabel("Ville").fill("Accra");
@@ -96,14 +106,20 @@ test("badge mentor : la demande de Moussa est validée par l’équipe, qui la v
 test("hackathon : Aïcha demande à rejoindre l’équipe Kora, son chef l’accepte", async ({ browser }) => {
   const aicha = await signIn(browser, "aicha.kouassi@exemple.ci", "/hackathons/fintech-inclusion/participer");
   await aicha.getByRole("radio", { name: /Rejoindre une équipe/ }).check();
-  await aicha.getByRole("listitem").filter({ hasText: "Équipe Kora" }).getByRole("button", { name: /Demander/ }).click();
+  // H3: the rules first, then "Demander" on the team sends the request at once.
   await aicha.getByRole("checkbox", { name: /J’accepte/ }).check();
-  await aicha.getByRole("button", { name: "Envoyer ma demande" }).click();
+  await aicha.getByRole("listitem").filter({ hasText: "Équipe Kora" }).getByRole("button", { name: /Demander/ }).click();
   await expect(aicha.getByText("Demande envoyée.")).toBeVisible();
 
   const chidi = await signIn(browser, "chidi.okafor@exemple.ng", "/hackathons/fintech-inclusion/equipe");
   await chidi.getByRole("button", { name: "Accepter" }).first().click();
   await expect(chidi.getByText("Aïcha Kouassi")).toBeVisible();
+  // H4: the team has its discussion in the messaging; Aïcha, just accepted, is in it.
+  await chidi.getByRole("button", { name: "Discussion de l’équipe" }).click();
+  await expect(chidi.getByRole("heading", { name: "Équipe Kora" })).toBeVisible();
+  await chidi.getByRole("button", { name: "Infos du groupe" }).click();
+  await expect(chidi.getByRole("dialog").getByRole("link", { name: "Aïcha Kouassi" })).toBeVisible();
+  await expect(chidi.getByRole("dialog").getByRole("link", { name: "Voir mon équipe" })).toBeVisible();
   await aicha.context().close();
   await chidi.context().close();
 });
@@ -143,12 +159,48 @@ test("tests d’apps : rejoindre le groupe de testeurs puis cocher une étape", 
   await page.getByRole("button", { name: /Rejoindre le groupe de testeurs/ }).click();
   // Joining opens the testers' group, where the install link is shared.
   await expect(page.getByRole("heading", { name: "Testeurs TontineApp" })).toBeVisible();
+  // T4: the tasks are pinned in the group, with the install link; ticking one here is kept on the listing.
+  const pinned = page.getByRole("region", { name: "Consignes épinglées" });
+  await expect(pinned.getByRole("link", { name: "Installer l’app" })).toBeVisible();
+  await pinned.getByRole("checkbox").nth(1).check();
+  await expect(pinned.getByText(/· 1\//)).toBeVisible();
+  await expect(page.getByPlaceholder("Écrire un retour…")).toBeVisible();
   await page.goto("/tests/tontine-app");
+  await expect(page.getByRole("button", { name: /Étape 2 faite/ })).toHaveAttribute("aria-pressed", "true");
   const step = page.getByRole("button", { name: /Créer une tontine/ });
   await step.click();
   await expect(step).toHaveAttribute("aria-pressed", "true");
   await page.reload();
   await expect(page.getByRole("button", { name: /Créer une tontine/ })).toHaveAttribute("aria-pressed", "true");
+  await page.context().close();
+});
+
+test("organiser un hackathon en 3 étapes : infos, défi sans prix, instructeurs", async ({ browser }) => {
+  const page = await signIn(browser, "kossi.mensah@exemple.tg", "/hackathons/organiser");
+  const local = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 11) + "09:00";
+  await page.getByLabel("Nom du hackathon").fill("Santé connectée");
+  await page.getByLabel("Lieu").fill("Lomé");
+  await page.getByLabel("Début").fill(local(10));
+  await page.getByLabel("Fin", { exact: true }).fill(local(12));
+  await page.getByLabel("Clôture des inscriptions").fill(local(8));
+  await page.getByLabel("Technologies").fill("Web ou mobile");
+  await page.getByRole("button", { name: "Continuer" }).click();
+  // H7: the challenge, and "no prize" instead of a list of prizes.
+  await expect(page.getByRole("heading", { name: "Le défi et les prix" })).toBeVisible();
+  await page.getByLabel("Le défi proposé").fill("Aider les dispensaires à partager le dossier médical de leurs patients.");
+  await page.getByRole("checkbox", { name: "Pas de prix pour ce hackathon" }).check();
+  await expect(page.getByLabel("Prix n° 1")).toHaveCount(0);
+  await page.getByRole("button", { name: "Continuer" }).click();
+  // H8: without a fee, no mentor can be chosen; with one, "Proposer" becomes "Proposée".
+  await expect(page.getByRole("heading", { name: "Recrute des instructeurs" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Proposer la mission à/ }).first()).toBeDisabled();
+  await page.getByLabel("Rémunération par instructeur (F CFA)").fill("50000");
+  await page.getByRole("button", { name: "Proposer la mission à Awa Diop" }).click();
+  await expect(page.getByRole("button", { name: "Mission proposée à Awa Diop" })).toHaveText("Proposée");
+  await expect(page.getByText("1 proposée")).toBeVisible();
+  await page.getByRole("button", { name: "Proposer le hackathon" }).click();
+  await expect(page).toHaveURL(/\/hackathons\/sante-connectee-[0-9a-f]{6}$/);
+  await expect(page.getByText("Pas de prix pour ce hackathon.")).toBeVisible();
   await page.context().close();
 });
 

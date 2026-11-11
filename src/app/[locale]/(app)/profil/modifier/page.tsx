@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { TopBar } from "@/components/shell/TopBar";
+import { avatarUrl } from "@/lib/avatar";
 import { pageUser } from "@/server/page";
 import { ProfileEditor } from "./ProfileEditor";
 import { ScreenSkeleton } from "@/components/ui/Skeleton";
@@ -12,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 async function EditorData() {
   const u = await pageUser("/profil/modifier");
-  return <ProfileEditor initial={{ country: u.country, city: u.city, level: u.level, headline: u.headline, bio: u.bio, profileLink: u.profileLink, stack: u.stack, goals: u.goals, gender: u.gender, timeZone: u.timeZone }} />;
+  return <ProfileEditor name={u.name} photo={avatarUrl(u)} initial={{ country: u.country, city: u.city, level: u.level, headline: u.headline, bio: u.bio, profileLink: u.profileLink, stack: u.stack, goals: u.goals, gender: u.gender, timeZone: u.timeZone }} />;
 }
 
 export default async function EditProfilePage() {

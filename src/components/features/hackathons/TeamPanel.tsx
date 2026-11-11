@@ -10,15 +10,35 @@ import { api, ApiError } from "@/lib/api";
 import { initials } from "@/lib/format";
 import type { TeamView } from "@/lib/domain-types";
 import { ActionButton } from "./ActionButton";
+import { MatePicker } from "./MatePicker";
 
 /** The captain's tools: requests to join, the open call ("cherche un·e designer"), and leaving the team. */
-export function TeamPanel({ team, meId, hackathonId, canChange, full }: { team: TeamView; meId: string; hackathonId: string; canChange: boolean; full: boolean }) {
+export function TeamPanel({ team, meId, hackathonId, canChange, full, placesLeft }: { team: TeamView; meId: string; hackathonId: string; canChange: boolean; full: boolean; placesLeft: number }) {
   const t = useTranslations("hackathons.team");
   const router = useRouter();
   const captain = team.captainId === meId;
   const [editing, setEditing] = useState(false);
   const [call, setCall] = useState(team.lookingFor ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+
+  /** H3: the captain invites contacts; each of them answers from the "Participer" screen. */
+  async function invite(memberIds: string[]) {
+    setInviting(true);
+    setInviteError(null);
+    try {
+      await api(`/api/teams/${team.id}/invites`, { body: { memberIds } });
+      setPicking(false);
+      router.refresh();
+    } catch (e) {
+      setPicking(false);
+      setInviteError(e instanceof ApiError ? e.message : t("failed"));
+    } finally {
+      setInviting(false);
+    }
+  }
 
   async function saveCall() {
     setError(null);
@@ -58,6 +78,20 @@ export function TeamPanel({ team, meId, hackathonId, canChange, full }: { team: 
             </Card>
           ))}
         </section>
+      )}
+
+      {captain && !team.solo && canChange && placesLeft > 0 && (
+        <>
+          <Button variant="secondary" icon="userPlus" className="justify-self-start" onClick={() => setPicking(true)}>
+            {t("invite")}
+          </Button>
+          <MatePicker open={picking} onClose={() => setPicking(false)} exclude={[...team.members.map((m) => m.id), ...team.invites.map((i) => i.user.id), ...team.requests.map((r) => r.user.id)]} max={placesLeft} busy={inviting} onPick={(chosen) => invite(chosen.map((c) => c.id))} />
+        </>
+      )}
+      {inviteError && (
+        <Alert tone="danger" role="alert">
+          {inviteError}
+        </Alert>
       )}
 
       {!team.solo && canChange && (

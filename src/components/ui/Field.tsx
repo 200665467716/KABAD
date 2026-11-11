@@ -9,7 +9,8 @@ type Meta = { label: ReactNode; hint?: ReactNode; error?: ReactNode; counter?: R
 
 function Wrapper({ id, label, hint, error, counter, className, children }: Meta & { id: string; children: ReactNode }) {
   return (
-    <div className={cn("grid min-w-0 gap-2", className)}>
+    // One column that may shrink: a date field with a value is wider than half a phone screen, and must not widen the page.
+    <div className={cn("grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2", className)}>
       <label htmlFor={id} className="text-sm font-extrabold text-ink">
         {label}
       </label>

@@ -60,7 +60,7 @@ export function ProfileView({ profile: m, isMe, badge }: { profile: Profile; isM
       <Page narrow>
         <Card className="gap-3.5">
           <div className="flex items-center gap-3.5">
-            <Avatar initials={initials(m.name)} size="xl" tone={m.verified ? "brand" : "neutral"} />
+            <Avatar initials={initials(m.name)} src={m.photo} size="xl" tone={m.verified ? "brand" : "neutral"} />
             <div className="grid min-w-0 gap-1">
               <h1 className="font-display text-xl font-extrabold">{m.name}</h1>
               <p className="text-sm text-muted">{[badge?.jobTitle || m.headline, place, m.diaspora ? t("diaspora") : ""].filter(Boolean).join(" · ")}</p>

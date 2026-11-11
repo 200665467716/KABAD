@@ -61,6 +61,7 @@ async function MentorData({ params }: { params: Promise<{ id: string }> }) {
               {t("verified", { gender })}
             </Badge>
             <span className="text-xs font-extrabold text-brand-text">{t("sessionsHeld", { count: mentor.sessionsHeld })}</span>
+            {mentor.rating && <span className="text-xs font-extrabold text-brand-text">· {t("rating", { average: mentor.rating.average, count: mentor.rating.count })}</span>}
           </div>
           {mentor.bio && <p className="text-[15px] leading-[22px]">{mentor.bio}</p>}
           <TagList items={[...mentor.domains, ...mentor.technologies]} />

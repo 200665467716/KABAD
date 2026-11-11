@@ -6,9 +6,25 @@ import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 
 /** A password input with a button that shows or hides what is typed (screens A2, A7, A9). */
-export function PasswordField({ id, label, hint, error, labelAside, className, ...rest }: { id: string; label: ReactNode; hint?: ReactNode; error?: ReactNode; labelAside?: ReactNode } & Omit<ComponentProps<"input">, "type">) {
+/**
+ * `reveal` hands the eye to the parent: two fields then share one button (A9). With `onReveal`,
+ * this field shows the button; without it, it only follows.
+ */
+export function PasswordField({
+  id,
+  label,
+  hint,
+  error,
+  labelAside,
+  className,
+  reveal,
+  onReveal,
+  ...rest
+}: { id: string; label: ReactNode; hint?: ReactNode; error?: ReactNode; labelAside?: ReactNode; reveal?: boolean; onReveal?: () => void } & Omit<ComponentProps<"input">, "type">) {
   const t = useTranslations("auth.password");
-  const [shown, setShown] = useState(false);
+  const [own, setOwn] = useState(false);
+  const shared = reveal !== undefined;
+  const shown = shared ? reveal : own;
   return (
     <div className={cn("grid min-w-0 gap-2", className)}>
       <div className="flex items-baseline justify-between gap-3">
@@ -26,13 +42,15 @@ export function PasswordField({ id, label, hint, error, labelAside, className, .
           aria-describedby={hint || error ? `${id}-msg` : undefined}
           {...rest}
         />
-        <button type="button" onClick={() => setShown((s) => !s)} aria-label={shown ? t("hide") : t("show")} aria-pressed={shown} className="inline-grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-bg">
+        {(!shared || onReveal) && (
+        <button type="button" onClick={() => (shared ? onReveal?.() : setOwn((s) => !s))} aria-label={shared ? (shown ? t("hideBoth") : t("showBoth")) : shown ? t("hide") : t("show")} aria-pressed={shown} className="inline-grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-bg">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
             <circle cx="12" cy="12" r="3" />
             {shown && <path d="M4 4l16 16" />}
           </svg>
         </button>
+        )}
       </div>
       {error ? (
         <span id={`${id}-msg`} className="flex items-start gap-1.5 text-[13px] leading-[18px] font-bold text-danger">

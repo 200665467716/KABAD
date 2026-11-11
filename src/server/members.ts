@@ -1,12 +1,41 @@
 /* Member profiles and their public stats. */
 import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
-import { notFound } from "./errors";
+import { DomainError, notFound } from "./errors";
+import { profilePhotoProblem, sniffMime } from "@/lib/attachments";
+import { avatarUrl } from "@/lib/avatar";
 import type { DirectoryEntry, Level, MemberCard, MentorStats, Profile, Recommendation } from "@/lib/domain-types";
 
-const cardSelect = { id: true, name: true, role: true, level: true, city: true, country: true, diaspora: true, years: true, headline: true, bio: true, stack: true, seniorVerifiedAt: true } as const;
+const cardSelect = { id: true, name: true, role: true, level: true, city: true, country: true, diaspora: true, years: true, headline: true, bio: true, stack: true, seniorVerifiedAt: true, photoAt: true } as const;
 
-export const toCard = ({ seniorVerifiedAt, ...u }: Prisma.UserGetPayload<{ select: typeof cardSelect }>): MemberCard => ({ ...u, verified: seniorVerifiedAt !== null });
+export const toCard = ({ seniorVerifiedAt, photoAt, ...u }: Prisma.UserGetPayload<{ select: typeof cardSelect }>): MemberCard => ({ ...u, verified: seniorVerifiedAt !== null, photo: avatarUrl({ id: u.id, photoAt }) });
+
+/** A member sets their profile photo (an image checked by its content), or removes it with `null`. */
+export async function setProfilePhoto(userId: string, data: Uint8Array | null, prisma: Db = db) {
+  const mime = data ? sniffMime(data) : null;
+  if (data) {
+    const problem = profilePhotoProblem(mime, data.byteLength);
+    if (problem) throw new DomainError("bad_file", problem, 400, "photo");
+  }
+  return prisma.$transaction(async (tx) => {
+    const photoAt = data ? new Date() : null;
+    if (data) {
+      const bytes = Buffer.from(data);
+      await tx.userPhoto.upsert({ where: { userId }, create: { userId, mime: mime!, data: bytes }, update: { mime: mime!, data: bytes } });
+    } else {
+      await tx.userPhoto.deleteMany({ where: { userId } });
+    }
+    await tx.user.update({ where: { id: userId }, data: { photoAt } });
+    return { photo: avatarUrl({ id: userId, photoAt }) };
+  });
+}
+
+/** The photo of a member. Every signed-in member may see it, like the profile it belongs to. */
+export async function getProfilePhoto(id: string, prisma: Db = db) {
+  const photo = await prisma.userPhoto.findUnique({ where: { userId: id }, select: { mime: true, data: true } });
+  if (!photo) throw notFound("Photo introuvable.");
+  return photo;
+}
 
 /** Sessions held, hours of mentoring held, hackathons judged. */
 export async function mentorStats(ids: string[], prisma: Db = db): Promise<Map<string, MentorStats>> {

@@ -6,10 +6,10 @@ import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { Button } from "@/components/ui/Button";
 import { ToggleChip } from "@/components/ui/Controls";
 import { Alert } from "@/components/ui/Display";
-import { TextArea, TextField } from "@/components/ui/Field";
-import { Icon } from "@/components/ui/Icon";
+import { Select, TextArea, TextField } from "@/components/ui/Field";
 import { useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
+import { parseSteps } from "@/lib/test-steps";
 
 type Platform = "ANDROID" | "IOS" | "WEB";
 type Question = { q: string; options: string; answer: string };
@@ -23,8 +23,7 @@ export function TestAppForm() {
   const router = useRouter();
   const [platforms, setPlatforms] = useState<Platform[]>(["ANDROID"]);
   const [slots, setSlots] = useState(8);
-  const [minutes, setMinutes] = useState(15);
-  const [steps, setSteps] = useState<string[]>(["", ""]);
+  const [minutes, setMinutes] = useState(10);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ field?: string; text: string } | null>(null);
@@ -44,7 +43,7 @@ export function TestAppForm() {
           slots,
           pitch: String(data.get("pitch") ?? ""),
           task: String(data.get("task") ?? ""),
-          steps: steps.map((s) => s.trim()).filter(Boolean),
+          steps: parseSteps(String(data.get("steps") ?? "")),
           questions: questions
             .filter((q) => q.q.trim())
             .map((q) => {
@@ -71,7 +70,7 @@ export function TestAppForm() {
       <Page narrow className="flex-1">
         <h2 className="font-display text-2xl font-extrabold uppercase">{t("form.heading")}</h2>
         <TextField id="name" name="name" label={t("form.name")} maxLength={40} error={fieldError("name")} />
-        <TextField id="url" name="url" type="url" label={t("form.url")} placeholder="https://" error={fieldError("url")} />
+        <TextField id="url" name="url" type="url" label={t("form.url")} placeholder={t("form.urlPlaceholder")} error={fieldError("url")} />
         <fieldset className="grid gap-2">
           <legend className="mb-2 text-sm font-extrabold">{t("form.platforms")}</legend>
           <div className="flex flex-wrap gap-2">
@@ -83,49 +82,26 @@ export function TestAppForm() {
           </div>
           {fieldError("platforms") && <span className="text-sm font-extrabold text-danger">{fieldError("platforms")}</span>}
         </fieldset>
-        <fieldset className="grid gap-2">
-          <legend className="mb-2 text-sm font-extrabold">{t("form.slots")}</legend>
-          <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
+          <Select id="slots" label={t("form.slots")} value={slots} onChange={(e) => setSlots(Number(e.target.value))}>
             {SLOTS.map((n) => (
-              <ToggleChip key={n} pressed={slots === n} onClick={() => setSlots(n)}>
+              <option key={n} value={n}>
                 {n}
-              </ToggleChip>
+              </option>
             ))}
-          </div>
-        </fieldset>
-        <fieldset className="grid gap-2">
-          <legend className="mb-2 text-sm font-extrabold">{t("form.minutes")}</legend>
-          <div className="flex flex-wrap gap-2">
+          </Select>
+          <Select id="minutes" label={t("form.minutes")} value={minutes} onChange={(e) => setMinutes(Number(e.target.value))}>
             {MINUTES.map((n) => (
-              <ToggleChip key={n} pressed={minutes === n} onClick={() => setMinutes(n)}>
+              <option key={n} value={n}>
                 {t("minutes", { count: n })}
-              </ToggleChip>
+              </option>
             ))}
-          </div>
-        </fieldset>
+          </Select>
+        </div>
+        {/* T3: one box for the tasks, one per line. A number or a dash typed in front is ignored. */}
+        <TextArea id="steps" name="steps" label={t("form.steps")} rows={4} placeholder={t("form.stepsPlaceholder")} hint={t("form.stepsHelp")} error={fieldError("steps")} />
         <TextArea id="pitch" name="pitch" label={t("form.pitch")} rows={3} maxLength={500} hint={t("form.pitchHint")} error={fieldError("pitch")} />
         <TextField id="task" name="task" label={t("form.task")} maxLength={200} placeholder={t("form.taskPlaceholder")} error={fieldError("task")} />
-
-        <fieldset className="grid gap-2">
-          <legend className="mb-2 text-sm font-extrabold">{t("form.steps")}</legend>
-          {steps.map((s, i) => (
-            <div key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
-              <TextField id={`step-${i}`} label={t("form.step", { n: i + 1 })} value={s} maxLength={200} onChange={(e) => setSteps((x) => x.map((y, j) => (j === i ? e.target.value : y)))} />
-              {steps.length > 1 && (
-                <button type="button" onClick={() => setSteps((x) => x.filter((_, j) => j !== i))} aria-label={t("form.removeStep", { n: i + 1 })} className="grid size-11 place-items-center rounded-full text-muted hover:bg-bg">
-                  <Icon name="close" size={18} />
-                </button>
-              )}
-            </div>
-          ))}
-          {steps.length < 5 && (
-            <Button variant="ghost" size="sm" icon="plus" onClick={() => setSteps((x) => [...x, ""])} className="justify-self-start">
-              {t("form.addStep")}
-            </Button>
-          )}
-          <p className="text-[13px] text-muted">{t("form.stepsHelp")}</p>
-          {fieldError("steps") && <span className="text-sm font-extrabold text-danger">{fieldError("steps")}</span>}
-        </fieldset>
 
         <fieldset className="grid gap-3">
           <legend className="mb-2 text-sm font-extrabold">{t("form.questions")}</legend>

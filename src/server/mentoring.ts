@@ -82,7 +82,7 @@ export async function getMentor(mentorId: string, prisma: Db = db): Promise<Ment
   if (!u) throw notFound("Mentor introuvable.");
   const from = new Date();
   const to = new Date(from.getTime() + BOOKING_WINDOW_DAYS * 86_400_000);
-  const [badges, slots, held] = await Promise.all([badgeOf(prisma, [u.id]), slotsOf(prisma, [u.id], from, to), sessionsHeld(prisma, [u.id])]);
+  const [badges, slots, held, rating] = await Promise.all([badgeOf(prisma, [u.id]), slotsOf(prisma, [u.id], from, to), sessionsHeld(prisma, [u.id]), ratingOf(prisma, u.id)]);
   const all = slots.get(u.id)?.free ?? [];
   const badge = badges.get(u.id);
   return {
@@ -97,6 +97,7 @@ export async function getMentor(mentorId: string, prisma: Db = db): Promise<Ment
     links: { github: badge?.githubUrl ?? null, linkedin: badge?.linkedinUrl ?? null, portfolio: badge?.portfolioUrl ?? null },
     nextSlot: all[0]?.toISOString() ?? null,
     sessionsHeld: held.get(u.id) ?? 0,
+    rating,
     slots: all.map((d) => d.toISOString()),
     takenSlots: (slots.get(u.id)?.taken ?? []).map((d) => d.toISOString()),
   };
@@ -167,7 +168,33 @@ function toView(b: BookingRow, viewerId: string): BookingView {
     mentor: b.mentor,
     mentee: b.mentee,
     iAm: b.mentorId === viewerId ? "MENTOR" : "MENTEE",
+    rating: b.rating,
+    ratingComment: b.ratingComment,
+    // The dev rates once, when the session they attended is over.
+    canRate: b.menteeId === viewerId && b.status === "ACCEPTED" && b.ratedAt === null && sessionOver(b),
   };
+}
+
+const sessionOver = (b: { startsAt: Date; minutes: number }) => b.startsAt.getTime() + b.minutes * 60_000 <= Date.now();
+
+/** After the session, the dev rates it from 1 to 5, once, with an optional word. The mentor is told and reads both. */
+export async function rateSession(menteeId: string, bookingId: string, input: { rating: number; comment?: string }, prisma: Db = db) {
+  const b = await prisma.mentoringBooking.findUnique({ where: { id: bookingId }, include: { mentee: { select: { name: true } } } });
+  if (!b || b.menteeId !== menteeId) throw notFound("Séance introuvable.");
+  if (b.status !== "ACCEPTED") throw new DomainError("not_held", "Seule une séance confirmée peut être notée.", 409);
+  if (!sessionOver(b)) throw new DomainError("not_over", "Tu pourras noter la séance une fois qu’elle sera terminée.", 409);
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.mentoringBooking.updateMany({ where: { id: bookingId, ratedAt: null }, data: { rating: input.rating, ratingComment: input.comment || null, ratedAt: new Date() } });
+    if (!count) throw new DomainError("rated", "Tu as déjà noté cette séance.", 409);
+    await pushNotifications(tx, [{ userId: b.mentorId, actor: b.mentee.name, key: "sessionRated", params: { topic: b.topic, rating: input.rating }, href: `/mentorat/seances/${b.id}`, icon: "check", tone: "brand" }]);
+    return { ok: true };
+  });
+}
+
+/** The average of the marks a mentor received, shown on their sheet (M2); null while nobody has rated them. */
+async function ratingOf(prisma: Tx, mentorId: string) {
+  const r = await prisma.mentoringBooking.aggregate({ where: { mentorId, rating: { not: null } }, _avg: { rating: true }, _count: { rating: true } });
+  return r._count.rating && r._avg.rating !== null ? { average: Math.round(r._avg.rating * 10) / 10, count: r._count.rating } : null;
 }
 
 export async function getBooking(userId: string, bookingId: string, prisma: Db = db): Promise<BookingView> {

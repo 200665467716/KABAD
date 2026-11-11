@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 import { formatSize, VOICE_MAX_SECONDS } from "@/lib/attachments";
 import type { ChatAttachment } from "@/lib/messaging-types";
-import { Icon } from "../../ui/Icon";
+import { Icon, type IconName } from "../../ui/Icon";
 
 const url = (a: ChatAttachment) => `/api/attachments/${a.id}`;
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -78,13 +78,13 @@ function VoiceNote({ attachment }: { attachment: ChatAttachment }) {
 }
 
 /** The paper clip of the composer: picks a PDF or an image. */
-export function AttachButton({ onPick, disabled }: { onPick: (file: File) => void; disabled?: boolean }) {
+export function AttachButton({ onPick, disabled, label, icon = "paperclip" }: { onPick: (file: File) => void; disabled?: boolean; label?: string; icon?: IconName }) {
   const t = useTranslations("messaging.attachments");
   const input = useRef<HTMLInputElement>(null);
   return (
     <>
-      <button type="button" disabled={disabled} onClick={() => input.current?.click()} aria-label={t("attach")} className="inline-grid size-11 shrink-0 place-items-center rounded-full text-ink hover:bg-bg disabled:opacity-40">
-        <Icon name="paperclip" />
+      <button type="button" disabled={disabled} onClick={() => input.current?.click()} aria-label={label ?? t("attach")} className="inline-grid size-11 shrink-0 place-items-center rounded-full text-ink hover:bg-bg disabled:opacity-40">
+        <Icon name={icon} />
       </button>
       <input
         ref={input}

@@ -38,3 +38,9 @@ export function initials(name: string): string {
     .map((part) => Array.from(part)[0]?.toLocaleUpperCase("fr") ?? "")
     .join("");
 }
+
+/**
+ * How a hackathon team is called on screen: "Équipe Baobab". A name that already says it
+ * ("Équipe Kora", "Team Rocket") is left as it is.
+ */
+export const teamTitle = (name: string, word = "Équipe") => (/^(équipe|equipe|team)\s/i.test(name) ? name : `${word} ${name}`);

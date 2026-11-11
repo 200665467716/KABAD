@@ -18,6 +18,8 @@ export function ResetPassword() {
   const token = useSearchParams().get("jeton") ?? "";
   const [p1, setP1] = useState("");
   const [p2, setP2] = useState("");
+  // One eye for both fields (A9).
+  const [shown, setShown] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const rules = [
@@ -54,8 +56,8 @@ export function ResetPassword() {
         }
       >
         {!token && <Alert tone="danger">{t("incomplete")}</Alert>}
-        <PasswordField id="password" name="password" label={t("password")} autoComplete="new-password" value={p1} onChange={(e) => setP1(e.target.value)} />
-        <PasswordField id="confirm" name="confirm" label={t("confirm")} autoComplete="new-password" value={p2} onChange={(e) => setP2(e.target.value)} />
+        <PasswordField id="password" name="password" label={t("password")} autoComplete="new-password" value={p1} onChange={(e) => setP1(e.target.value)} reveal={shown} onReveal={() => setShown((s) => !s)} />
+        <PasswordField id="confirm" name="confirm" label={t("confirm")} autoComplete="new-password" value={p2} onChange={(e) => setP2(e.target.value)} reveal={shown} />
         <ul aria-label={t("rules")} className="m-0 grid list-none gap-2.5 rounded-action border-2 border-line-strong bg-raised px-4 py-3.5">
           {rules.map((r) => (
             <li key={r.label} className={cn("flex items-center gap-2.5 text-sm font-bold", r.ok ? "text-success" : "text-muted")}>

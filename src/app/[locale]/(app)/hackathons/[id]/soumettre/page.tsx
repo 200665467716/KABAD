@@ -7,6 +7,7 @@ import { Page, TopBar } from "@/components/shell/TopBar";
 import { Alert } from "@/components/ui/Display";
 import { SubmissionForm } from "@/components/features/hackathons/SubmissionForm";
 import { redirect } from "@/i18n/navigation";
+import { teamTitle } from "@/lib/format";
 import { getHackathon } from "@/server/hackathons";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
@@ -40,7 +41,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       {top}
-      <SubmissionForm hackathonId={id} heading={`${team.name} · ${h.title}`} initial={team.submission} />
+      <SubmissionForm hackathonId={id} heading={`${team.solo ? team.name : teamTitle(team.name, t("teamWord"))} · ${h.title}`} initial={team.submission} />
     </>
   );
 }

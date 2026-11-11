@@ -38,6 +38,7 @@ export function ForgotPassword() {
       <AuthFrame
         back="/connexion"
         heading={t("heading")}
+        icon="lock"
         title={sentTo ? t("sentTitle") : t("title")}
         lead={sentTo ? t.rich("sentLead", { email: sentTo, b: (c) => <b className="text-ink">{c}</b> }) : t("lead")}
         footer={

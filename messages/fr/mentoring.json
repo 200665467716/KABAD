@@ -62,7 +62,8 @@
       "today": "Aujourd’hui",
       "bookCta": "Réserver une séance",
       "verifiedShort": "{gender, select, FEMALE {Vérifiée} MALE {Vérifié} other {Vérifié}}",
-      "slotTaken": "{time}, déjà réservé"
+      "slotTaken": "{time}, déjà réservé",
+      "rating": "{average, number} sur 5 ({count, plural, one {# avis} other {# avis}})"
     },
     "book": {
       "title": "Réserver",
@@ -118,7 +119,10 @@
       "cancelText": "L’autre personne sera prévenue. Le créneau redevient libre.",
       "keep": "Garder la séance",
       "copy": "Copier le lien",
-      "copied": "Lien copié"
+      "copied": "Lien copié",
+      "ratingFrom": "La note de {name}",
+      "ratingMine": "Ta note",
+      "ratingValue": "{rating} sur 5"
     },
     "requests": {
       "title": "Demandes reçues",
@@ -179,7 +183,10 @@
         "7": "Dim."
       },
       "notMentor": "Tu ouvriras des créneaux une fois ton badge mentor accordé.",
-      "askBadge": "Demander le badge"
+      "askBadge": "Demander le badge",
+      "editRange": "Modifier la plage du {day}, {range}",
+      "remove": "Retirer",
+      "done": "OK"
     },
     "badge": {
       "metaTitle": "Badge mentor",
@@ -269,6 +276,17 @@
       "emptyClosed": "Aucune séance annulée ou refusée.",
       "find": "Trouver un mentor",
       "all": "Toutes mes séances"
+    },
+    "rating": {
+      "title": "Note la séance",
+      "lead": "Comment s’est passée ta séance avec {name} ? Ta note l’aide à progresser et guide les autres devs.",
+      "label": "Note de la séance",
+      "mark": "{n} sur 5",
+      "comment": "Un mot pour ton mentor (facultatif)",
+      "commentHint": "{name} lira ton message.",
+      "send": "Envoyer ma note",
+      "sending": "Envoi…",
+      "failed": "La note n’a pas été enregistrée. Réessaie."
     }
   }
 }

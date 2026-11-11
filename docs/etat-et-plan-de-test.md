@@ -1,8 +1,8 @@
 # État d'avancement et plan de test manuel
 
-Bilan du 9 novembre 2026, mis à jour le 11 novembre, branche `dev/modifications`. Pour chaque fonctionnalité : une note sur 10, ce qui manque pour atteindre 10, le fonctionnement normal, puis les tests à faire à la main, avec ce qu'on doit voir quand tout va bien.
+Bilan du 9 novembre 2026, mis à jour le 11 novembre (au soir : manques des maquettes traités), branche `dev/main`. Pour chaque fonctionnalité : une note sur 10, ce qui manque pour atteindre 10, le fonctionnement normal, puis les tests à faire à la main, avec ce qu'on doit voir quand tout va bien.
 
-Vérifications automatiques au 11 novembre : lint et types propres, 41 tests unitaires, 67 tests d'intégration sur PostgreSQL, 111 tests e2e (téléphone et ordinateur), aucune licence GPL, AGPL ou LGPL.
+Vérifications automatiques au 11 novembre : lint et types propres, 48 tests unitaires, 77 tests d'intégration sur PostgreSQL, 112 tests e2e (téléphone et ordinateur), aucune licence GPL, AGPL ou LGPL.
 
 ## Tableau de bord
 
@@ -10,14 +10,14 @@ Vérifications automatiques au 11 novembre : lint et types propres, 41 tests uni
 | --- | --- | --- | --- |
 | 0 | Mise en ligne et socle technique | **2/10** | Rien n'est en ligne ; `main` n'a pas reçu la refonte ; pas de reverse proxy, de déploiement, de sauvegardes ni de supervision |
 | 1 | Landing page | **9/10** | Logo de la CADEV dans le bandeau (fichier à fournir), vrais chiffres à la place des exemples |
-| 2 | Inscription et connexion | **8,5/10** | Code e-mail en 6 cases, icônes des écrans, détails de textes |
+| 2 | Inscription et connexion | **9,5/10** | Maquettes reprises le 11 novembre au soir (code en 6 cases, icônes A3 et A8, œil unique en A9) ; reste le test manuel sur un vrai téléphone |
 | 3 | Accueil, profil, notifications | **7,5/10** | En-tête de l'accueil, carte « Tests d'apps », profil (vedette, couleurs, Paramètres), « Tout marquer comme lu » dans l'en-tête |
-| 4 | Mentorat | **9/10** | Plages en pastilles (M8), évaluation de la séance (mise de côté) |
+| 4 | Mentorat | **9,5/10** | Plages en pastilles (M8) et note de la séance faites le 11 novembre au soir ; la note n'a pas de maquette, à faire relire |
 | 5 | Badge mentor et validation | **8,5/10** | Détails de textes |
-| 6 | Hackathons | **6,5/10** | Création en 3 étapes, discussion d'équipe absente, dépôt public non vérifié, invitations de coéquipiers (mis de côté le 11 novembre) |
-| 7 | Tests d'apps | **7/10** | Écran T4 « Groupe de testeurs » dédié absent, formulaire T3 à aligner |
-| 8 | Messagerie | **9/10** | Confirmation pour retirer un membre d'un groupe, photo de profil des membres |
-| 9 | Africa Rise-Up | **8/10** | Ombre vedette sur le projet en direct, textes des champs |
+| 6 | Hackathons | **8,5/10** | Faits le 11 novembre au soir : création en 3 étapes, discussion d'équipe, dépôt public vérifié, invitations de coéquipiers, « Demander ». Restent les champs en plus de H6 à trancher et les tests manuels |
+| 7 | Tests d'apps | **8,5/10** | T4 et T3 faits le 11 novembre au soir. Restent les champs en plus de T3 (présentation, objectif, questions de contrôle) à trancher |
+| 8 | Messagerie | **9,5/10** | Confirmation de retrait et photo de profil faites le 11 novembre au soir ; à tester à la main |
+| 9 | Africa Rise-Up | **8,5/10** | Ombre vedette et textes des champs faits le 11 novembre au soir. Pas de salon audio intégré (décision D3) |
 | 10 | Administration et modération | **7,5/10** | Quelques écrans hors maquette, pas de tests manuels récents |
 | 11 | Compte et sécurité | **8,5/10** | Écran « Paramètres » de la maquette absent |
 | 12 | Anglais | **7,5/10** | Tous les textes passent par les dictionnaires ; relecture anglaise à faire |
@@ -26,13 +26,13 @@ Vérifications automatiques au 11 novembre : lint et types propres, 41 tests uni
 | 15 | Tâches planifiées (worker) | **8,5/10** | Fonctionne et testé, e-mails compris ; à lancer en production avec une boîte d'envoi |
 | 16 | Temps réel | **8/10** | Fonctionne et testé ; adresse `wss://` à configurer en production |
 
-Moyenne des fonctionnalités produit (1 à 12) : **8/10**. Le point le plus urgent n'est pas une fonctionnalité : c'est la mise en ligne (0), condition de recevabilité.
+Moyenne des fonctionnalités produit (1 à 12) : **8,6/10**. Les notes relevées le 11 novembre au soir sont une proposition : elles restent à confirmer par ce plan de test, à la main. Le point le plus urgent n'est pas une fonctionnalité : c'est la mise en ligne (0), condition de recevabilité.
 
 ## Préparer les tests
 
 Sur un ordinateur, en suivant le README (« Lancer KABAD sur son ordinateur ») :
 
-1. Récupérer la branche : `git switch dev/modifications`, puis `git pull --rebase`.
+1. Récupérer la branche : `git switch dev/main`, puis `git pull --rebase`.
 2. `npm install`, `npm run db:migrate`, `npm run db:seed` (remet les données de démo à zéro : à refaire entre deux séries de tests).
 3. Lancer les trois services dans trois terminaux : `npm run realtime`, `npm run dev`, `npm run worker`.
 4. Ouvrir http://localhost:3000.
@@ -85,11 +85,13 @@ Bon à savoir :
 
 ---
 
-## 2. Inscription et connexion — 8,5/10
+## 2. Inscription et connexion — 9,5/10
 
 **Fonctionnement normal** : inscription en 5 étapes. (1) Nom, e-mail, mot de passe de 8 caractères minimum dont un chiffre, conditions à cocher. (2) Un code à 6 chiffres arrive par e-mail, valable 10 minutes. (3) Pays, ville, niveau. (4) Technos et objectifs. (5) Devs à rencontrer, à inviter (facultatif). La connexion bloque 15 minutes après 5 mauvais mots de passe.
 
-**Manque pour 10/10** : code en 6 cases séparées et carrés d'icône des écrans A3 et A8, bouton œil unique en A9, petits écarts de textes (« Invité » au lieu de « Envoyée » en A6).
+**Fait le 11 novembre au soir** : code en 6 cases séparées (A3, A3e), carrés d'icône des écrans A3 et A8, bouton œil unique pour les deux champs en A9 ; « Invité » en A6 était déjà fait.
+
+**Manque pour 10/10** : test manuel sur un vrai téléphone (clavier numérique, collage du code).
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
@@ -97,6 +99,7 @@ Bon à savoir :
 | Mot de passe `kabad` puis `motdepasse` | Messages sous le champ, en rouge avec une icône : « au moins 8 caractères », puis « au moins un chiffre » |
 | E-mail d'un compte existant (`kossi.mensah@exemple.tg`) | Sous le champ : « Un compte existe déjà avec cet e-mail. » avec un lien « Se connecter » qui y mène |
 | Inscription valide | Arrivée sur « Confirme ton e-mail » ; le code apparaît dans le terminal de `npm run dev` |
+| Écran du code | Six cases, une par chiffre ; chaque chiffre tapé passe à la case suivante, « Retour arrière » revient à la précédente, un code collé remplit les six cases |
 | Saisir un faux code (`000000`) | Sous le champ : « Ce code est incorrect ou a expiré. Un code reste valable 10 minutes. » ; l'encart passe en bordure rouge avec « Demande un nouveau code » |
 | Saisir le bon code | Étape suivante (profil) ; plus de bandeau « e-mail non confirmé » dans l'app |
 | « Renvoyer le code » plusieurs fois de suite | Au-delà de 3 demandes dans l'heure : « Tu as déjà demandé plusieurs e-mails. » |
@@ -104,7 +107,7 @@ Bon à savoir :
 | Compte sans autres membres à suggérer | État vide « Tu fais partie des premiers » avec un bouton pour inviter des devs |
 | Connexion avec un mauvais mot de passe | Bandeau rouge « **E-mail ou mot de passe incorrect.** Vérifie ton mot de passe, ou choisis-en un nouveau. » et, sous le champ, « Il reste 4 essais avant un blocage de 15 min » (puis 3, 2, 1) |
 | 6e essai raté | « Trop d'essais de connexion. Réessaie dans 15 min. » |
-| Mot de passe oublié | Message de confirmation ; le lien s'affiche dans le terminal ; il ouvre A9 avec 3 règles qui passent au vert (8 caractères, un chiffre, identiques) ; après enregistrement, on est connecté |
+| Mot de passe oublié | Message de confirmation ; le lien s'affiche dans le terminal ; il ouvre A9 avec 3 règles qui passent au vert (8 caractères, un chiffre, identiques) et un seul œil qui affiche ou masque les deux champs ; après enregistrement, on est connecté |
 | Navigation au clavier (Tab) | Un contour indigo épais est visible sur chaque élément ; sur fond indigo, il est jaune |
 
 ---
@@ -129,11 +132,13 @@ Bon à savoir :
 
 ---
 
-## 4. Mentorat — 9/10
+## 4. Mentorat — 9,5/10
 
 **Fonctionnement normal** : seuls les mentors badgés apparaissent. Le dev choisit un mentor, un jour, un créneau de 30 minutes (fuseau affiché), puis écrit son sujet et son problème. La demande part, le mentor l'accepte ou la refuse. Le mentor donne son lien Google Meet dans ses disponibilités : sans lien, pas de créneaux ni d'acceptation. Acceptée, la séance donne ce lien Meet aux deux et un fichier calendrier. « Toutes mes séances » garde l'historique (à venir, passées, annulées). Une demande sans réponse expire ; le mentor reçoit une relance à 48 h ; un rappel part 1 h avant la séance. Un membre a 3 demandes en attente au plus.
 
-**Manque pour 10/10** : plages des disponibilités en pastilles (M8) ; évaluation de la séance (mise de côté le 11 novembre).
+**Fait le 11 novembre au soir** : plages des disponibilités en pastilles (M8) ; note de la séance. Une fois la séance terminée, le dev la note de 1 à 5, une seule fois, avec un mot facultatif ; le mentor est prévenu, et sa fiche affiche la moyenne.
+
+**Manque pour 10/10** : la note de séance n'a pas de maquette, à faire relire par l'équipe.
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
@@ -154,12 +159,15 @@ Bon à savoir :
 | Mentorat → « Toutes mes séances » | Trois onglets avec leur nombre : à venir, passées, annulées ; chaque ligne ouvre la séance |
 | « Ajouter à mon calendrier » | Un fichier `.ics` se télécharge et s'ouvre dans l'agenda |
 | « Annuler la séance » | Une feuille « Annuler la séance ? » ; après confirmation, l'autre est prévenu |
-| Aïcha → Disponibilités | Modifier une plage, bloquer une date, enregistrer ; les créneaux côté Kossi suivent |
+| Aïcha → Disponibilités | Chaque plage est une pastille (« 18:00 – 20:00 ») ; la toucher ouvre ses heures juste en dessous, avec « Retirer » et « OK » ; « + » ajoute une plage. Modifier une plage, bloquer une date, enregistrer ; les créneaux côté Kossi suivent |
+| Kossi → une séance confirmée et terminée | Carte « Note la séance » : 5 étoiles, un mot facultatif, « Envoyer ma note » ; ensuite la carte « Ta note » la remplace, et on ne peut plus noter |
+| Awa → la même séance, puis sa fiche de mentor | « La note de Kossi » avec les étoiles et son mot ; une notification « a noté votre séance » ; la fiche affiche « 4,5 sur 5 (2 avis) » |
+| Noter une séance à venir, ou la séance d'un autre | Rien à noter : la carte n'apparaît pas |
 | Deux comptes qui prennent le même créneau en même temps | Un seul l'obtient (testé automatiquement) |
 
 ---
 
-## 5. Badge mentor et validation — 7,5/10
+## 5. Badge mentor et validation — 8,5/10
 
 **Fonctionnement normal** : un dev demande le badge en 2 étapes : expertise (1 à 3 domaines, technos, années d'expérience, poste, entreprise facultative), puis liens (au moins un : GitHub, LinkedIn ou portfolio) et présentation de 280 caractères au plus. L'équipe KABAD valide, ou refuse avec un motif envoyé au candidat. Validé, il apparaît dans la liste des mentors et peut ouvrir ses créneaux.
 
@@ -178,22 +186,30 @@ Bon à savoir :
 
 ---
 
-## 6. Hackathons — 6,5/10
+## 6. Hackathons — 8,5/10
 
 **Fonctionnement normal** : n'importe quel dev connecté propose un hackathon, en indiquant l'organisateur en texte libre. L'équipe KABAD le relit et le publie. Les devs s'inscrivent seuls, créent une équipe ou demandent à en rejoindre une ; le capitaine accepte. Aucun mentorat n'est exigé. Chaque équipe soumet une solution (dépôt, démo facultative, description), modifiable jusqu'à la fin. À la fin, le hackathon passe au jury (3 mentors notent chaque solution sur 4 critères, sans jamais noter quelqu'un qu'ils ont accompagné). L'équipe publie les résultats. L'organisateur annonce de 0 à 5 prix en texte libre : à la publication, ils sont donnés dans l'ordre du classement et chaque équipe primée apprend le sien (D12, plus de cagnotte).
 
-**Manque pour 10/10** (mis de côté le 11 novembre) : création en 3 étapes de la maquette (infos, défi et prix, instructeurs) ; espace de discussion de chaque équipe ; vérification que le dépôt est public (et l'erreur de H5e) ; inviter des coéquipiers ; « Demander » sur chaque équipe.
+**Fait le 11 novembre au soir** : création en 3 étapes (H6 infos, H7 défi et prix avec « Pas de prix pour ce hackathon », H8 instructeurs, puis « Proposer le hackathon ») ; discussion de chaque équipe dans la messagerie (H4) ; dépôt vérifié public à l'envoi, `https://` ajouté tout seul (H5, H5e) ; le chef d'équipe invite ses contacts, à la création ou depuis « Mon équipe » (H3) ; « Demander » sur chaque équipe envoie la demande tout de suite.
+
+**Manque pour 10/10** : champs en plus de H6 (clôture, niveau, technos) à trancher ; textes de détail (« 2 à 5 devs ») ; tests manuels.
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
 | Hackathons, filtres Tous / En ligne / Présentiel / Hybride | La liste se filtre ; chaque billet montre un compte à rebours |
 | Ouvrir « Fintech pour l'inclusion » | Dates, durée, taille des équipes, défi, prix, organisateur |
 | Participer seul | Case du règlement obligatoire ; inscription confirmée ; le billet affiche « Ton équipe » |
-| Créer une équipe, puis, avec un autre compte, demander à la rejoindre | Le capitaine reçoit la demande et l'accepte ; le membre apparaît dans « Mon équipe » ; une équipe pleine refuse |
+| Créer une équipe, puis, avec un autre compte, « Rejoindre une équipe » → « Demander » | Il faut d'abord cocher le règlement ; le bouton devient « Demandé » et « Demande envoyée. » s'affiche ; le capitaine reçoit la demande et l'accepte ; le membre apparaît dans « Mon équipe » ; une équipe pleine refuse |
+| Créer une équipe : « + », choisir un contact, valider | L'invité apparaît dans « Mon équipe » avec « Invitation envoyée · en attente » ; il reçoit une notification ; sur son écran « Participer », une carte « Équipe … t'invite » avec « Refuser » et « Rejoindre l'équipe » |
+| Inviter un membre qui n'est pas un contact, ou plus de membres que de places | Refusé : « Tu ne peux inviter que tes contacts. », « Ton équipe serait trop grande… » |
+| « Mon équipe » → bulle en haut à droite | La discussion « Équipe … » s'ouvre dans la messagerie, avec tous les membres ; « Infos du groupe » → « Voir mon équipe » ; pas de « Quitter le groupe » |
+| Quitter l'équipe | On sort aussi de la discussion ; si le chef part, le plus ancien membre gère l'équipe et la discussion |
 | Membre du jury qui veut participer | Refusé |
 | Soumettre la solution avec un lien de dépôt faux (`abc`) | Erreur rouge sous le champ |
+| Lien d'un dépôt privé ou qui n'existe pas (`github.com/kabad/prive`) | Sous le champ : « Ce lien ne mène à aucun dépôt public. Vérifie l'adresse, ou rends le dépôt public avant l'envoi. » |
+| Lien d'un dépôt public tapé sans `https://` | Accepté ; `https://` est ajouté tout seul |
 | Soumettre correctement | Confirmation ; la solution est modifiable jusqu'à la fin |
-| Proposer un hackathon (Organiser) | Fin avant début refusée ; une fois envoyé, il n'est pas public tant que l'équipe KABAD ne l'a pas publié |
+| Proposer un hackathon (Organiser) | Trois étapes : « Ton hackathon », « Le défi et les prix », « Recrute des instructeurs ». Fin avant début refusée ; « Pas de prix pour ce hackathon » retire la liste des prix ; sans rémunération, les boutons « Proposer » des mentors sont grisés ; avec, « Proposer » devient « Proposée » et le compteur suit. Une fois envoyé, le hackathon n'est pas public tant que l'équipe KABAD ne l'a pas publié ; les mentors choisis reçoivent la mission |
 | `equipe@kabad.app` → Admin → Hackathons → Publier | Le hackathon apparaît dans la liste de tous |
 | Jury : Ibrahim sur « Raccourcisseur » | Il note les solutions sans voir qui les a faites, 4 critères de 1 à 5 |
 | Publier les résultats (équipe KABAD) | Classement affiché avec le prix de chaque équipe primée ; chaque membre d'une équipe primée reçoit « ton équipe finit à la place N et gagne … » ; les autres reçoivent « les résultats sont publiés » |
@@ -202,18 +218,22 @@ Bon à savoir :
 
 ---
 
-## 7. Tests d'apps — 7/10
+## 7. Tests d'apps — 8,5/10
 
 **Fonctionnement normal** : un dev publie une annonce (nom, lien d'installation, plateformes, nombre de testeurs, durée, étapes). À la publication, il ouvre son groupe de testeurs dans la messagerie, avec le lien d'installation. Les testeurs prennent une place (dans la limite des places), entrent dans le groupe, cochent les étapes, puis envoient un rapport avec une capture par étape. L'auteur valide ou refuse chaque rapport, avec un motif.
 
-**Manque pour 10/10** : écran T4 « Groupe de testeurs » dédié (consignes épinglées à cocher, « Installer l'app », « auteur de l'app ») ; formulaire T3 aligné sur la maquette (une seule zone pour les tâches, 10 min par défaut) ; « 1 testeurs » à corriger en « 1 testeur ».
+**Fait le 11 novembre au soir** : écran T4 (dans le groupe : consignes épinglées à cocher, « Installer l'app », « auteur de l'app » à côté de son nom, « Joindre une capture », « Écrire un retour… ») ; formulaire T3 (une seule zone pour les tâches, une par ligne, 10 min par défaut, deux listes pour les testeurs et la durée) ; « 1 testeur » et « 2 tâches sur 3 faites ».
+
+**Manque pour 10/10** : trancher les champs en plus de T3 (présentation, objectif, questions de contrôle), gardés pour l'instant.
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
 | Tests d'apps, onglets « Annonces » / « Mes tests » | Annonces des autres d'un côté ; mes tests et mes annonces de l'autre |
 | Liste vide (après avoir tout rejoint) | Carte pointillée « Aucune annonce pour l'instant » et bouton « Publier une annonce » |
+| Publier une annonce : taper les tâches « 1. … », « 2. … », une par ligne | Les numéros tapés sont retirés ; chaque ligne devient une tâche ; plus de 5 lignes : refusé |
 | Publier une annonce | Le message « En publiant, tu ouvres ton groupe de testeurs… » ; après publication, « Testeurs {app} » apparaît dans la messagerie de l'auteur |
 | Avec un autre compte : « Rejoindre le groupe de testeurs » | Arrivée dans le groupe ; l'auteur est notifié ; le groupe apparaît dans sa messagerie |
+| Dans le groupe de testeurs | En haut, « Épinglé · consignes » avec les tâches à cocher et « Installer l'app » ; cocher une tâche la coche aussi sur l'annonce ; les messages de l'auteur portent « · auteur de l'app » ; la zone d'écriture dit « Écrire un retour… ». L'auteur voit les tâches numérotées, sans case |
 | Dans le groupe, ouvrir « Participants » | Message « Ce groupe suit l'annonce de test… » et bouton « Voir l'annonce de test » ; pas de bouton « Quitter le groupe » |
 | Remplir toutes les places, puis essayer avec un compte de plus | « Toutes les places de test sont prises. » |
 | Cocher les étapes, envoyer un rapport avec moins de captures que d'étapes | Refusé : une capture par étape |
@@ -222,11 +242,13 @@ Bon à savoir :
 
 ---
 
-## 8. Messagerie — 9/10
+## 8. Messagerie — 9,5/10
 
 **Fonctionnement normal** : un premier contact passe par une invitation, avec un message facultatif de 300 caractères au plus. Tant qu'elle n'est pas acceptée, l'expéditeur la voit dans sa messagerie avec « En attente » ; personne ne peut écrire. Acceptée, la conversation s'ouvre avec le message d'invitation. Messages en temps réel : texte, notes vocales (2 minutes), images et PDF (2 Mo). Groupes privés avec un thème, créés parmi ses contacts (50 membres au plus). Signalement et blocage. Après un refus, on peut réinviter la même personne au bout de 30 jours.
 
-**Manque pour 10/10** : confirmation pour retirer un membre d'un groupe ; photo de profil des membres.
+**Fait le 11 novembre au soir** : feuille de confirmation avant de retirer un membre d'un groupe ; photo de profil des membres (choisie dans « Modifier mon profil », affichée sur le profil, dans la liste des conversations, l'en-tête, les messages de groupe et les participants).
+
+**Manque pour 10/10** : tests manuels à deux navigateurs.
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
@@ -239,6 +261,9 @@ Bon à savoir :
 | Fichier de plus de 2 Mo | « Le fichier fait 2 Mo au plus. » |
 | Note vocale | Enregistrement, envoi, lecture chez l'autre ; au-delà de 2 minutes, refusé |
 | Nouveau groupe avec un thème et 2 contacts | Le groupe apparaît chez tous en direct |
+| Groupe que tu as créé → « Infos du groupe » → « Retirer » | Feuille « Retirer Yao du groupe ? » avec « Annuler » et « Retirer » (rouge) ; rien ne change tant qu'on n'a pas confirmé |
+| Profil → modifier → « Ajouter une photo » | La photo s'affiche tout de suite ; chez un contact, elle remplace les initiales dans la liste des conversations, l'en-tête et les messages de groupe ; « Retirer la photo » rend les initiales |
+| Envoyer un fichier qui n'est pas une image comme photo | Refusé : « Ta photo est une image PNG, JPEG ou WebP. » |
 | Quitter un groupe | Feuille de confirmation ; si le créateur part, le plus ancien membre prend le relais |
 | Bloquer un membre | Il ne peut plus écrire ni inviter |
 | Signaler un message | Le signalement arrive chez l'équipe KABAD (Admin → Signalements) |
@@ -250,15 +275,17 @@ Bon à savoir :
 
 ---
 
-## 9. Africa Rise-Up — 7/10
+## 9. Africa Rise-Up — 8,5/10
 
 **Fonctionnement normal** : un dev lance un projet (nom, défi visé parmi Eau, Santé, Agriculture, Éducation, Énergie, Finance, Autre, problème, compétences recherchées). Le projet a son canal : discussion avec fils de réponses, événements, membres et fiche du projet. Les devs rejoignent le projet et entrent dans son canal. Le porteur programme des événements avec un lien de visio ; les membres sont prévenus et reçoivent un rappel 1 h avant. Pas de salon audio intégré en V1.
 
-**Manque pour 10/10** : ombre vedette sur le projet en direct ; textes des champs.
+**Fait le 11 novembre au soir** : ombre vedette sur le projet en direct (une seule par écran) ; textes des champs de « Lancer un projet » repris de la maquette R3.
+
+**Manque pour 10/10** : tests manuels. Pas de salon audio intégré : décision D3, maintenue.
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
-| Rise-Up, filtres par défi | La liste se filtre ; les projets en direct viennent en premier |
+| Rise-Up, filtres par défi | La liste se filtre ; les projets en direct viennent en premier, et le premier porte l'ombre décalée |
 | Lancer un projet | Le canal est créé ; le projet apparaît dans la liste et dans la messagerie du porteur |
 | Avec un autre compte : rejoindre le projet | Il entre dans le canal et la liste des membres ; le porteur est notifié |
 | Écrire une idée, y répondre | Le fil s'ouvre avec le nombre de réponses |
@@ -374,8 +401,8 @@ Bon à savoir :
 ## Ordre de travail proposé jusqu'au 15 novembre
 
 1. **Mise en ligne** (0) : fusion dans `main`, Caddy, déploiement, sauvegardes, `/api/health`, démo sur le serveur Systalink. Condition de recevabilité.
-2. **Écrans absents qui se voient en démo** : T4 groupe de testeurs, discussion d'équipe en hackathon (mis de côté le 11 novembre ; M2, la fiche du mentor, est faite).
-3. **Parcours à reprendre** : accueil et profil ; création de hackathon en 3 étapes (mise de côté). Rise-Up est fait.
+2. **Écrans absents qui se voient en démo** : faits (T4 groupe de testeurs, discussion d'équipe en hackathon, M2).
+3. **Parcours à reprendre** : accueil et profil. La création de hackathon en 3 étapes et Rise-Up sont faits.
 4. **Si le temps le permet** : PWA hors connexion.
 
 Le 12 novembre au soir, gel des fonctionnalités : ensuite, uniquement des corrections, et ce plan de test sur la version en ligne.

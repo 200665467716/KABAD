@@ -60,7 +60,14 @@
       "genderHint": "Only used to word texts about you, for example on your mentor page.",
       "genderNone": "I prefer not to say",
       "genderFemale": "Woman",
-      "genderMale": "Man"
+      "genderMale": "Man",
+      "photo": "Profile photo",
+      "photoAdd": "Add a photo",
+      "photoChange": "Change photo",
+      "photoRemove": "Remove photo",
+      "photoSending": "Sending…",
+      "photoHint": "It shows on your profile and in messaging. Without a photo, your initials are shown.",
+      "photoFailed": "The photo was not saved. Try again."
     },
     "public": {
       "title": "Profile",

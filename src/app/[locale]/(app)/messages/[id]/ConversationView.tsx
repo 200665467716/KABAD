@@ -8,10 +8,11 @@ import { MessageBubble, SystemLine } from "@/components/features/Thread";
 import { AttachButton, AttachmentView, VoiceRecorder } from "@/components/features/messaging/Attachments";
 import { ReportSheet } from "@/components/features/ReportSheet";
 import { TopBar } from "@/components/shell/TopBar";
-import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
-import { Sheet } from "@/components/ui/Controls";
+import { Button, buttonClass, ButtonLink, IconButton } from "@/components/ui/Button";
+import { ConfirmSheet, Sheet } from "@/components/ui/Controls";
 import { Alert, Avatar, DaySeparator } from "@/components/ui/Display";
 import { Select, TextField } from "@/components/ui/Field";
+import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 import { GROUP_PHOTO_SIZE } from "@/lib/attachments";
 import { initials } from "@/lib/format";
@@ -37,6 +38,7 @@ function merge(current: Shown[], incoming: ChatMessage[]): Shown[] {
 
 export function ConversationView({ me, initial }: { me: { id: string; name: string }; initial: ConversationDetail }) {
   const t = useTranslations("messaging.conversation");
+  const tp = useTranslations("tests.platform");
   const time = useChatTime();
   const [detail, setDetail] = useState(initial);
   const [messages, setMessages] = useState<Shown[]>(initial.messages);
@@ -53,6 +55,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   const stickToBottom = useRef(true);
   const keepOffset = useRef<number | null>(null);
   const group = detail.kind === "GROUP";
+  // T4: in a testers' group, the tasks stay pinned above the messages.
+  const test = detail.test;
   // The group of an app to test or of a Rise-Up project changes only from there.
   const manageable = group && detail.isOwner && !detail.linked;
 
@@ -184,6 +188,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   const blocked = !group && (blockedNow || detail.blocked !== null);
   const memberNames = [t("you"), ...others.map((m) => m.name.split(" ")[0])].join(", ");
   const tone = (authorId: string | null) => ACCENTS[Math.max(0, others.findIndex((o) => o.id === authorId)) % 2];
+  // MS5: each message of a group shows its author's photo (initials for a member who left).
+  const photos = new Map(detail.members.map((m) => [m.id, m.photo]));
   const length = Array.from(draft).length;
 
   return (
@@ -195,12 +201,12 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
             <Avatar initials={initials(detail.title)} src={detail.photo} size="sm" square tone="neutral" />
           ) : detail.other ? (
             <Link href={`/profil/${detail.other.id}`} aria-label={t("profileOf", { name: detail.other.name })}>
-              <Avatar initials={initials(detail.other.name)} size="sm" />
+              <Avatar initials={initials(detail.other.name)} src={detail.other.photo} size="sm" />
             </Link>
           ) : null
         }
         title={detail.title}
-        subtitle={group ? `${t("memberCount", { count: detail.members.length })} · ${detail.theme ?? memberNames}` : detail.other ? `${detail.other.role === "SENIOR" ? `${t("mentor")} · ` : ""}${detail.other.city}` : undefined}
+        subtitle={group ? `${t("memberCount", { count: detail.members.length })} · ${test ? test.platforms.map((p) => tp(p)).join(", ") : (detail.theme ?? memberNames)}` : detail.other ? `${detail.other.role === "SENIOR" ? `${t("mentor")} · ` : ""}${detail.other.city}` : undefined}
         actions={
           <>
             {manageable && <IconButton icon="userPlus" label={t("addMembers")} onClick={() => setAdding(true)} />}
@@ -209,6 +215,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
           </>
         }
       />
+
+      {test && <PinnedTasks key={test.id} test={test} />}
 
       <div
         ref={list}
@@ -237,8 +245,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
                   <SystemLine>{m.body}</SystemLine>
                 ) : group && !mine ? (
                   <div className="grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2">
-                    <Avatar initials={initials(m.authorName ?? "?")} size="sm" />
-                    <MessageBubble text={m.body} hidden={m.hidden} attachment={m.attachment && <AttachmentView attachment={m.attachment} />} time={time.clock(m.createdAt)} author={m.authorName ?? t("member")} authorTone={tone(m.authorId)} onReport={() => setReportMessage(m.id)} />
+                    <Avatar initials={initials(m.authorName ?? "?")} src={photos.get(m.authorId ?? "")} size="sm" />
+                    <MessageBubble text={m.body} hidden={m.hidden} attachment={m.attachment && <AttachmentView attachment={m.attachment} />} time={time.clock(m.createdAt)} author={test && m.authorId === test.ownerId ? t("appAuthor", { name: m.authorName ?? t("member") }) : (m.authorName ?? t("member"))} authorTone={tone(m.authorId)} onReport={() => setReportMessage(m.id)} />
                   </div>
                 ) : (
                   <MessageBubble text={m.body} hidden={m.hidden} attachment={m.attachment && <AttachmentView attachment={m.attachment} mine={mine} />} time={time.clock(m.createdAt)} mine={mine} status={m.status} onRetry={() => retry(m)} onReport={mine ? undefined : () => setReportMessage(m.id)} />
@@ -257,7 +265,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
             </Alert>
           )}
           <div className="flex items-end gap-1">
-            <AttachButton disabled={blocked && !group} onPick={(f) => upload(f, "FILE")} />
+            <AttachButton disabled={blocked && !group} onPick={(f) => upload(f, "FILE")} label={test ? t("attachCapture") : undefined} icon={test ? "image" : undefined} />
             <textarea
               rows={Math.min(5, Math.max(1, draft.split("\n").length))}
               value={draft}
@@ -265,8 +273,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
               onKeyDown={onKey}
               maxLength={MESSAGE_MAX_LENGTH}
               disabled={blocked && !group}
-              aria-label={group ? t("placeholderGroup") : t("placeholder")}
-              placeholder={group ? t("placeholderGroup") : t("placeholder")}
+              aria-label={test ? t("placeholderTest") : group ? t("placeholderGroup") : t("placeholder")}
+              placeholder={test ? t("placeholderTest") : group ? t("placeholderGroup") : t("placeholder")}
               className="min-h-11 min-w-0 flex-1 resize-none rounded-[22px] border-2 border-line-strong bg-bg px-4 py-2 text-base leading-[22px]"
             />
             {draft.trim() ? (
@@ -288,6 +296,59 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
       {group && <MembersSheet open={people} onClose={() => setPeople(false)} detail={detail} meId={me.id} onChanged={reload} onLeft={() => router.replace("/messages")} />}
       {manageable && <AddMembersSheet open={adding} onClose={() => setAdding(false)} conversationId={detail.id} memberIds={detail.members.map((m) => m.id)} onAdded={reload} />}
     </div>
+  );
+}
+
+/** Screen T4: the tasks of the test, pinned. A tester ticks them here; the author reads them. */
+function PinnedTasks({ test }: { test: NonNullable<ConversationDetail["test"]> }) {
+  const t = useTranslations("messaging.conversation");
+  const [done, setDone] = useState<number[]>(test.doneSteps ?? []);
+  const [open, setOpen] = useState(true);
+  const [error, setError] = useState(false);
+  const tester = test.doneSteps !== null;
+
+  async function toggle(index: number, next: boolean) {
+    const before = done;
+    setError(false);
+    setDone(next ? [...done, index] : done.filter((i) => i !== index));
+    try {
+      const r = await api<{ doneSteps: number[] }>(`/api/tests/${test.id}/steps`, { method: "PUT", body: { index, done: next } });
+      setDone(r.doneSteps);
+    } catch {
+      setDone(before);
+      setError(true);
+    }
+  }
+
+  return (
+    <section aria-label={t("pinnedLabel")} className="mx-auto mt-3 grid w-[calc(100%-28px)] max-w-[732px] gap-2 rounded-lg border-2 border-line-strong bg-raised px-3.5 py-3">
+      <div className="flex items-center justify-between gap-2.5">
+        <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex min-h-9 items-center gap-1.5 text-xs font-extrabold tracking-wide text-muted uppercase">
+          {t("pinned")}
+          {tester && <span className="tabular">· {done.length}/{test.steps.length}</span>}
+          <Icon name="chevron" size={16} className={open ? "-rotate-90" : "rotate-90"} />
+        </button>
+        {/* A plain <a>: the app lives outside KABAD. */}
+        <a href={test.url} target="_blank" rel="noreferrer" className={buttonClass({ variant: "ink", size: "sm", className: "h-9 px-3 text-[13px] no-underline" })}>
+          {t("installApp")}
+        </a>
+      </div>
+      {open &&
+        test.steps.map((step, i) =>
+          tester ? (
+            <label key={i} className="flex min-h-8 cursor-pointer items-center gap-2.5 text-sm font-bold">
+              <input type="checkbox" checked={done.includes(i)} onChange={(e) => toggle(i, e.target.checked)} className="size-5 shrink-0 accent-[var(--brand)]" />
+              <span className={done.includes(i) ? "text-muted line-through" : undefined}>{step}</span>
+            </label>
+          ) : (
+            <p key={i} className="flex min-h-8 items-center gap-2.5 text-sm font-bold">
+              <span className="grid size-5 shrink-0 place-items-center rounded-full bg-ink text-[11px] text-raised">{i + 1}</span>
+              {step}
+            </p>
+          ),
+        )}
+      {error && <p className="text-[13px] font-bold text-danger">{t("taskError")}</p>}
+    </section>
   );
 }
 
@@ -347,7 +408,7 @@ function AddMembersSheet({ open, onClose, conversationId, memberIds, onAdded }: 
             return (
               <li key={c.id}>
                 <label className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5">
-                  <Avatar initials={initials(c.name)} size="sm" />
+                  <Avatar initials={initials(c.name)} src={c.photo} size="sm" />
                   <span className="grid">
                     <span className="text-sm font-bold">{c.name}</span>
                     <span className="text-xs text-muted">{c.city}</span>
@@ -373,6 +434,8 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
   const tc = useTranslations("messaging.conversation");
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [editing, setEditing] = useState(false);
+  // Removing a member asks for a confirmation first: they lose the group at once.
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Only the owner of a private group changes its name, theme and photo.
@@ -392,85 +455,100 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
   }
 
   return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title={t("infoTitle")}
-      footer={
-        detail.linked ? (
-          <ButtonLink href={detail.linked.kind === "test" ? `/tests/${detail.linked.id}` : `/rise-up/${detail.linked.id}`} variant="secondary" size="lg" block>
-            {detail.linked.kind === "test" ? t("openTest") : t("openProject")}
-          </ButtonLink>
-        ) : confirmLeave ? (
-          <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
-            <Button variant="secondary" onClick={() => setConfirmLeave(false)}>
-              {t("cancel")}
-            </Button>
-            <Button variant="danger" disabled={busy !== null} onClick={() => run("leave", () => api(`/api/groups/${detail.id}/leave`, { method: "POST" }), onLeft)}>
-              {busy === "leave" ? t("leaving") : t("confirm")}
-            </Button>
-          </div>
-        ) : (
-          <Button variant="secondary" size="lg" block onClick={() => setConfirmLeave(true)}>
-            {t("leave")}
-          </Button>
-        )
-      }
-    >
-      {/* MS5: the photo, the name of the group and, under it, its theme. */}
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-        <Avatar initials={initials(detail.title)} src={detail.photo} size="lg" square tone="neutral" />
-        <span className="grid min-w-0">
-          <b className="font-display text-lg leading-6 break-words">{detail.title}</b>
-          <span className="text-sm text-muted">{[tc("memberCount", { count: detail.members.length }), detail.theme].filter(Boolean).join(" · ")}</span>
-        </span>
-        {editable && !editing && (
-          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-            {t("edit")}
-          </Button>
-        )}
-      </div>
-      {editable && editing && <GroupEditor detail={detail} onDone={() => setEditing(false)} onChanged={onChanged} />}
-      {detail.linked && <Alert tone="info">{detail.linked.kind === "test" ? t("linkedTest") : t("linkedProject")}</Alert>}
-      <h3 className="text-sm font-extrabold">{t("title", { count: detail.members.length })}</h3>
-      {confirmLeave && (
-        <Alert tone="info">
-          {t("leaveInfo")}
-          {detail.isOwner ? ` ${t("leaveOwner")}` : ""}
-        </Alert>
-      )}
-      <ul className="m-0 list-none divide-y divide-line rounded-lg border border-line p-0">
-        {detail.members.map((m) => (
-          <li key={m.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5">
-            <Avatar initials={initials(m.name)} size="sm" />
-            <span className="grid">
-              <Link href={`/profil/${m.id}`} className="text-sm font-bold text-ink no-underline">
-                {m.id === meId ? tc("you") : m.name}
-              </Link>
-              {m.owner && <span className="text-xs text-muted">{t("owner")}</span>}
-            </span>
-            {detail.isOwner && !detail.linked && m.id !== meId ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={busy !== null}
-                aria-label={t("removeLabel", { name: m.name })}
-                onClick={() => run(m.id, () => api(`/api/groups/${detail.id}/members/${m.id}`, { method: "DELETE" }), onChanged)}
-              >
-                {busy === m.id ? "…" : t("remove")}
+    <>
+      <Sheet
+        open={open}
+        onClose={onClose}
+        title={t("infoTitle")}
+        footer={
+          detail.linked ? (
+            <ButtonLink href={detail.linked.kind === "test" ? `/tests/${detail.linked.id}` : detail.linked.kind === "team" ? `/hackathons/${detail.linked.id}/equipe` : `/rise-up/${detail.linked.id}`} variant="secondary" size="lg" block>
+              {detail.linked.kind === "test" ? t("openTest") : detail.linked.kind === "team" ? t("openTeam") : t("openProject")}
+            </ButtonLink>
+          ) : confirmLeave ? (
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
+              <Button variant="secondary" onClick={() => setConfirmLeave(false)}>
+                {t("cancel")}
               </Button>
-            ) : (
-              <span />
-            )}
-          </li>
-        ))}
-      </ul>
-      {error && (
-        <Alert tone="danger" role="alert">
-          {error}
-        </Alert>
-      )}
-    </Sheet>
+              <Button variant="danger" disabled={busy !== null} onClick={() => run("leave", () => api(`/api/groups/${detail.id}/leave`, { method: "POST" }), onLeft)}>
+                {busy === "leave" ? t("leaving") : t("confirm")}
+              </Button>
+            </div>
+          ) : (
+            <Button variant="secondary" size="lg" block onClick={() => setConfirmLeave(true)}>
+              {t("leave")}
+            </Button>
+          )
+        }
+      >
+        {/* MS5: the photo, the name of the group and, under it, its theme. */}
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+          <Avatar initials={initials(detail.title)} src={detail.photo} size="lg" square tone="neutral" />
+          <span className="grid min-w-0">
+            <b className="font-display text-lg leading-6 break-words">{detail.title}</b>
+            <span className="text-sm text-muted">{[tc("memberCount", { count: detail.members.length }), detail.theme].filter(Boolean).join(" · ")}</span>
+          </span>
+          {editable && !editing && (
+            <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+              {t("edit")}
+            </Button>
+          )}
+        </div>
+        {editable && editing && <GroupEditor detail={detail} onDone={() => setEditing(false)} onChanged={onChanged} />}
+        {detail.linked && <Alert tone="info">{detail.linked.kind === "test" ? t("linkedTest") : detail.linked.kind === "team" ? t("linkedTeam") : t("linkedProject")}</Alert>}
+        <h3 className="text-sm font-extrabold">{t("title", { count: detail.members.length })}</h3>
+        {confirmLeave && (
+          <Alert tone="info">
+            {t("leaveInfo")}
+            {detail.isOwner ? ` ${t("leaveOwner")}` : ""}
+          </Alert>
+        )}
+        <ul className="m-0 list-none divide-y divide-line rounded-lg border border-line p-0">
+          {detail.members.map((m) => (
+            <li key={m.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5">
+              <Avatar initials={initials(m.name)} src={m.photo} size="sm" />
+              <span className="grid">
+                <Link href={`/profil/${m.id}`} className="text-sm font-bold text-ink no-underline">
+                  {m.id === meId ? tc("you") : m.name}
+                </Link>
+                {m.owner && <span className="text-xs text-muted">{t("owner")}</span>}
+              </span>
+              {detail.isOwner && !detail.linked && m.id !== meId ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy !== null}
+                  aria-label={t("removeLabel", { name: m.name })}
+                  onClick={() => setRemoving({ id: m.id, name: m.name })}
+                >
+                  {busy === m.id ? "…" : t("remove")}
+                </Button>
+              ) : (
+                <span />
+              )}
+            </li>
+          ))}
+        </ul>
+        {error && (
+          <Alert tone="danger" role="alert">
+            {error}
+          </Alert>
+        )}
+      </Sheet>
+        <ConfirmSheet
+          open={removing !== null}
+          onClose={() => setRemoving(null)}
+          onConfirm={() => {
+            const m = removing;
+            if (!m) return;
+            setRemoving(null);
+            run(m.id, () => api(`/api/groups/${detail.id}/members/${m.id}`, { method: "DELETE" }), onChanged);
+          }}
+          title={t("removeTitle", { name: (removing?.name ?? "").split(" ")[0] })}
+          text={t("removeText", { name: (removing?.name ?? "").split(" ")[0] })}
+          confirm={t("remove")}
+        />
+    </>
   );
 }
 

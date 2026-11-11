@@ -23,7 +23,7 @@ export function MemberList({ members }: { members: DirectoryEntry[] }) {
             <Card key={m.id} className="content-start gap-3 px-4 py-3.5">
               <Link href={`/profil/${m.id}`} className="text-ink no-underline">
                 <PersonRow
-                  avatar={<Avatar initials={initials(m.name)} tone={m.verified ? "brand" : "neutral"} />}
+                  avatar={<Avatar initials={initials(m.name)} src={m.photo} tone={m.verified ? "brand" : "neutral"} />}
                   name={m.name}
                   badge={m.verified ? <Badge tone="success">{t("mentor")}</Badge> : undefined}
                   meta={[m.headline, m.city, m.diaspora ? t("diaspora") : ""].filter(Boolean).join(" · ")}

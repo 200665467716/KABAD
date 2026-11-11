@@ -62,7 +62,8 @@
       "today": "Today",
       "bookCta": "Book a session",
       "verifiedShort": "Verified",
-      "slotTaken": "{time}, already booked"
+      "slotTaken": "{time}, already booked",
+      "rating": "{average, number} out of 5 ({count, plural, one {# review} other {# reviews}})"
     },
     "book": {
       "title": "Book",
@@ -118,7 +119,10 @@
       "cancelText": "The other person will be told. The slot becomes free again.",
       "keep": "Keep the session",
       "copy": "Copy the link",
-      "copied": "Link copied"
+      "copied": "Link copied",
+      "ratingFrom": "{name}’s rating",
+      "ratingMine": "Your rating",
+      "ratingValue": "{rating} out of 5"
     },
     "requests": {
       "title": "Requests received",
@@ -179,7 +183,10 @@
         "7": "Sun"
       },
       "notMentor": "You’ll open slots once your mentor badge is granted.",
-      "askBadge": "Ask for the badge"
+      "askBadge": "Ask for the badge",
+      "editRange": "Change the {day} range, {range}",
+      "remove": "Remove",
+      "done": "OK"
     },
     "badge": {
       "metaTitle": "Mentor badge",
@@ -269,6 +276,17 @@
       "emptyClosed": "No cancelled or declined session.",
       "find": "Find a mentor",
       "all": "All my sessions"
+    },
+    "rating": {
+      "title": "Rate the session",
+      "lead": "How did your session with {name} go? Your rating helps them improve and guides other devs.",
+      "label": "Session rating",
+      "mark": "{n} out of 5",
+      "comment": "A word for your mentor (optional)",
+      "commentHint": "{name} will read your message.",
+      "send": "Send my rating",
+      "sending": "Sending…",
+      "failed": "The rating was not saved. Try again."
     }
   }
 }

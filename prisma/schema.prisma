@@ -65,8 +65,11 @@ model User {
   timeZone         String    @default("Africa/Lome") @db.VarChar(40)
   /// Video link a mentor uses for every session (Meet, Jitsi…). Empty: KABAD creates a Jitsi room per session.
   meetingUrl       String    @default("") @db.VarChar(200)
+  /// When the profile photo last changed, or null without one. The address of the picture carries it, so browsers refresh it.
+  photoAt          DateTime?
   createdAt        DateTime  @default(now())
 
+  photo                UserPhoto?
   sessions             Session[]
   invitationsSent      Invitation[]         @relation("InvitationFrom")
   invitationsReceived  Invitation[]         @relation("InvitationTo")
@@ -175,6 +178,7 @@ model Conversation {
   messages Message[]
   testApp  TestApp?
   project  RiseProject?
+  team     Team?
   photo    GroupPhoto?
 }
 
@@ -184,6 +188,14 @@ model GroupPhoto {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   mime           String       @db.VarChar(20)
   data           Bytes
+}
+
+/// The profile photo of a member, already cropped and reduced by the browser. In its own table so that loading a member never loads its bytes.
+model UserPhoto {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mime   String @db.VarChar(20)
+  data   Bytes
 }
 
 enum Gender {
@@ -392,6 +404,10 @@ model MentoringBooking {
   nudgedAt      DateTime?
   /// Both members were reminded one hour before the session (worker).
   remindedAt    DateTime?
+  /// After the session, the dev rates it from 1 to 5, once, with an optional word for the mentor.
+  rating        Int?
+  ratingComment String?       @db.VarChar(300)
+  ratedAt       DateTime?
 
   @@index([mentorId, startsAt])
   @@index([menteeId, startsAt])
@@ -476,6 +492,9 @@ model Team {
   solo        Boolean           @default(false)
   /// Open call shown to other participants: "Cherche un·e dev backend".
   lookingFor  String?           @db.VarChar(80)
+  /// The team's discussion (H4): a group of the messaging that follows the team's members. Solo entries have none.
+  conversationId String?        @unique
+  conversation   Conversation?  @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   createdAt   DateTime          @default(now())
   members     TeamMember[]
   requests    TeamJoinRequest[]
@@ -513,6 +532,8 @@ model TeamJoinRequest {
   team       Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   status     TeamRequestStatus @default(PENDING)
+  /// False: the member asked to join, the captain answers. True: the captain invited the member, who answers (H3).
+  invited    Boolean           @default(false)
   createdAt  DateTime          @default(now())
   answeredAt DateTime?
 

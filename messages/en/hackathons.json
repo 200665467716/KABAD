@@ -99,14 +99,24 @@
       "acceptRules": "I accept the",
       "rules": "hackathon rules",
       "submit": "Confirm my entry",
-      "submitJoin": "Send my request",
       "sending": "Sending…",
       "failed": "Your entry didn’t go through. Try again.",
       "requestedTitle": "Request sent.",
       "requestedText": "The team captain will read your request. You’ll get a notification when they answer.",
       "back": "Back to the hackathon",
       "closed": "Registrations for this hackathon are closed.",
-      "juror": "You are on this hackathon’s jury: you can’t take part."
+      "juror": "You are on this hackathon’s jury: you can’t take part.",
+      "needRules": "Accept the hackathon rules first.",
+      "invitedTitle": "{team} invites you",
+      "invitedText": "Invited by {name} · {count} of {max}",
+      "invitedDecline": "Decline",
+      "invitedAccept": "Join the team",
+      "removeMate": "Remove {name} from the invited",
+      "inviteMate": "Invite a member",
+      "matesCount": "{count} of {max} · invite your teammates",
+      "askLabel": "Ask to join {team}",
+      "askedLabel": "Request sent to {team}",
+      "teamWord": "Team"
     },
     "team": {
       "solo": "alone",
@@ -144,7 +154,12 @@
       "leaveCaptain": "You are the captain: the longest-standing member takes over. Leave?",
       "submit": "Submit our solution",
       "editSubmission": "Edit the solution",
-      "locked": "Solution sent to the jury"
+      "locked": "Solution sent to the jury",
+      "discussion": "Team discussion",
+      "inviteSent": "Invitation sent · waiting",
+      "inviteCancel": "Cancel",
+      "invite": "Invite a teammate",
+      "teamWord": "Team"
     },
     "submit": {
       "title": "Submit",
@@ -161,7 +176,8 @@
       "sending": "Sending…",
       "failed": "The solution wasn’t sent. Try again.",
       "notStarted": "The hackathon hasn’t started yet.",
-      "closed": "This hackathon is over: solutions are no longer accepted."
+      "closed": "This hackathon is over: solutions are no longer accepted.",
+      "teamWord": "Team"
     },
     "organize": {
       "heading": "Organize",
@@ -195,23 +211,36 @@
       "stack": "Technologies",
       "stackPlaceholder": "Web or mobile",
       "challenge": "The challenge",
-      "prizes": "Prizes announced",
+      "prizes": "Prizes",
       "prizesHint": "0 to 5 prizes, in free text. The first goes to the first team in the ranking, the second to the second, and so on. You hand them over yourself. Leave empty if there is no prize.",
       "prizeLabel": "Prize no. {rank}",
       "addPrize": "Add a prize",
       "rules": "Rules",
       "optional": "Optional: link to the rules.",
-      "instructorsTitle": "Instructors (optional)",
-      "instructorsText": "KABAD mentors coach your teams. You pay for their mission.",
       "mission": "Mission",
       "fee": "Fee per instructor (F CFA)",
       "count": "Number",
-      "review": "Once sent, you pick the instructors; the KABAD team then publishes the hackathon.",
+      "review": "By sending, you propose your hackathon: the KABAD team reviews it, then publishes it. The chosen mentors receive the mission offer.",
       "continue": "Continue",
       "back": "Back",
       "send": "Propose the hackathon",
       "sending": "Sending…",
-      "failed": "The hackathon wasn’t saved. Try again."
+      "failed": "The hackathon wasn’t saved. Try again.",
+      "step3": "Recruit instructors",
+      "lead3": "KABAD mentors prepare your teams. Their mission is paid. This step is optional.",
+      "prizePlaceholder": "E.g. [amount] F CFA + incubation",
+      "rulesPlaceholder": "Link to the rules",
+      "noPrize": "No prize for this hackathon",
+      "missionPlaceholder": "Prepare the teams and guide them for 48 hours",
+      "feePlaceholder": "[Amount]",
+      "suggested": "Suggested mentors",
+      "proposedCount": "{count, plural, =0 {None offered} one {# offered} other {# offered}}",
+      "feeFirst": "Enter a fee to offer the mission to mentors.",
+      "noMentors": "No mentor available yet.",
+      "propose": "Offer",
+      "proposed": "Offered",
+      "proposeLabel": "Offer the mission to {name}",
+      "proposedLabel": "Mission offered to {name}"
     },
     "instructors": {
       "title": "Instructors",
@@ -340,6 +369,15 @@
       "resultsConfirm": "Publish the results? Every team is told, and the winning teams learn which prize they won.",
       "failed": "That didn’t work."
     },
-    "pending": "Awaiting publication"
+    "pending": "Awaiting publication",
+    "mates": {
+      "title": "Invite teammates",
+      "invite": "{count, plural, =0 {Pick a contact} one {Invite # contact} other {Invite # contacts}}",
+      "help": "{max, plural, =0 {Your team is full.} one {You can invite your contacts. # spot left.} other {You can invite your contacts. # spots left.}} Each of them answers the invitation.",
+      "loading": "Loading your contacts…",
+      "none": "No contact to invite. Invite devs from messaging first.",
+      "inviteLabel": "Invite {name}",
+      "loadError": "Your contacts could not be loaded. Try again."
+    }
   }
 }

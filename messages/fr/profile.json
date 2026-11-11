@@ -60,7 +60,14 @@
       "genderHint": "Sert seulement à accorder les textes, par exemple « Vérifiée » sur ta fiche de mentor.",
       "genderNone": "Je préfère ne pas le dire",
       "genderFemale": "Femme",
-      "genderMale": "Homme"
+      "genderMale": "Homme",
+      "photo": "Photo de profil",
+      "photoAdd": "Ajouter une photo",
+      "photoChange": "Changer la photo",
+      "photoRemove": "Retirer la photo",
+      "photoSending": "Envoi…",
+      "photoHint": "Elle s’affiche sur ton profil et dans la messagerie. Sans photo, on voit tes initiales.",
+      "photoFailed": "La photo n’a pas été enregistrée. Réessaie."
     },
     "public": {
       "title": "Profil",

@@ -2,8 +2,9 @@
  * Hackathons (the former code challenges), enforced on the server:
  * - an organizer proposes a hackathon; the KABAD team publishes it after review;
  * - members enter alone or as a team until registrations close; a member is in one team per hackathon;
- *   joining a team goes through a request the captain accepts;
- * - each team sends one solution, editable until the end of the hackathon, which then goes to the jury
+ *   joining a team goes through a request the captain accepts, or an invitation from the captain the member accepts;
+ *   each team has its discussion in the messaging, which follows its members;
+ * - each team sends one solution (its repository must be public), editable until the end of the hackathon, which then goes to the jury
  *   (the worker records the change, src/server/jobs.ts);
  * - three badged mentors score each solution anonymously on 4 criteria; the mark is the average of their totals;
  * - hackathons and mentoring are independent: anyone may enter, without any mentoring required;
@@ -16,7 +17,10 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
 import { mentoredBy } from "./mentoring";
+import { closeCommunityGroup, handOverCommunityGroup, joinCommunityGroup, leaveCommunityGroup, openCommunityGroup } from "./messaging";
 import { pushNotifications, type NotificationInput } from "./notifications";
+import type { RepoCheck } from "./repo-check";
+import { teamTitle } from "@/lib/format";
 import { averageMark, totalScore } from "@/lib/jury";
 import { prizeFor } from "@/lib/prize";
 import type { HackathonDetail, HackathonResults, HackathonSummary, JuryItem, MissionView, RankingRow, TeamView } from "@/lib/domain-types";
@@ -117,8 +121,10 @@ function toTeam(t: TeamRow, viewerId: string): TeamView {
     lookingFor: t.lookingFor,
     captainId: t.captainId,
     members: t.members.map((m) => ({ ...m.user, skill: m.skill })),
-    // Only the captain sees who asks to join.
-    requests: viewerId === t.captainId ? t.requests.map((r) => ({ id: r.id, user: r.user, createdAt: r.createdAt.toISOString() })) : [],
+    // Only the captain sees who asks to join, and whom they invited.
+    requests: viewerId === t.captainId ? t.requests.filter((r) => !r.invited).map((r) => ({ id: r.id, user: r.user, createdAt: r.createdAt.toISOString() })) : [],
+    invites: viewerId === t.captainId ? t.requests.filter((r) => r.invited).map((r) => ({ id: r.id, user: r.user, createdAt: r.createdAt.toISOString() })) : [],
+    conversationId: t.conversationId,
     submission: t.submission && {
       projectName: t.submission.projectName,
       repoUrl: t.submission.repoUrl,
@@ -157,9 +163,18 @@ export async function getHackathon(viewerId: string | null, id: string, prisma: 
   const myTeam = viewerId ? await teamOf(prisma, id, viewerId) : null;
   const open = await prisma.team.findMany({
     where: { hackathonId: id, solo: false },
-    select: { id: true, name: true, lookingFor: true, _count: { select: { members: true } }, requests: viewerId ? { where: { userId: viewerId, status: "PENDING" }, select: { id: true } } : false },
+    select: { id: true, name: true, lookingFor: true, _count: { select: { members: true } }, requests: viewerId ? { where: { userId: viewerId, status: "PENDING", invited: false }, select: { id: true } } : false },
     orderBy: { createdAt: "asc" },
   });
+  // Teams whose captain invited the viewer: answered from the "Participer" screen (H3).
+  const invitations =
+    viewerId && !myTeam
+      ? await prisma.teamJoinRequest.findMany({
+          where: { userId: viewerId, invited: true, status: "PENDING", team: { hackathonId: id } },
+          select: { id: true, team: { select: { name: true, captain: { select: { name: true } }, _count: { select: { members: true } } } } },
+          orderBy: { createdAt: "asc" },
+        })
+      : [];
   return {
     ...summary,
     description: h.description,
@@ -173,6 +188,7 @@ export async function getHackathon(viewerId: string | null, id: string, prisma: 
     openTeams: open
       .filter((t) => t._count.members < h.teamMax && t.id !== myTeam?.id)
       .map((t) => ({ id: t.id, name: t.name, lookingFor: t.lookingFor, members: t._count.members, requested: Array.isArray(t.requests) && t.requests.length > 0 })),
+    invitations: invitations.map((i) => ({ id: i.id, team: i.team.name, captain: i.team.captain.name, members: i.team._count.members })),
     published: h.publishedAt !== null,
     canEdit,
   };
@@ -198,6 +214,8 @@ export type HackathonInput = {
   missionText?: string;
   instructorFee?: number;
   instructorCount?: number;
+  /** Mentors the instructor mission is offered to, at the last step of the form (H8). */
+  mentorIds?: string[];
 };
 
 function slug(title: string) {
@@ -225,6 +243,8 @@ function checkDates(input: Pick<HackathonInput, "startsAt" | "endsAt" | "closesA
 /** An organizer proposes a hackathon. It stays hidden until the KABAD team publishes it. */
 export async function createHackathon(userId: string, input: HackathonInput, prisma: Db = db) {
   checkDates(input);
+  const mentorIds = input.mentorIds ?? [];
+  if (mentorIds.length && !input.instructorFee) throw new DomainError("fee", "Indique d’abord la rémunération par instructeur.", 400, "instructorFee");
   const creator = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
   return prisma.$transaction(async (tx) => {
     const h = await tx.hackathon.create({
@@ -250,6 +270,7 @@ export async function createHackathon(userId: string, input: HackathonInput, pri
         instructorCount: input.instructorCount ?? 0,
       },
     });
+    if (mentorIds.length) await offerMissions(tx, h, mentorIds);
     const admins = await tx.user.findMany({ where: { isAdmin: true, suspendedAt: null }, select: { id: true } });
     await pushNotifications(tx, admins.map((a) => ({ userId: a.id, actor: creator.name, key: "hackathonProposed", params: { title: input.title }, href: `/hackathons/${h.id}`, icon: "trophy", tone: "brand" })));
     return { id: h.id };
@@ -285,7 +306,7 @@ const alreadyIn = () => new DomainError("already_in", "Tu es déjà inscrit à c
 export async function register(
   userId: string,
   hackathonId: string,
-  input: { mode: "solo" | "create" | "join"; teamName?: string; teamId?: string; skill?: string; lookingFor?: string },
+  input: { mode: "solo" | "create" | "join"; teamName?: string; teamId?: string; skill?: string; lookingFor?: string; invite?: string[] },
   prisma: Db = db,
 ) {
   const h = await openForEntries(prisma, hackathonId, userId);
@@ -297,8 +318,9 @@ export async function register(
     const team = await prisma.team.findUnique({ where: { id: input.teamId ?? "" }, include: { _count: { select: { members: true } } } });
     if (!team || team.hackathonId !== hackathonId || team.solo) throw notFound("Équipe introuvable.");
     if (team._count.members >= h.teamMax) throw new DomainError("full", "Cette équipe est complète.", 409);
+    if (await prisma.teamJoinRequest.count({ where: { teamId: team.id, userId, status: "PENDING", invited: true } })) throw new DomainError("invited", "Cette équipe t’a déjà invité : accepte son invitation.", 409);
     return prisma.$transaction(async (tx) => {
-      const r = await tx.teamJoinRequest.upsert({ where: { teamId_userId: { teamId: team.id, userId } }, create: { teamId: team.id, userId }, update: { status: "PENDING", answeredAt: null } });
+      const r = await tx.teamJoinRequest.upsert({ where: { teamId_userId: { teamId: team.id, userId } }, create: { teamId: team.id, userId }, update: { status: "PENDING", invited: false, answeredAt: null } });
       await pushNotifications(tx, [{ userId: team.captainId, actor: me.name, key: "teamJoinRequested", params: { team: team.name, title: h.title }, href: `/hackathons/${hackathonId}/equipe`, icon: "users", tone: "brand" }]);
       return { requestId: r.id };
     });
@@ -312,8 +334,13 @@ export async function register(
     return await prisma.$transaction(async (tx) => {
       const team = await tx.team.create({ data: { hackathonId, name, captainId: userId, solo: input.mode === "solo", lookingFor: input.mode === "create" ? input.lookingFor || null : null } });
       await tx.teamMember.create({ data: { teamId: team.id, userId, hackathonId, skill } });
-      // Requests sent to other teams no longer make sense.
+      // Requests sent to other teams, and invitations received, no longer make sense.
       await tx.teamJoinRequest.updateMany({ where: { userId, status: "PENDING", team: { hackathonId } }, data: { status: "DECLINED", answeredAt: new Date() } });
+      if (input.mode === "create") {
+        // H4: the team's discussion opens with the team; H3: the captain invites contacts at once.
+        await openTeamGroup(tx, team, me.name);
+        await sendTeamInvites(tx, h, team, me.name, input.invite ?? []);
+      }
       return { teamId: team.id };
     });
   } catch (e) {
@@ -327,14 +354,101 @@ export async function register(
   }
 }
 
-export async function answerJoinRequest(captainId: string, requestId: string, accept: boolean, prisma: Db = db) {
-  const r = await prisma.teamJoinRequest.findUnique({ where: { id: requestId }, include: { team: { include: { hackathon: true, _count: { select: { members: true } } } } } });
-  if (!r || r.team.captainId !== captainId) throw notFound("Demande introuvable.");
-  if (r.status !== "PENDING") throw new DomainError("answered", "Cette demande a déjà reçu une réponse.", 409);
+const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
+
+/** Opens the team's discussion in the messaging (H4). A solo entry has none. */
+async function openTeamGroup(tx: Prisma.TransactionClient, team: { id: string; name: string; captainId: string }, captainName: string) {
+  const conversationId = await openCommunityGroup(tx, {
+    name: teamTitle(team.name),
+    theme: "Hackathon",
+    ownerId: team.captainId,
+    intro: `${firstName(captainName)} a créé l’équipe ${team.name}. Cette discussion est réservée à ses membres.`,
+  });
+  await tx.team.update({ where: { id: team.id }, data: { conversationId } });
+  return conversationId;
+}
+
+/**
+ * The discussion of the member's team. A team created before discussions existed gets it now,
+ * opened by its captain, with every member in it.
+ */
+export async function teamDiscussion(userId: string, teamId: string, prisma: Db = db) {
+  return prisma.$transaction(async (tx) => {
+    // The team's row is locked first: two members opening the discussion together get the same group.
+    await tx.$queryRaw`SELECT id FROM "Team" WHERE id = ${teamId} FOR UPDATE`;
+    const t = await tx.team.findUnique({ where: { id: teamId }, include: { captain: { select: { name: true } }, members: { orderBy: { joinedAt: "asc" }, select: { userId: true } } } });
+    if (!t || !t.members.some((m) => m.userId === userId)) throw notFound("Équipe introuvable.");
+    if (t.solo) throw new DomainError("solo", "Une participation en solo n’a pas de discussion d’équipe.", 409);
+    const conversationId = t.conversationId ?? (await openTeamGroup(tx, t, t.captain.name));
+    for (const m of t.members) await joinCommunityGroup(tx, conversationId, m.userId);
+    return { conversationId };
+  });
+}
+
+/**
+ * The captain invites contacts into the team (H3). An invitation is a join request made the other way round:
+ * the invited member answers it. Places are counted with the invitations still waiting.
+ */
+async function sendTeamInvites(
+  tx: Prisma.TransactionClient,
+  h: { id: string; title: string; teamMax: number; jurors: Array<{ userId: string }> },
+  team: { id: string; name: string; captainId: string },
+  captainName: string,
+  memberIds: string[],
+) {
+  const ids = [...new Set(memberIds)].filter((id) => id !== team.captainId);
+  if (ids.length === 0) return { invited: 0 };
+  if ((await tx.contact.count({ where: { userId: team.captainId, contactId: { in: ids } } })) !== ids.length) throw forbidden("Tu ne peux inviter que tes contacts.");
+  if (ids.some((id) => h.jurors.some((j) => j.userId === id))) throw new DomainError("juror", "Un membre du jury ne peut pas rejoindre une équipe.", 409);
+  const [seated, members, pending] = await Promise.all([
+    tx.teamMember.count({ where: { hackathonId: h.id, userId: { in: ids } } }),
+    tx.teamMember.count({ where: { teamId: team.id } }),
+    tx.teamJoinRequest.findMany({ where: { teamId: team.id, status: "PENDING" }, select: { userId: true, invited: true } }),
+  ]);
+  if (seated) throw new DomainError("already_in", "Un des membres invités participe déjà à ce hackathon.", 409);
+  if (pending.some((p) => !p.invited && ids.includes(p.userId))) throw new DomainError("asked", "Un de ces membres a déjà demandé à rejoindre ton équipe : accepte sa demande.", 409);
+  // Members already invited and still thinking are not invited twice.
+  const fresh = ids.filter((id) => !pending.some((p) => p.userId === id));
+  if (members + pending.filter((p) => p.invited).length + fresh.length > h.teamMax) throw new DomainError("full", "Ton équipe serait trop grande : invite moins de membres, ou annule une invitation.", 409);
+  for (const userId of fresh) {
+    await tx.teamJoinRequest.upsert({ where: { teamId_userId: { teamId: team.id, userId } }, create: { teamId: team.id, userId, invited: true }, update: { status: "PENDING", invited: true, answeredAt: null, createdAt: new Date() } });
+  }
+  await pushNotifications(
+    tx,
+    fresh.map((userId) => ({ userId, actor: captainName, key: "teamInvited", params: { team: team.name, title: h.title }, href: `/hackathons/${h.id}/participer`, icon: "users", tone: "brand" })),
+  );
+  return { invited: fresh.length };
+}
+
+export async function inviteToTeam(captainId: string, teamId: string, memberIds: string[], prisma: Db = db) {
+  const t = await prisma.team.findUnique({ where: { id: teamId }, include: { captain: { select: { name: true } } } });
+  if (!t || t.captainId !== captainId) throw notFound("Équipe introuvable.");
+  if (t.solo) throw new DomainError("solo", "Tu participes en solo : crée une équipe pour inviter des coéquipiers.", 409);
+  const h = await openForEntries(prisma, t.hackathonId, captainId);
+  return prisma.$transaction((tx) => sendTeamInvites(tx, h, t, t.captain.name, memberIds));
+}
+
+/** The captain takes an invitation back before it is answered. */
+export async function cancelTeamInvite(captainId: string, requestId: string, prisma: Db = db) {
+  const r = await prisma.teamJoinRequest.findUnique({ where: { id: requestId }, include: { team: { select: { captainId: true } } } });
+  if (!r || !r.invited || r.team.captainId !== captainId) throw notFound("Invitation introuvable.");
+  await prisma.teamJoinRequest.deleteMany({ where: { id: requestId, status: "PENDING" } });
+  return { ok: true };
+}
+
+/** A request to join is answered by the captain; an invitation, by the member invited. */
+export async function answerJoinRequest(userId: string, requestId: string, accept: boolean, prisma: Db = db) {
+  const r = await prisma.teamJoinRequest.findUnique({
+    where: { id: requestId },
+    include: { user: { select: { name: true } }, team: { include: { hackathon: { include: { jurors: { select: { userId: true } } } }, _count: { select: { members: true } } } } },
+  });
+  if (!r || (r.invited ? r.userId : r.team.captainId) !== userId) throw notFound(r?.invited ? "Invitation introuvable." : "Demande introuvable.");
+  if (r.status !== "PENDING") throw new DomainError("answered", r.invited ? "Tu as déjà répondu à cette invitation." : "Cette demande a déjà reçu une réponse.", 409);
   const h = r.team.hackathon;
   if (accept) {
     if (h.status !== "OPEN" || h.closesAt.getTime() <= Date.now()) throw new DomainError("closed", "Les inscriptions sont closes.", 409);
-    if (r.team._count.members >= h.teamMax) throw new DomainError("full", "Ton équipe est complète.", 409);
+    if (r.team._count.members >= h.teamMax) throw new DomainError("full", r.invited ? "Cette équipe est complète." : "Ton équipe est complète.", 409);
+    if (r.invited && h.jurors.some((j) => j.userId === userId)) throw forbidden("Tu fais partie du jury de ce hackathon : tu ne peux pas y participer.");
   }
   try {
     return await prisma.$transaction(async (tx) => {
@@ -343,15 +457,19 @@ export async function answerJoinRequest(captainId: string, requestId: string, ac
       if (accept) {
         await tx.teamMember.create({ data: { teamId: r.teamId, userId: r.userId, hackathonId: h.id } });
         await tx.teamJoinRequest.updateMany({ where: { userId: r.userId, status: "PENDING", team: { hackathonId: h.id } }, data: { status: "DECLINED", answeredAt: new Date() } });
+        // The new member enters the team's discussion.
+        if (r.team.conversationId) await joinCommunityGroup(tx, r.team.conversationId, r.userId);
       }
       await pushNotifications(tx, [
-        { userId: r.userId, actor: r.team.name, key: accept ? "teamJoinAccepted" : "teamJoinDeclined", params: { title: h.title }, href: `/hackathons/${h.id}`, icon: "users", tone: accept ? "success" : "neutral" },
+        r.invited
+          ? { userId: r.team.captainId, actor: r.user.name, key: accept ? "teamInviteAccepted" : "teamInviteDeclined", params: { team: r.team.name, title: h.title }, href: `/hackathons/${h.id}/equipe`, icon: "users", tone: accept ? "success" : "neutral" }
+          : { userId: r.userId, actor: r.team.name, key: accept ? "teamJoinAccepted" : "teamJoinDeclined", params: { title: h.title }, href: `/hackathons/${h.id}`, icon: "users", tone: accept ? "success" : "neutral" },
       ]);
-      return { ok: true };
+      return { ok: true, hackathonId: h.id };
     });
   } catch (e) {
     // The member joined another team in the meantime.
-    if ((e as { code?: string }).code === "P2002") throw new DomainError("already_in", "Ce membre a déjà rejoint une autre équipe.", 409);
+    if ((e as { code?: string }).code === "P2002") throw r.invited ? alreadyIn() : new DomainError("already_in", "Ce membre a déjà rejoint une autre équipe.", 409);
     throw e;
   }
 }
@@ -366,6 +484,14 @@ export async function leaveTeam(userId: string, teamId: string, prisma: Db = db)
     const rest = t.members.filter((m) => m.userId !== userId);
     if (rest.length === 0) await tx.team.delete({ where: { id: teamId } });
     else if (t.captainId === userId) await tx.team.update({ where: { id: teamId }, data: { captainId: rest[0].userId } });
+    // The team's discussion follows: the member leaves it, a new captain takes it over, an empty team closes it.
+    if (t.conversationId) {
+      if (rest.length === 0) await closeCommunityGroup(tx, t.conversationId);
+      else {
+        await leaveCommunityGroup(tx, t.conversationId, userId);
+        if (t.captainId === userId) await handOverCommunityGroup(tx, t.conversationId, rest[0].userId);
+      }
+    }
     return { ok: true };
   });
 }
@@ -408,6 +534,8 @@ export async function submitSolution(
   hackathonId: string,
   input: { projectName: string; repoUrl: string; demoUrl?: string; explanation: string },
   prisma: Db = db,
+  /** Says whether the repository is public (src/server/repo-check.ts). Without it, the link is not checked. */
+  repoCheck?: RepoCheck,
 ) {
   const h = await prisma.hackathon.findUnique({ where: { id: hackathonId } });
   if (!h || !h.publishedAt) throw notFound("Hackathon introuvable.");
@@ -416,6 +544,10 @@ export async function submitSolution(
   const team = await teamOf(prisma, hackathonId, userId);
   if (!team) throw forbidden("Inscris-toi d’abord à ce hackathon.");
   if (team.members.length < h.teamMin) throw new DomainError("team_small", `Il faut au moins ${h.teamMin} membres dans l’équipe pour soumettre.`, 409);
+  // H5e: the jury must be able to open the repository. A forge that does not answer does not block the team.
+  if (repoCheck && (await repoCheck(input.repoUrl)) === false) {
+    throw new DomainError("repo_private", "Ce lien ne mène à aucun dépôt public. Vérifie l’adresse, ou rends le dépôt public avant l’envoi.", 400, "repoUrl");
+  }
   const data = {
     projectName: input.projectName,
     repoUrl: input.repoUrl,
@@ -591,14 +723,19 @@ export async function proposeMissions(userId: string, hackathonId: string, mento
   const h = await requireOrganizer(prisma, userId, hackathonId);
   if (!h.instructorFee) throw new DomainError("fee", "Indique d’abord la rémunération par instructeur.", 400, "instructorFee");
   if (h.status === "DONE") throw new DomainError("done", "Ce hackathon est terminé.", 409);
-  const mentors = await prisma.user.findMany({ where: { id: { in: mentorIds }, seniorVerifiedAt: { not: null }, suspendedAt: null }, select: { id: true } });
+  return prisma.$transaction(async (tx) => ({ proposed: await offerMissions(tx, { id: h.id, organizerName: h.organizerName, instructorFee: h.instructorFee }, mentorIds) }));
+}
+
+/** Records the missions and tells each mentor. Used when the hackathon is proposed (H8) and afterwards. */
+async function offerMissions(tx: Prisma.TransactionClient, h: { id: string; organizerName: string; instructorFee: number | null }, mentorIds: string[]) {
+  const mentors = await tx.user.findMany({ where: { id: { in: mentorIds }, seniorVerifiedAt: { not: null }, suspendedAt: null }, select: { id: true } });
   if (mentors.length !== new Set(mentorIds).size) throw new DomainError("not_mentor", "Seuls les mentors KABAD peuvent être instructeurs.", 400);
-  return prisma.$transaction(async (tx) => {
-    const { count } = await tx.instructorMission.createMany({ data: mentors.map((m) => ({ hackathonId, mentorId: m.id, fee: h.instructorFee! })), skipDuplicates: true });
-    const created = await tx.instructorMission.findMany({ where: { hackathonId, mentorId: { in: mentors.map((m) => m.id) }, status: "PROPOSED" }, select: { id: true, mentorId: true } });
-    await pushNotifications(tx, created.map((m) => ({ userId: m.mentorId, actor: h.organizerName, key: "missionProposed", href: `/hackathons/missions/${m.id}`, icon: "wallet", tone: "accent" })));
-    return { proposed: count };
-  });
+  const before = await tx.instructorMission.findMany({ where: { hackathonId: h.id }, select: { mentorId: true } });
+  const { count } = await tx.instructorMission.createMany({ data: mentors.map((m) => ({ hackathonId: h.id, mentorId: m.id, fee: h.instructorFee! })), skipDuplicates: true });
+  // Only the mentors asked just now are told: a mentor already asked is not notified again.
+  const created = await tx.instructorMission.findMany({ where: { hackathonId: h.id, mentorId: { in: mentors.map((m) => m.id), notIn: before.map((m) => m.mentorId) } }, select: { id: true, mentorId: true } });
+  await pushNotifications(tx, created.map((m) => ({ userId: m.mentorId, actor: h.organizerName, key: "missionProposed", href: `/hackathons/missions/${m.id}`, icon: "wallet", tone: "accent" })));
+  return count;
 }
 
 export async function answerMission(mentorId: string, missionId: string, accept: boolean, prisma: Db = db) {

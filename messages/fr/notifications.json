@@ -39,7 +39,11 @@
       "testReportRefused": " a refusé ton rapport sur « {title} » : {reason}",
       "invitationReceived": " t’invite à échanger.",
       "invitationAccepted": " a accepté ton invitation. Vous pouvez discuter.",
-      "roomLive": " est en direct : « {title} ». Rejoins le salon."
+      "roomLive": " est en direct : « {title} ». Rejoins le salon.",
+      "teamInvited": " t’invite dans l’équipe {team} ({title}).",
+      "teamInviteAccepted": " a rejoint ton équipe {team} ({title}).",
+      "teamInviteDeclined": " ne rejoint pas ton équipe {team} ({title}).",
+      "sessionRated": " a noté votre séance « {topic} » : {rating} sur 5."
     }
   }
 }

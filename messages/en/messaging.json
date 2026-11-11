@@ -96,7 +96,14 @@
       "tooLong": "A message is {max} characters at most.",
       "voiceSending": "Voice message…",
       "uploadFailed": "The file wasn’t sent. Try again.",
-      "groupInfo": "Group info"
+      "groupInfo": "Group info",
+      "pinned": "Pinned · instructions",
+      "pinnedLabel": "Pinned instructions",
+      "installApp": "Install the app",
+      "appAuthor": "{name} · author of the app",
+      "attachCapture": "Attach a screenshot",
+      "placeholderTest": "Write feedback…",
+      "taskError": "The task was not saved. Try again."
     },
     "add": {
       "title": "Add participants",
@@ -134,7 +141,11 @@
       "photoSending": "Sending…",
       "noTheme": "No theme",
       "save": "Save",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "removeTitle": "Remove {name} from the group?",
+      "removeText": "{name} will no longer see the group’s messages. You can add them again later.",
+      "openTeam": "See my team",
+      "linkedTeam": "This group is your hackathon team’s discussion: join or leave it by joining or leaving the team."
     },
     "group": {
       "metaTitle": "New group",

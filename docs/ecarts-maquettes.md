@@ -25,26 +25,26 @@ Comparaison des 62 écrans du canevas « KABAD — Refonte » (version du 7 nove
 ## Lot 2 — Écrans absents
 
 - [x] **M2 Profil du mentor**, séparé du calendrier (M3) : poste, ville, « Vérifiée par KABAD », domaines et technos, « Sur quoi … peut t'aider », « Son travail » (liens du badge), 3 prochains créneaux, « Réserver une séance » (11 novembre). Les informations du badge s'affichent aussi sur le profil public.
-- [ ] **T4 Groupe de testeurs** : écran dédié (consignes épinglées à cocher, « Installer l'app », « auteur de l'app », « Joindre une capture », « Écrire un retour… »).
-- [ ] **Espace de discussion de l'équipe** de hackathon (H4) : lier l'équipe à une conversation de groupe.
+- [x] **T4 Groupe de testeurs** (11 novembre) : écran dédié (consignes épinglées à cocher, « Installer l'app », « auteur de l'app », « Joindre une capture », « Écrire un retour… »).
+- [x] **Espace de discussion de l'équipe** de hackathon (H4) : l'équipe est liée à une conversation de groupe (11 novembre).
 - [x] **Photo de groupe** (MS4, MS1, MS5) : envoi d'image recadrée dans le navigateur, affichage dans la liste, l'en-tête et les infos du groupe ; renommage du groupe par son responsable (11 novembre).
 
 ## Lot 3 — Parcours à reprendre
 
-- [ ] **Organiser un hackathon en 3 étapes** (H6 infos, H7 défi et prix avec « Pas de prix », H8 instructeurs puis « Publier le hackathon »).
+- [x] **Organiser un hackathon en 3 étapes** (11 novembre) (H6 infos, H7 défi et prix avec « Pas de prix », H8 instructeurs puis « Publier le hackathon »).
 - [x] **M3** : créneaux déjà réservés visibles et barrés, fuseau en nom de ville (« Heure de Lomé »), résumé « Jeu. 5 nov. · 15 h 00 – 15 h 30 » (11 novembre).
 - [x] **M6** : « Accepter » mène à la séance confirmée ; état « Demande refusée · X est prévenu ».
 - [x] **M7** : « Lien Google Meet », « Rejoindre sur Google Meet », « Copier le lien » (11 novembre).
 - [x] **B1** : technos en puces comme à l'inscription (pré-remplies depuis le profil), domaines bloqués à 3 (11 novembre).
-- [ ] **H5/H5e** : vérifier que le dépôt est public ; « Ce lien ne mène à aucun dépôt public… » ; `https://` ajouté tout seul.
-- [ ] **H3** : inviter des coéquipiers, « Demander » sur chaque équipe.
+- [x] **H5/H5e** (11 novembre) : vérifier que le dépôt est public ; « Ce lien ne mène à aucun dépôt public… » ; `https://` ajouté tout seul.
+- [x] **H3** : inviter des coéquipiers, « Demander » sur chaque équipe (11 novembre).
 - [ ] **Accueil (B2)** : logo et avatar à droite dans l'en-tête, carte séance qui chevauche l'en-tête, « Tests d'apps » en carte.
 - [ ] **P1 Profil** : carte d'identité en vedette, icônes colorées par fonctionnalité, « Devenir mentor » en carte pointillée, bouton « Paramètres », niveau toujours affiché.
 - [x] **R2, R5** : bandeau du salon (encre, bouton maïs), zone d'écriture fixée en bas ; lien Google Meet obligatoire ; « Notification et rappel 1 h avant » relié au rappel ; « Lancer un salon » (11 novembre).
 
 ## Lot 4 — Textes et détails
 
-Fait le 11 novembre pour la messagerie : « Écrire un message… », « Écrire au groupe… », « message vocal », bandeau des invitations en pointillés, recherche dans les conversations, bouton flottant « Nouveau groupe », thème sous le nom du groupe, « Invité » (A6) ; M1 : « Demandes reçues » dans l'en-tête. Reste : tests (« 2 tâches sur 3 faites ») et hackathons (« 2 à 5 devs », « Équipe {nom} », « Proposer / Proposée »), mis de côté ; croix « Annuler » sur les formulaires, drapeaux de pays sur les avatars, ombre vedette unique par écran, cibles de 44 px sur les liens et le contrôle segmenté.
+Fait le 11 novembre pour la messagerie : « Écrire un message… », « Écrire au groupe… », « message vocal », bandeau des invitations en pointillés, recherche dans les conversations, bouton flottant « Nouveau groupe », thème sous le nom du groupe, « Invité » (A6) ; M1 : « Demandes reçues » dans l'en-tête. Faits le 11 novembre au soir : code e-mail en 6 cases et icônes A3, A8, œil unique en A9, plages en pastilles (M8), formulaire T3, « 2 tâches sur 3 faites », « Équipe {nom} », « Proposer / Proposée », ombre vedette du projet en direct (R1), textes de R3, photo de profil des membres. Reste : « 2 à 5 devs » ; croix « Annuler » sur les formulaires, drapeaux de pays sur les avatars, ombre vedette unique par écran, cibles de 44 px sur les liens et le contrôle segmenté.
 
 ## Questions à trancher par l'équipe
 
