@@ -2,7 +2,7 @@
 
 Bilan du 9 novembre 2026, mis à jour le 11 novembre, branche `dev/modifications`. Pour chaque fonctionnalité : une note sur 10, ce qui manque pour atteindre 10, le fonctionnement normal, puis les tests à faire à la main, avec ce qu'on doit voir quand tout va bien.
 
-Vérifications automatiques au 11 novembre : lint et types propres, 41 tests unitaires, 67 tests d'intégration sur PostgreSQL, 111 tests e2e (téléphone et ordinateur), aucune licence GPL, AGPL ou LGPL.
+Vérifications automatiques au 11 novembre : lint et types propres, 41 tests unitaires, 68 tests d'intégration sur PostgreSQL, 111 tests e2e (téléphone et ordinateur), aucune licence GPL, AGPL ou LGPL.
 
 ## Tableau de bord
 

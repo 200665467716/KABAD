@@ -225,6 +225,16 @@ describe("hackathons", () => {
     expect(await note("fatou")).toEqual(["resultsPublished", null]);
   });
 
+  it("sans aucune note du jury, la publication est refusée avec un message, pas une erreur 500", async () => {
+    // No juror was named: nothing is missing, yet there is no ranking.
+    await hackathon();
+    await register("kossi", "h", { mode: "solo" }, prisma);
+    await submitSolution("kossi", "h", { projectName: "Momo", repoUrl: "https://github.com/k/r", explanation: "x".repeat(40) }, prisma);
+    await prisma.hackathon.update({ where: { id: "h" }, data: { status: "JURY" } });
+    await refused(publishResults("equipe", "h", prisma), "unscored");
+    expect((await prisma.hackathon.findUniqueOrThrow({ where: { id: "h" } })).status).toBe("JURY");
+  });
+
   it("sans prix annoncé, la première équipe apprend qu’elle a gagné", async () => {
     await hackathon({ jurors: { create: [{ userId: "nadia" }, { userId: "ibrahim" }, { userId: "aicha" }] } });
     await register("kossi", "h", { mode: "solo" }, prisma);
