@@ -180,8 +180,14 @@ Décisions du jour (Emmerson) : Google Meet pour le mentorat seulement ; genre s
 - [x] Profil : genre facultatif (accords « Vérifiée » / « Vérifié » sur la fiche d'un mentor) et fuseau horaire au choix ; les heures de l'accueil et des événements suivent le fuseau du membre.
 - [x] Mentorat : historique « Toutes mes séances » (`/mentorat/seances`) en trois onglets, à venir, passées, annulées.
 - [x] Rise-Up : onglet « Fiche » dans le canal d'un projet (défi, porteur, date de lancement, équipe, problème, compétences recherchées).
-- [ ] Rise-Up : salons de discussion à lancer depuis un canal (forme à préciser : vocal, texte ou lien de visio).
-- Tests : 33 unitaires, 51 d'intégration, 111 e2e.
+- [x] Rise-Up : salons à lancer depuis un canal. Un salon est un lien Google Meet ouvert tout de suite aux membres, prévenus aussitôt ; un seul à la fois par projet ; son auteur ou l'initiateur le ferme. Un événement exige aussi un lien Meet ; le repli Jitsi est retiré. Bandeau du salon, zone d'écriture fixée en bas, rappel relié à « Notification et rappel 1 h avant ».
+- [x] Landing : corrections du document du 11 novembre (liste des fonctionnalités qui disparaissait au clic, hero, « Pourquoi rejoindre KABAD » en mentorat, Rise-Up, tests d'apps, étapes, FAQ, adresse de contact).
+- [x] Hackathons : retrait des cagnottes (D12), prix en texte libre donnés selon le classement.
+- [x] Messagerie : non-lus des pièces jointes, blocage dans un groupe commun, gros groupes (notifications par lots), vidéo MP4 refusée comme note vocale, invitations simultanées ; photo et renommage des groupes ; maquettes MS1, MS3, MS5, A6.
+- [x] Mentorat : fiche du mentor M2 séparée du calendrier, informations du badge sur le profil public, créneaux pris barrés (M3), « Demandes reçues » dans l'en-tête (M1), badge en puces (B1) ; réservation à 30 jours, pas deux séances à la même heure, retrait de badge qui prévient les devs, plages sans chevauchement.
+- [ ] Logo de la CADEV dans le bandeau de la landing : fichier du logo à fournir.
+- [ ] Encore ouverts côté maquettes (hors tests d'apps et hackathons, mis de côté) : accueil B2, profil P1 et écran « Paramètres », plages en pastilles (M8), états vides et écran hors connexion, code e-mail en 6 cases.
+- Tests : 41 unitaires, 67 d'intégration, 111 e2e.
 
 ## P1 — Les « Must » manquants et Africa Rise-Up (objectif : 11 novembre)
 

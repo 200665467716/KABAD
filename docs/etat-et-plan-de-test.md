@@ -2,31 +2,31 @@
 
 Bilan du 9 novembre 2026, mis à jour le 11 novembre, branche `dev/modifications`. Pour chaque fonctionnalité : une note sur 10, ce qui manque pour atteindre 10, le fonctionnement normal, puis les tests à faire à la main, avec ce qu'on doit voir quand tout va bien.
 
-Vérifications automatiques au 11 novembre : lint et types propres, 33 tests unitaires, 51 tests d'intégration sur PostgreSQL, 111 tests e2e (téléphone et ordinateur), aucune licence GPL, AGPL ou LGPL.
+Vérifications automatiques au 11 novembre : lint et types propres, 41 tests unitaires, 67 tests d'intégration sur PostgreSQL, 111 tests e2e (téléphone et ordinateur), aucune licence GPL, AGPL ou LGPL.
 
 ## Tableau de bord
 
 | # | Fonctionnalité | Note | Ce qui bloque le 10 |
 | --- | --- | --- | --- |
 | 0 | Mise en ligne et socle technique | **2/10** | Rien n'est en ligne ; `main` n'a pas reçu la refonte ; pas de reverse proxy, de déploiement, de sauvegardes ni de supervision |
-| 1 | Landing page | **9/10** | Vrais chiffres, pages Contact et Confidentialité |
+| 1 | Landing page | **9/10** | Logo de la CADEV dans le bandeau (fichier à fournir), vrais chiffres à la place des exemples |
 | 2 | Inscription et connexion | **8,5/10** | Code e-mail en 6 cases, icônes des écrans, détails de textes |
 | 3 | Accueil, profil, notifications | **7,5/10** | En-tête de l'accueil, carte « Tests d'apps », profil (vedette, couleurs, Paramètres), « Tout marquer comme lu » dans l'en-tête |
-| 4 | Mentorat | **8/10** | Écran M2 (profil du mentor) absent, créneaux déjà pris invisibles |
-| 5 | Badge mentor et validation | **7,5/10** | Technos en puces, textes |
-| 6 | Hackathons | **6,5/10** | Création en 3 étapes, discussion d'équipe absente, dépôt public non vérifié, invitations de coéquipiers |
+| 4 | Mentorat | **9/10** | Plages en pastilles (M8), évaluation de la séance (mise de côté) |
+| 5 | Badge mentor et validation | **8,5/10** | Détails de textes |
+| 6 | Hackathons | **6,5/10** | Création en 3 étapes, discussion d'équipe absente, dépôt public non vérifié, invitations de coéquipiers (mis de côté le 11 novembre) |
 | 7 | Tests d'apps | **7/10** | Écran T4 « Groupe de testeurs » dédié absent, formulaire T3 à aligner |
-| 8 | Messagerie | **8/10** | Photo de groupe absente, thème du groupe non affiché, textes |
-| 9 | Africa Rise-Up | **7/10** | Salons de discussion à préciser, zone d'écriture, interrupteur de rappel |
+| 8 | Messagerie | **9/10** | Confirmation pour retirer un membre d'un groupe, photo de profil des membres |
+| 9 | Africa Rise-Up | **8/10** | Ombre vedette sur le projet en direct, textes des champs |
 | 10 | Administration et modération | **7,5/10** | Quelques écrans hors maquette, pas de tests manuels récents |
 | 11 | Compte et sécurité | **8,5/10** | Écran « Paramètres » de la maquette absent |
 | 12 | Anglais | **7,5/10** | Tous les textes passent par les dictionnaires ; relecture anglaise à faire |
 | 13 | Application installable (PWA) | **3/10** | Manifeste et icônes seulement : pas de mode hors connexion, d'invitation à installer ni de notifications |
-| 14 | Paiement des cagnottes | **1/10** | XedoPay pas branché : la page de soutien affiche « bientôt » |
+| 14 | Prix des hackathons | **retiré** | Plus de cagnotte ni de paiement (décision D12) : les prix sont des textes libres, remis par l'organisateur |
 | 15 | Tâches planifiées (worker) | **8,5/10** | Fonctionne et testé, e-mails compris ; à lancer en production avec une boîte d'envoi |
 | 16 | Temps réel | **8/10** | Fonctionne et testé ; adresse `wss://` à configurer en production |
 
-Moyenne des fonctionnalités produit (1 à 12) : **7,7/10**. Le point le plus urgent n'est pas une fonctionnalité : c'est la mise en ligne (0), condition de recevabilité.
+Moyenne des fonctionnalités produit (1 à 12) : **8/10**. Le point le plus urgent n'est pas une fonctionnalité : c'est la mise en ligne (0), condition de recevabilité.
 
 ## Préparer les tests
 
@@ -129,11 +129,11 @@ Bon à savoir :
 
 ---
 
-## 4. Mentorat — 8/10
+## 4. Mentorat — 9/10
 
 **Fonctionnement normal** : seuls les mentors badgés apparaissent. Le dev choisit un mentor, un jour, un créneau de 30 minutes (fuseau affiché), puis écrit son sujet et son problème. La demande part, le mentor l'accepte ou la refuse. Le mentor donne son lien Google Meet dans ses disponibilités : sans lien, pas de créneaux ni d'acceptation. Acceptée, la séance donne ce lien Meet aux deux et un fichier calendrier. « Toutes mes séances » garde l'historique (à venir, passées, annulées). Une demande sans réponse expire ; le mentor reçoit une relance à 48 h ; un rappel part 1 h avant la séance. Un membre a 3 demandes en attente au plus.
 
-**Manque pour 10/10** : écran M2 « Profil du mentor » séparé du calendrier (liens GitHub/LinkedIn, sujets, prochains créneaux) ; créneaux déjà réservés affichés barrés ; évaluation de la séance (mise de côté le 11 novembre).
+**Manque pour 10/10** : plages des disponibilités en pastilles (M8) ; évaluation de la séance (mise de côté le 11 novembre).
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
@@ -147,6 +147,10 @@ Bon à savoir :
 | Aïcha → « Accepter » (autre demande) | Arrivée sur « Séance confirmée » ; Kossi est notifié ; les deux voient « Lien Google Meet », « Rejoindre sur Google Meet » et « Copier le lien » |
 | Mentor sans lien Meet : enregistrer des créneaux, ou accepter une demande | Refusé : « Ajoute ton lien Google Meet… » |
 | Disponibilités : coller `meet.google.com/abc-defg-hij`, puis un lien d'un autre site | Le premier est accepté (`https://` ajouté tout seul) ; le second est refusé |
+| Ouvrir un mentor depuis la liste | Sa fiche : poste et ville, « Vérifiée par KABAD », sujets en liste, liens GitHub et LinkedIn, 3 prochains créneaux, « Réserver une séance » |
+| « Réserver une séance », puis un jour où quelqu'un a déjà réservé | Le créneau pris est barré et ne se sélectionne pas ; le résumé affiche « Jeu. 5 nov. · 15 h 00 – 15 h 30 » |
+| Demander deux séances à la même heure chez deux mentors | La seconde est refusée : « Tu as déjà une séance à cette heure. » |
+| Mentor → Disponibilités : une plage 20:00 – 00:00, puis « ajouter une plage » | La nouvelle plage se place avant, sans chevauchement ; l'enregistrement passe |
 | Mentorat → « Toutes mes séances » | Trois onglets avec leur nombre : à venir, passées, annulées ; chaque ligne ouvre la séance |
 | « Ajouter à mon calendrier » | Un fichier `.ics` se télécharge et s'ouvre dans l'agenda |
 | « Annuler la séance » | Une feuille « Annuler la séance ? » ; après confirmation, l'autre est prévenu |
@@ -176,9 +180,9 @@ Bon à savoir :
 
 ## 6. Hackathons — 6,5/10
 
-**Fonctionnement normal** : n'importe quel dev connecté propose un hackathon, en indiquant l'organisateur en texte libre. L'équipe KABAD le relit et le publie. Les devs s'inscrivent seuls, créent une équipe ou demandent à en rejoindre une ; le capitaine accepte. Aucun mentorat n'est exigé. Chaque équipe soumet une solution (dépôt, démo facultative, description), modifiable jusqu'à la fin. À la fin, le hackathon passe au jury (3 mentors notent chaque solution sur 4 critères, sans jamais noter quelqu'un qu'ils ont accompagné). L'équipe publie les résultats. Avec une cagnotte ou une dotation : 90 % à l'équipe gagnante, 10 % à KABAD, versés après 48 h de contestation. L'organisateur peut proposer des missions d'instructeur rémunérées à des mentors, qui acceptent ou refusent.
+**Fonctionnement normal** : n'importe quel dev connecté propose un hackathon, en indiquant l'organisateur en texte libre. L'équipe KABAD le relit et le publie. Les devs s'inscrivent seuls, créent une équipe ou demandent à en rejoindre une ; le capitaine accepte. Aucun mentorat n'est exigé. Chaque équipe soumet une solution (dépôt, démo facultative, description), modifiable jusqu'à la fin. À la fin, le hackathon passe au jury (3 mentors notent chaque solution sur 4 critères, sans jamais noter quelqu'un qu'ils ont accompagné). L'équipe publie les résultats. L'organisateur annonce de 0 à 5 prix en texte libre : à la publication, ils sont donnés dans l'ordre du classement et chaque équipe primée apprend le sien (D12, plus de cagnotte).
 
-**Manque pour 10/10** : création en 3 étapes de la maquette (infos, défi et prix avec « Pas de prix », instructeurs) ; espace de discussion de chaque équipe ; vérification que le dépôt est public (et l'erreur de H5e) ; inviter des coéquipiers ; « Demander » sur chaque équipe ; placeholder « [Prix annoncés par l'organisateur] » ; paiement des cagnottes (voir 14).
+**Manque pour 10/10** (mis de côté le 11 novembre) : création en 3 étapes de la maquette (infos, défi et prix, instructeurs) ; espace de discussion de chaque équipe ; vérification que le dépôt est public (et l'erreur de H5e) ; inviter des coéquipiers ; « Demander » sur chaque équipe.
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
@@ -192,7 +196,7 @@ Bon à savoir :
 | Proposer un hackathon (Organiser) | Fin avant début refusée ; une fois envoyé, il n'est pas public tant que l'équipe KABAD ne l'a pas publié |
 | `equipe@kabad.app` → Admin → Hackathons → Publier | Le hackathon apparaît dans la liste de tous |
 | Jury : Ibrahim sur « Raccourcisseur » | Il note les solutions sans voir qui les a faites, 4 critères de 1 à 5 |
-| Publier les résultats (équipe KABAD) | Gagnant affiché ; avec une cagnotte : versement de 90 % au gagnant et 10 % à KABAD dans Admin → Versements, disponible après 48 h |
+| Publier les résultats (équipe KABAD) | Classement affiché avec le prix de chaque équipe primée ; chaque membre d'une équipe primée reçoit « ton équipe finit à la place N et gagne … » ; les autres reçoivent « les résultats sont publiés » |
 | Mission d'instructeur → « Refuser » | Feuille « Refuser la mission ? » ; après refus, retour aux notifications ; l'organisateur est prévenu |
 | Mission → « Accepter » | Arrivée sur le hackathon |
 
@@ -218,11 +222,11 @@ Bon à savoir :
 
 ---
 
-## 8. Messagerie — 8/10
+## 8. Messagerie — 9/10
 
 **Fonctionnement normal** : un premier contact passe par une invitation, avec un message facultatif de 300 caractères au plus. Tant qu'elle n'est pas acceptée, l'expéditeur la voit dans sa messagerie avec « En attente » ; personne ne peut écrire. Acceptée, la conversation s'ouvre avec le message d'invitation. Messages en temps réel : texte, notes vocales (2 minutes), images et PDF (2 Mo). Groupes privés avec un thème, créés parmi ses contacts (50 membres au plus). Signalement et blocage. Après un refus, on peut réinviter la même personne au bout de 30 jours.
 
-**Manque pour 10/10** : photo de groupe ; thème affiché sous le nom du groupe ; recherche dans les conversations ; textes de la maquette (« Écrire un message… », « message vocal ») ; confirmation pour retirer un membre d'un groupe.
+**Manque pour 10/10** : confirmation pour retirer un membre d'un groupe ; photo de profil des membres.
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
@@ -238,6 +242,11 @@ Bon à savoir :
 | Quitter un groupe | Feuille de confirmation ; si le créateur part, le plus ancien membre prend le relais |
 | Bloquer un membre | Il ne peut plus écrire ni inviter |
 | Signaler un message | Le signalement arrive chez l'équipe KABAD (Admin → Signalements) |
+| Recevoir une image ou un message vocal sans ouvrir la conversation | Le compteur de non-lus augmente, comme pour un texte |
+| Chercher « fintech » dans la liste | Seules les conversations dont le nom correspond restent ; sans résultat : « Aucune conversation ne correspond… » |
+| Groupe que tu as créé → « Infos du groupe » → « Modifier » : changer le nom, le thème, ajouter une photo | Une ligne « … a renommé le groupe » arrive chez tous ; la photo s'affiche dans la liste, l'en-tête et les infos |
+| Bloquer un membre d'un groupe commun, puis lui faire écrire dans le groupe | Chez toi : « Message d'un membre que tu as bloqué. », pas de non-lu ; les autres lisent son message |
+| Envoyer une vidéo MP4 comme message vocal | Refusé : seuls les PDF, les images et les messages vocaux sont acceptés |
 
 ---
 
@@ -245,7 +254,7 @@ Bon à savoir :
 
 **Fonctionnement normal** : un dev lance un projet (nom, défi visé parmi Eau, Santé, Agriculture, Éducation, Énergie, Finance, Autre, problème, compétences recherchées). Le projet a son canal : discussion avec fils de réponses, événements, membres et fiche du projet. Les devs rejoignent le projet et entrent dans son canal. Le porteur programme des événements avec un lien de visio ; les membres sont prévenus et reçoivent un rappel 1 h avant. Pas de salon audio intégré en V1.
 
-**Manque pour 10/10** : salons de discussion à lancer depuis un canal (forme à préciser) ; zone d'écriture fixée en bas du canal ; interrupteur « Notification et rappel 1 h avant » relié au rappel ; ombre vedette sur le projet en direct ; textes des champs.
+**Manque pour 10/10** : ombre vedette sur le projet en direct ; textes des champs.
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
@@ -255,6 +264,9 @@ Bon à savoir :
 | Écrire une idée, y répondre | Le fil s'ouvre avec le nombre de réponses |
 | Non-membre qui veut écrire | Impossible |
 | Programmer un événement | Les membres reçoivent une notification ; la page de l'événement montre l'ordre du jour, « Rejoindre la visio », l'ajout au calendrier |
+| Canal d'un projet → « Lancer un salon », coller un lien d'un autre site puis `meet.google.com/abc-defg-hij` | Le premier est refusé ; avec le lien Meet, le bandeau « Salon en direct » apparaît, « Rejoindre la visio » ouvre Google Meet, les autres membres sont notifiés |
+| Page du salon → « Fermer le salon » | Feuille de confirmation ; le bandeau disparaît du projet et « Lancer un salon » revient |
+| Programmer un événement en décochant « Notification et rappel 1 h avant » | Aucun membre n'est notifié, ni maintenant ni une heure avant |
 | Canal d'un projet → onglet « Fiche » | Défi, porteur (lien vers son profil), date de lancement, équipe et pays, le projet en une phrase, le problème, les compétences recherchées |
 | Quitter le projet | Il sort aussi du canal |
 
@@ -262,7 +274,7 @@ Bon à savoir :
 
 ## 10. Administration et modération — 7,5/10
 
-**Fonctionnement normal** : le compte de l'équipe KABAD a un tableau de bord : badges à examiner, hackathons à publier et à juger, signalements, membres (suspendre, réintégrer, retirer un badge), versements à faire, et le journal de toutes les actions. Un membre ordinaire n'a accès à rien de tout cela.
+**Fonctionnement normal** : le compte de l'équipe KABAD a un tableau de bord : badges à examiner, hackathons à publier et à juger, signalements, membres (suspendre, réintégrer, retirer un badge), et le journal de toutes les actions. Un membre ordinaire n'a accès à rien de tout cela.
 
 **Manque pour 10/10** : passe de design sur ces écrans (étiquette « Admin » de la maquette B5) ; tests manuels complets.
 
@@ -272,7 +284,7 @@ Bon à savoir :
 | Kossi → `/admin` | Page introuvable |
 | Signalements → retirer un message | Le message devient « Message retiré par la modération. » chez tous |
 | Membres → suspendre Moussa | Moussa est déconnecté partout et ne peut plus se connecter ; réintégrer lui rend l'accès |
-| Versements → marquer comme envoyé avec une référence | Le bénéficiaire est notifié ; le versement passe à « Envoyé » |
+| Membres → réintégrer un membre suspendu | Il peut se reconnecter ; l'action est dans le journal |
 | Journal | Chaque action ci-dessus y figure, avec son auteur |
 
 ---
@@ -320,21 +332,21 @@ Bon à savoir :
 
 ---
 
-## 14. Paiement des cagnottes — 1/10
+## 14. Prix des hackathons — cagnottes retirées (D12)
 
-**Fait** : modèle de contributions en base, page publique de soutien `/soutenir/[id]`, répartition 90/10 calculée et testée.
+**Fait** : KABAD ne garde ni ne verse d'argent. L'organisateur annonce de 0 à 5 prix en texte libre ; ils sont donnés dans l'ordre du classement à la publication des résultats, et il les remet lui-même. La page `/soutenir`, l'écran « Versements » et le numéro Mobile Money de la soumission ont disparu.
 
-**Manque pour 10/10** : branchement de XedoPay en mode test (paiement hébergé, webhook signé, crédit une seule fois par référence), remboursement si le hackathon est annulé (R40). Aujourd'hui, la page de soutien affiche « bientôt » et aucun paiement n'est possible.
+**Manque pour 10/10** : rien de prévu pour la CADEV.
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
-| Ouvrir `/soutenir/agritech-sahel` sans compte | La page s'affiche, explique la répartition 90/10 et annonce que le paiement arrive bientôt |
+| Organiser un hackathon avec 2 prix, ou sans aucun prix | Les prix s'affichent numérotés sur la page du hackathon ; sans prix : « Pas de prix pour ce hackathon. » |
 
 ---
 
 ## 15. Tâches planifiées — 8,5/10
 
-**Fonctionnement normal** : le service `worker` lance, sans jamais ralentir une page : expiration des demandes de séance sans réponse, relance du mentor à 48 h, rappel 1 h avant une séance ou un événement Rise-Up, passage des hackathons au jury à la fin, annonce des versements après 48 h, expiration des invitations à 30 jours, envoi par e-mail des notifications importantes (chaque minute). Chaque tâche est testée automatiquement et sans effet si elle tourne deux fois.
+**Fonctionnement normal** : le service `worker` lance, sans jamais ralentir une page : expiration des demandes de séance sans réponse, relance du mentor à 48 h, rappel 1 h avant une séance ou un événement Rise-Up, passage des hackathons au jury à la fin, expiration des invitations à 30 jours, envoi par e-mail des notifications importantes (chaque minute). Chaque tâche est testée automatiquement et sans effet si elle tourne deux fois.
 
 **Manque pour 10/10** : le faire tourner en production (service `worker` de `compose.yaml`) et le surveiller.
 
@@ -362,8 +374,8 @@ Bon à savoir :
 ## Ordre de travail proposé jusqu'au 15 novembre
 
 1. **Mise en ligne** (0) : fusion dans `main`, Caddy, déploiement, sauvegardes, `/api/health`, démo sur le serveur Systalink. Condition de recevabilité.
-2. **Écrans absents qui se voient en démo** : M2 profil du mentor, T4 groupe de testeurs, discussion d'équipe en hackathon.
-3. **Parcours à reprendre** : création de hackathon en 3 étapes, accueil et profil, Rise-Up.
-4. **Si le temps le permet** : PWA hors connexion, paiement en sandbox.
+2. **Écrans absents qui se voient en démo** : T4 groupe de testeurs, discussion d'équipe en hackathon (mis de côté le 11 novembre ; M2, la fiche du mentor, est faite).
+3. **Parcours à reprendre** : accueil et profil ; création de hackathon en 3 étapes (mise de côté). Rise-Up est fait.
+4. **Si le temps le permet** : PWA hors connexion.
 
 Le 12 novembre au soir, gel des fonctionnalités : ensuite, uniquement des corrections, et ce plan de test sur la version en ligne.

@@ -24,27 +24,27 @@ Comparaison des 62 écrans du canevas « KABAD — Refonte » (version du 7 nove
 
 ## Lot 2 — Écrans absents
 
-- [ ] **M2 Profil du mentor**, séparé du calendrier (M3) : poste, ville, « Vérifiée par KABAD », domaines et technos, « Sur quoi … peut t'aider », « Son travail » (liens du badge), 3 prochains créneaux, « Réserver une séance ».
+- [x] **M2 Profil du mentor**, séparé du calendrier (M3) : poste, ville, « Vérifiée par KABAD », domaines et technos, « Sur quoi … peut t'aider », « Son travail » (liens du badge), 3 prochains créneaux, « Réserver une séance » (11 novembre). Les informations du badge s'affichent aussi sur le profil public.
 - [ ] **T4 Groupe de testeurs** : écran dédié (consignes épinglées à cocher, « Installer l'app », « auteur de l'app », « Joindre une capture », « Écrire un retour… »).
 - [ ] **Espace de discussion de l'équipe** de hackathon (H4) : lier l'équipe à une conversation de groupe.
-- [ ] **Photo de groupe** (MS4, MS1, MS5) : champ en base, envoi d'image, affichage.
+- [x] **Photo de groupe** (MS4, MS1, MS5) : envoi d'image recadrée dans le navigateur, affichage dans la liste, l'en-tête et les infos du groupe ; renommage du groupe par son responsable (11 novembre).
 
 ## Lot 3 — Parcours à reprendre
 
 - [ ] **Organiser un hackathon en 3 étapes** (H6 infos, H7 défi et prix avec « Pas de prix », H8 instructeurs puis « Publier le hackathon »).
-- [ ] **M3** : créneaux déjà réservés visibles et barrés, résumé « Jeu. 5 nov. · 15 h 00 – 15 h 30 ». Fait le 11 novembre : fuseau en nom de ville (« Heure de Lomé »).
+- [x] **M3** : créneaux déjà réservés visibles et barrés, fuseau en nom de ville (« Heure de Lomé »), résumé « Jeu. 5 nov. · 15 h 00 – 15 h 30 » (11 novembre).
 - [x] **M6** : « Accepter » mène à la séance confirmée ; état « Demande refusée · X est prévenu ».
 - [x] **M7** : « Lien Google Meet », « Rejoindre sur Google Meet », « Copier le lien » (11 novembre).
-- [ ] **B1** : technos en puces comme à l'inscription (pré-remplies depuis le profil), domaines bloqués à 3.
+- [x] **B1** : technos en puces comme à l'inscription (pré-remplies depuis le profil), domaines bloqués à 3 (11 novembre).
 - [ ] **H5/H5e** : vérifier que le dépôt est public ; « Ce lien ne mène à aucun dépôt public… » ; `https://` ajouté tout seul.
 - [ ] **H3** : inviter des coéquipiers, « Demander » sur chaque équipe.
 - [ ] **Accueil (B2)** : logo et avatar à droite dans l'en-tête, carte séance qui chevauche l'en-tête, « Tests d'apps » en carte.
 - [ ] **P1 Profil** : carte d'identité en vedette, icônes colorées par fonctionnalité, « Devenir mentor » en carte pointillée, bouton « Paramètres », niveau toujours affiché.
-- [ ] **R2, R5** : bandeau du salon (encre, bouton maïs), zone d'écriture fixée en bas ; format Google Meet ; interrupteur « Notification et rappel 1 h avant » relié au rappel.
+- [x] **R2, R5** : bandeau du salon (encre, bouton maïs), zone d'écriture fixée en bas ; lien Google Meet obligatoire ; « Notification et rappel 1 h avant » relié au rappel ; « Lancer un salon » (11 novembre).
 
 ## Lot 4 — Textes et détails
 
-Reprise mot pour mot des textes (messagerie : « Écrire un message… », « message vocal » ; tests : « 2 tâches sur 3 faites » ; hackathons : « 2 à 5 devs », « Équipe {nom} », « Proposer / Proposée » ; croix « Annuler » sur les formulaires), drapeaux de pays sur les avatars, ombre vedette unique par écran, cibles de 44 px sur les liens et le contrôle segmenté.
+Fait le 11 novembre pour la messagerie : « Écrire un message… », « Écrire au groupe… », « message vocal », bandeau des invitations en pointillés, recherche dans les conversations, bouton flottant « Nouveau groupe », thème sous le nom du groupe, « Invité » (A6) ; M1 : « Demandes reçues » dans l'en-tête. Reste : tests (« 2 tâches sur 3 faites ») et hackathons (« 2 à 5 devs », « Équipe {nom} », « Proposer / Proposée »), mis de côté ; croix « Annuler » sur les formulaires, drapeaux de pays sur les avatars, ombre vedette unique par écran, cibles de 44 px sur les liens et le contrôle segmenté.
 
 ## Questions à trancher par l'équipe
 
@@ -52,6 +52,6 @@ Reprise mot pour mot des textes (messagerie : « Écrire un message… », « me
 2. ~~Publication des hackathons~~ : **tranché le 7 novembre**, l'équipe KABAD relit et publie. Le bouton de H8 dira « Proposer le hackathon ».
 3. ~~Mentorat exigé pour un hackathon~~ : **tranché le 7 novembre**, plus aucune exigence ; partage 90/10 (fait).
 4. **Champs en plus** de T3 (présentation, objectif, questions de contrôle), H6 (clôture, niveau, technos), R3 (le projet en une phrase) : les garder ? **Mis de côté le 11 novembre** : pas de changement sur les tests d'apps ni sur les hackathons pour le moment.
-5. **Technologies** : 12 dans le point projet, 15 dans la maquette A5 (avec PostgreSQL, Docker, AWS).
-6. **Salon Rise-Up** : le 11 novembre, Rise-Up reste fait de canaux de discussion, avec une fiche du projet dans chaque canal (faite, onglet « Fiche ») et la possibilité de lancer des salons de discussion. Reste à préciser la forme du salon : vocal dans KABAD, discussion écrite à part, ou lien de visio.
+5. ~~Technologies~~ : **tranché le 11 novembre**, on garde les 12 du point projet.
+6. ~~Salon Rise-Up~~ : **tranché le 11 novembre**, un salon est un lien de visio (Google Meet) lancé depuis le canal du projet (fait), en plus de la fiche du projet (faite).
 7. ~~Genre~~ : **tranché le 11 novembre**, genre facultatif sur le profil (fait).
