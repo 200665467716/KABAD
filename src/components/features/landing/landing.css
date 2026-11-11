@@ -113,7 +113,8 @@
 .lp .band{background:var(--band);color:var(--band-fg);overflow:hidden;border-top:2px solid var(--ink);border-bottom:2px solid var(--ink)}
 .lp .band .track{display:flex;width:max-content;animation:lp-marq 38s linear infinite}
 .lp .band:hover .track{animation-play-state:paused}
-.lp .band .seg{display:flex;align-items:center;gap:28px;padding:18px 14px;font:700 15px/1 var(--display);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+.lp .band .seg{display:flex;align-items:center;gap:28px;padding:8px 14px;min-height:64px;font:700 15px/1 var(--display);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+.lp .band .seg .cadev{height:36px;width:auto;flex:none;box-sizing:content-box;padding:6px 10px;border-radius:10px;background:#fff;margin-right:-12px}
 .lp .band .seg i{width:10px;height:10px;background:var(--mais);transform:rotate(45deg);flex:none}
 @keyframes lp-marq{to{transform:translateX(-50%)}}
 .lp .band{position:relative}

@@ -666,6 +666,8 @@ export async function publishResults(adminId: string, hackathonId: string, prism
   if (missing) throw new DomainError("unscored", `${missing} solution${missing > 1 ? "s n’ont" : " n’a"} pas encore été notée${missing > 1 ? "s" : ""} par tout le jury.`, 409);
 
   const rank = await ranking(hackathonId, prisma);
+  // No jury named, or every juror recused: there is no ranking to publish.
+  if (rank.length === 0) throw new DomainError("unscored", "Aucune solution n’a reçu de note du jury.", 409);
   const winner = h.submissions.find((s) => s.teamId === rank[0].teamId)!;
   const placeOf = new Map(rank.map((r, i) => [r.teamId, i + 1]));
   const everyone = h.submissions.flatMap((s) => s.team.members.map((m) => ({ userId: m.userId, place: placeOf.get(s.teamId)! })));

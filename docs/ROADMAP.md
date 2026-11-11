@@ -185,9 +185,11 @@ Décisions du jour (Emmerson) : Google Meet pour le mentorat seulement ; genre s
 - [x] Hackathons : retrait des cagnottes (D12), prix en texte libre donnés selon le classement.
 - [x] Messagerie : non-lus des pièces jointes, blocage dans un groupe commun, gros groupes (notifications par lots), vidéo MP4 refusée comme note vocale, invitations simultanées ; photo et renommage des groupes ; maquettes MS1, MS3, MS5, A6.
 - [x] Mentorat : fiche du mentor M2 séparée du calendrier, informations du badge sur le profil public, créneaux pris barrés (M3), « Demandes reçues » dans l'en-tête (M1), badge en puces (B1) ; réservation à 30 jours, pas deux séances à la même heure, retrait de badge qui prévient les devs, plages sans chevauchement.
-- [ ] Logo de la CADEV dans le bandeau de la landing : fichier du logo à fournir.
+- [x] Logo de la CADEV dans le bandeau de la landing, à côté de « Une initiative issue de la Coupe d'Afrique des développeurs » (`public/partenaires/cadev.svg`).
 - [ ] Encore ouverts côté maquettes : accueil B2, profil P1 et écran « Paramètres », états vides et écran hors connexion.
-- Tests : 41 unitaires, 67 d'intégration, 111 e2e.
+- [x] Repris du travail local du 9 novembre (branche `sauvegarde/travail-local-9-nov`) : limiteur de débit indépendant du fuseau de PostgreSQL (il ne bloquait jamais sur une base réglée hors UTC), tests d'intégration lançables sous Windows, publication des résultats refusée proprement quand aucune solution n'a de note.
+- [x] `npm run db:migrate` régénère le client Prisma après la migration (Prisma 7 ne le fait plus seul) : plus d'erreur « Unknown argument » au seed après un changement de schéma.
+- Tests : 41 unitaires, 68 d'intégration, 111 e2e.
 
 ## Mise à jour du 11 novembre au soir (branche `dev/main`)
 

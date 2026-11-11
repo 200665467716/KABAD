@@ -2,14 +2,14 @@
 
 Bilan du 9 novembre 2026, mis à jour le 11 novembre (au soir : manques des maquettes traités), branche `dev/main`. Pour chaque fonctionnalité : une note sur 10, ce qui manque pour atteindre 10, le fonctionnement normal, puis les tests à faire à la main, avec ce qu'on doit voir quand tout va bien.
 
-Vérifications automatiques au 11 novembre : lint et types propres, 48 tests unitaires, 77 tests d'intégration sur PostgreSQL, 112 tests e2e (téléphone et ordinateur), aucune licence GPL, AGPL ou LGPL.
+Vérifications automatiques au 11 novembre : lint et types propres, 48 tests unitaires, 78 tests d'intégration sur PostgreSQL, 112 tests e2e (téléphone et ordinateur), aucune licence GPL, AGPL ou LGPL.
 
 ## Tableau de bord
 
 | # | Fonctionnalité | Note | Ce qui bloque le 10 |
 | --- | --- | --- | --- |
 | 0 | Mise en ligne et socle technique | **2/10** | Rien n'est en ligne ; `main` n'a pas reçu la refonte ; pas de reverse proxy, de déploiement, de sauvegardes ni de supervision |
-| 1 | Landing page | **9/10** | Logo de la CADEV dans le bandeau (fichier à fournir), vrais chiffres à la place des exemples |
+| 1 | Landing page | **9/10** | Vrais chiffres à la place des exemples |
 | 2 | Inscription et connexion | **9,5/10** | Maquettes reprises le 11 novembre au soir (code en 6 cases, icônes A3 et A8, œil unique en A9) ; reste le test manuel sur un vrai téléphone |
 | 3 | Accueil, profil, notifications | **7,5/10** | En-tête de l'accueil, carte « Tests d'apps », profil (vedette, couleurs, Paramètres), « Tout marquer comme lu » dans l'en-tête |
 | 4 | Mentorat | **9,5/10** | Plages en pastilles (M8) et note de la séance faites le 11 novembre au soir ; la note n'a pas de maquette, à faire relire |
