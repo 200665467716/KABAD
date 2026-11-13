@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Controls";
 import { Alert } from "@/components/ui/Display";
@@ -19,6 +19,8 @@ export function ReportSheet({ open, onClose, subject, target, onBlocked }: { ope
   const [block, setBlock] = useState(false);
   const [state, setState] = useState<"form" | "sending" | "sent">("form");
   const [error, setError] = useState<string | null>(null);
+  // Deux feuilles de signalement vivent sur la même page (conversation et message) : chacune son identifiant.
+  const detailsId = useId();
 
   const close = () => {
     onClose();
@@ -85,7 +87,7 @@ export function ReportSheet({ open, onClose, subject, target, onBlocked }: { ope
               />
             ))}
           </fieldset>
-          <TextArea id="report-details" label={t("details")} rows={3} maxLength={1000} value={details} onChange={(e) => setDetails(e.target.value)} placeholder={t("detailsPlaceholder")} />
+          <TextArea id={detailsId} label={t("details")} rows={3} maxLength={1000} value={details} onChange={(e) => setDetails(e.target.value)} placeholder={t("detailsPlaceholder")} />
           <Checkbox checked={block} onChange={(e) => setBlock(e.target.checked)}>
             {t("block")}
           </Checkbox>

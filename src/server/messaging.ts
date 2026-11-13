@@ -160,7 +160,8 @@ export async function getConversation(userId: string, conversationId: string, op
   const c = await prisma.conversation.findUniqueOrThrow({
     where: { id: conversationId },
     include: {
-      members: { include: { user: { select: { id: true, name: true, role: true, city: true, photoAt: true } } }, orderBy: { joinedAt: "asc" } },
+      // Les membres ajoutés ensemble ont la même date d'arrivée : l'identifiant départage, pour un ordre stable.
+      members: { include: { user: { select: { id: true, name: true, role: true, city: true, photoAt: true } } }, orderBy: [{ joinedAt: "asc" }, { userId: "asc" }] },
       // T4: the testers' group shows the tasks to tick and the install link.
       testApp: { select: { id: true, url: true, steps: true, platforms: true, ownerId: true, participants: { where: { userId }, select: { doneSteps: true } } } },
       project: { select: { id: true } },
@@ -292,32 +293,36 @@ export async function listContacts(userId: string, prisma: Db = db) {
   return rows.map(({ contact: { photoAt, ...c } }) => ({ ...c, photo: avatarUrl({ id: c.id, photoAt }) }));
 }
 
+const fromSelect = { id: true, name: true, city: true, country: true, stack: true, years: true, role: true, photoAt: true } as const;
+/** L'expéditeur d'une invitation, avec l'adresse de sa photo à la place de sa date. */
+const withPhoto = <T extends { id: string; photoAt: Date | null }>({ photoAt, ...u }: T) => ({ ...u, photo: avatarUrl({ id: u.id, photoAt }) });
+
 export async function listInvitations(userId: string, prisma: Db = db) {
   const [received, sent] = await Promise.all([
     prisma.invitation.findMany({
       where: { toId: userId, status: "PENDING" },
       orderBy: { createdAt: "desc" },
-      include: { from: { select: { id: true, name: true, city: true, country: true, stack: true, years: true, role: true } } },
+      include: { from: { select: fromSelect } },
     }),
-    prisma.invitation.findMany({ where: { fromId: userId, status: "PENDING" }, orderBy: { createdAt: "desc" }, select: { id: true, toId: true, message: true, createdAt: true, to: { select: { name: true, city: true } } } }),
+    prisma.invitation.findMany({ where: { fromId: userId, status: "PENDING" }, orderBy: { createdAt: "desc" }, select: { id: true, toId: true, message: true, createdAt: true, to: { select: { name: true, city: true, photoAt: true } } } }),
   ]);
   return {
-    received: received.map((i) => ({ id: i.id, message: i.message, createdAt: i.createdAt.toISOString(), from: i.from })),
-    sent: sent.map((i) => ({ id: i.id, toId: i.toId, message: i.message, createdAt: i.createdAt.toISOString(), to: i.to })),
+    received: received.map((i) => ({ id: i.id, message: i.message, createdAt: i.createdAt.toISOString(), from: withPhoto(i.from) })),
+    sent: sent.map((i) => ({ id: i.id, toId: i.toId, message: i.message, createdAt: i.createdAt.toISOString(), to: { name: i.to.name, city: i.to.city, photo: avatarUrl({ id: i.toId, photoAt: i.to.photoAt }) } })),
   };
 }
 
 export async function getInvitation(userId: string, invitationId: string, prisma: Db = db): Promise<InvitationDetail> {
   const i = await prisma.invitation.findUnique({
     where: { id: invitationId },
-    include: { from: { select: { id: true, name: true, city: true, country: true, stack: true, years: true, role: true } } },
+    include: { from: { select: fromSelect } },
   });
   if (!i || i.toId !== userId) throw notFound("Invitation introuvable.");
   let conversationId: string | null = null;
   if (i.status === "ACCEPTED") {
     conversationId = (await prisma.conversation.findUnique({ where: { directKey: directKey(i.fromId, i.toId) }, select: { id: true } }))?.id ?? null;
   }
-  return { id: i.id, status: i.status, message: i.message, createdAt: i.createdAt.toISOString(), from: i.from, conversationId };
+  return { id: i.id, status: i.status, message: i.message, createdAt: i.createdAt.toISOString(), from: withPhoto(i.from), conversationId };
 }
 
 export async function sendInvitation(fromId: string, input: { toId: string; message: string }, prisma: Db = db) {
@@ -468,7 +473,8 @@ export async function addGroupMembers(userId: string, conversationId: string, me
     await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: msg.createdAt } });
     const everyone = [...current, ...ids];
     await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients: everyone });
-    await notify(tx, { t: "conversation", conversationId, recipients: ids });
+    // Tout le monde recharge le groupe : les anciens membres voient la nouvelle liste et le nouveau compte.
+    await notify(tx, { t: "conversation", conversationId, recipients: everyone });
     return { added: ids.length };
   });
 }
@@ -524,8 +530,10 @@ export async function updateGroup(userId: string, conversationId: string, input:
   return prisma.$transaction(async (tx) => {
     const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
     await tx.conversation.update({ where: { id: conversationId }, data: { name: input.name, theme } });
-    const body = renamed ? `${firstName(me.name)} a renommé le groupe « ${input.name} »` : `${firstName(me.name)} a changé le thème du groupe`;
-    await announceChange(tx, conversationId, m.conversation.members.map((x) => x.userId), body);
+    const everyone = m.conversation.members.map((x) => x.userId);
+    // Un renommage et un changement de thème faits ensemble laissent chacun leur ligne.
+    if (renamed) await announceChange(tx, conversationId, everyone, `${firstName(me.name)} a renommé le groupe « ${input.name} »`);
+    if (theme !== m.conversation.theme) await announceChange(tx, conversationId, everyone, `${firstName(me.name)} a changé le thème du groupe`);
     return { ok: true };
   });
 }
@@ -580,7 +588,7 @@ export async function leaveGroup(userId: string, conversationId: string, prisma:
     const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
     let body = `${firstName(me.name)} a quitté le groupe`;
     if (m.conversation.createdById === userId) {
-      const heir = await tx.conversationMember.findFirstOrThrow({ where: { conversationId }, orderBy: { joinedAt: "asc" }, include: { user: { select: { name: true } } } });
+      const heir = await tx.conversationMember.findFirstOrThrow({ where: { conversationId }, orderBy: [{ joinedAt: "asc" }, { userId: "asc" }], include: { user: { select: { name: true } } } });
       await tx.conversationMember.update({ where: { conversationId_userId: { conversationId, userId: heir.userId } }, data: { role: "OWNER" } });
       await tx.conversation.update({ where: { id: conversationId }, data: { createdById: heir.userId } });
       body += `. ${firstName(heir.user.name)} gère maintenant le groupe`;
@@ -619,6 +627,10 @@ export async function joinCommunityGroup(tx: Prisma.TransactionClient, conversat
   await notify(tx, { t: "conversation", conversationId, recipients: [userId] });
 }
 
+/**
+ * Le départ laisse sa ligne « X a quitté le groupe », comme dans un groupe privé : quitter puis rejoindre
+ * se lit « a rejoint, a quitté, a rejoint » au lieu de deux arrivées de suite sans départ.
+ */
 export async function leaveCommunityGroup(tx: Prisma.TransactionClient, conversationId: string, userId: string) {
   const { count } = await tx.conversationMember.deleteMany({ where: { conversationId, userId } });
   if (!count) return;
@@ -704,19 +716,26 @@ export async function block(userId: string, blockedId: string, prisma: Db = db) 
     { userId, contactId: blockedId },
     { userId: blockedId, contactId: userId },
   ];
-  await prisma.$transaction([
-    prisma.block.upsert({ where: { blockerId_blockedId: { blockerId: userId, blockedId } }, create: { blockerId: userId, blockedId }, update: {} }),
-    prisma.contact.deleteMany({ where: { OR: both } }),
-    prisma.invitation.updateMany({
+  await prisma.$transaction(async (tx) => {
+    await tx.block.upsert({ where: { blockerId_blockedId: { blockerId: userId, blockedId } }, create: { blockerId: userId, blockedId }, update: {} });
+    await tx.contact.deleteMany({ where: { OR: both } });
+    await tx.invitation.updateMany({
       where: { status: "PENDING", OR: [{ fromId: userId, toId: blockedId }, { fromId: blockedId, toId: userId }] },
       data: { status: "DECLINED", answeredAt: new Date() },
-    }),
+    });
     // Sessions to come between them are cancelled.
-    prisma.mentoringBooking.updateMany({
+    await tx.mentoringBooking.updateMany({
       where: { status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gt: new Date() }, OR: [{ mentorId: userId, menteeId: blockedId }, { mentorId: blockedId, menteeId: userId }] },
       data: { status: "CANCELLED", answeredAt: new Date() },
-    }),
-  ]);
+    });
+    await announceBlockChange(tx, userId, blockedId);
+  });
+}
+
+/** Leur conversation à deux se recharge chez l'un et l'autre : le champ de saisie se ferme ou se rouvre en direct. */
+async function announceBlockChange(tx: Prisma.TransactionClient, a: string, b: string) {
+  const direct = await tx.conversation.findUnique({ where: { directKey: directKey(a, b) }, select: { id: true } });
+  if (direct) await notify(tx, { t: "conversation", conversationId: direct.id, recipients: [a, b] });
 }
 
 export async function listBlocked(userId: string, prisma: Db = db) {
@@ -724,8 +743,20 @@ export async function listBlocked(userId: string, prisma: Db = db) {
   return rows.map((b) => ({ ...b.blocked, since: b.createdAt.toISOString() }));
 }
 
+/**
+ * Débloquer rend l'état d'avant le blocage : si les deux avaient une conversation (donc une invitation acceptée),
+ * ils redeviennent contacts, comme le suppose la conversation rouverte. Sans conversation, il faut une nouvelle invitation.
+ * Rien ne se rouvre tant que l'autre bloque encore.
+ */
 export async function unblock(userId: string, blockedId: string, prisma: Db = db) {
-  await prisma.block.deleteMany({ where: { blockerId: userId, blockedId } });
+  await prisma.$transaction(async (tx) => {
+    const { count } = await tx.block.deleteMany({ where: { blockerId: userId, blockedId } });
+    if (!count || (await isBlocked(tx, userId, blockedId))) return;
+    const direct = await tx.conversation.findUnique({ where: { directKey: directKey(userId, blockedId) }, select: { id: true } });
+    if (!direct) return;
+    await tx.contact.createMany({ data: [{ userId, contactId: blockedId }, { userId: blockedId, contactId: userId }], skipDuplicates: true });
+    await announceBlockChange(tx, userId, blockedId);
+  });
   return { ok: true };
 }
 

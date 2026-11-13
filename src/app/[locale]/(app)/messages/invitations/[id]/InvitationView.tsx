@@ -44,7 +44,7 @@ export function InvitationView({ invitation }: { invitation: InvitationDetail })
       <TopBar back="/messages/invitations" title={t("title")} actions={<IconButton icon="flag" label={t("report")} onClick={() => setReport(true)} />} />
       <Page narrow className="flex-1 content-start gap-6 pt-7">
         <div className="grid justify-items-center gap-2.5 text-center">
-          <Avatar initials={initials(from.name)} size="xl" />
+          <Avatar initials={initials(from.name)} src={from.photo} size="xl" />
           <div className="grid gap-0.5">
             <h2 className="font-display text-xl font-extrabold">{from.name}</h2>
             <span className="text-sm text-muted">

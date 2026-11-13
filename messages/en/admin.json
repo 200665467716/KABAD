@@ -117,6 +117,12 @@
       "alreadySuspended": "already suspended",
       "alreadyHidden": "already removed",
       "decision": "Decision: {resolution}",
+      "decisions": {
+        "dismiss": "Dismissed",
+        "hide": "Content removed",
+        "warn": "Member warned",
+        "suspend": "Member suspended"
+      },
       "noteLabel": "Reason or note (read by the member if warned)",
       "dismiss": "Dismiss",
       "closeRoom": "Close the room",
@@ -134,6 +140,7 @@
       "intro": "Every team action is recorded here, so we can account for it.",
       "empty": "No actions yet.",
       "actions": {
+        "unknown": "took an action ({code})",
         "reportDismiss": "dismissed a report",
         "reportHide": "removed content",
         "reportWarn": "warned a member",
@@ -145,7 +152,14 @@
         "challengeCreate": "created a challenge",
         "challengeClose": "closed a challenge",
         "challengePublish": "published results",
-        "payoutSent": "recorded a payout"
+        "payoutSent": "recorded a payout",
+        "badgeGrant": "granted the mentor badge",
+        "badgeRefuse": "refused a mentor badge request",
+        "badgeRevoke": "withdrew the mentor badge",
+        "hackathonJury": "appointed a hackathon jury",
+        "hackathonPublish": "published a hackathon",
+        "hackathonClose": "closed a hackathon",
+        "hackathonPublishResults": "published a hackathon’s results"
       }
     }
   }

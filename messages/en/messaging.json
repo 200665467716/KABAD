@@ -48,7 +48,7 @@
       "error": "Your answer wasn’t sent. Try again.",
       "noMessage": "No message",
       "declineTitle": "Decline the invitation?",
-      "declineText": "{name} won’t be told. You can still invite them later.",
+      "declineText": "No notification is sent to {name}. You can still invite them later.",
       "declined": "Invitation declined."
     },
     "invitation": {
@@ -60,14 +60,14 @@
       "years": "{count, plural, one {# year} other {# years}}",
       "mentor": "Mentor",
       "alreadyAnswered": "You already answered this invitation.",
-      "note": "{name} can’t send you anything else until you accept. If you decline, nobody is told.",
+      "note": "{name} can’t send you anything else until you accept. If you decline, no notification is sent.",
       "accept": "Accept",
       "accepting": "Opening…",
       "decline": "Decline",
       "declining": "Declining…",
       "error": "Your answer wasn’t sent. Try again.",
       "declineTitle": "Decline the invitation?",
-      "declineText": "{name} won’t be told. You can still invite them later."
+      "declineText": "No notification is sent to {name}. You can still invite them later."
     },
     "conversation": {
       "metaTitle": "Conversation",
@@ -96,6 +96,7 @@
       "tooLong": "A message is {max} characters at most.",
       "voiceSending": "Voice message…",
       "uploadFailed": "The file wasn’t sent. Try again.",
+      "fileTooBig": "Files are 2 MB at most.",
       "groupInfo": "Group info",
       "pinned": "Pinned · instructions",
       "pinnedLabel": "Pinned instructions",

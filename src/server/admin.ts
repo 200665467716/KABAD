@@ -11,6 +11,9 @@ import { HIDDEN_MESSAGE } from "./messaging";
 import { pushNotifications } from "./notifications";
 import { endRoom } from "./rooms";
 import { notify } from "./realtime-events";
+import { DECISION_LABEL, type ReportDecision } from "@/lib/report-decision";
+
+export type { ReportDecision };
 
 export async function logAction(tx: Prisma.TransactionClient | Db, adminId: string, action: string, targetId?: string | null, details?: string) {
   await tx.adminAction.create({ data: { adminId, action, targetId: targetId ?? null, details: details?.slice(0, 500) } });
@@ -129,14 +132,6 @@ export async function listReports(adminId: string, status: "OPEN" | "REVIEWED", 
   return out;
 }
 
-export type ReportDecision = "dismiss" | "hide" | "warn" | "suspend";
-
-const DECISION_LABEL: Record<ReportDecision, string> = {
-  dismiss: "Classé sans suite",
-  hide: "Contenu retiré",
-  warn: "Membre averti",
-  suspend: "Membre suspendu",
-};
 
 /** Handles a report. Other open reports on the same thing are closed with it. */
 export async function resolveReport(adminId: string, reportId: string, decision: ReportDecision, note: string | undefined, prisma: Db = db) {
@@ -167,7 +162,8 @@ export async function resolveReport(adminId: string, reportId: string, decision:
       where: { status: "OPEN", OR: [{ id: r.id }, { targetType: r.targetType, targetId: r.targetId }] },
       data: { status: "REVIEWED", resolvedAt: new Date(), resolvedById: adminId, resolution },
     });
-    await logAction(tx, adminId, `report:${decision}`, r.id, resolution);
+    // Le journal dit déjà la décision par son code : il ne garde que la note, sans libellé français en tête.
+    await logAction(tx, adminId, `report:${decision}`, r.id, note?.trim() || undefined);
     return { ok: true };
   });
 }
@@ -287,7 +283,27 @@ export async function badgedMentors(adminId: string, prisma: Db = db) {
 export async function auditLog(adminId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
   const rows = await prisma.adminAction.findMany({ orderBy: { createdAt: "desc" }, take: 100, include: { admin: { select: { name: true } } } });
-  return rows.map((r) => ({ id: r.id, admin: r.admin.name, action: r.action, targetId: r.targetId, details: r.details, createdAt: r.createdAt.toISOString() }));
+  // Chaque ligne nomme ce qu'elle vise (membre ou hackathon), et un jury ses jurés, au lieu de leurs identifiants.
+  const juryIds = rows.filter((r) => r.action === "hackathon:jury" && r.details).flatMap((r) => r.details!.split(","));
+  const targetIds = rows.map((r) => r.targetId).filter((id): id is string => Boolean(id));
+  // Une décision sur un signalement vise le signalement : on nomme le membre qu'il concerne.
+  const reports = await prisma.report.findMany({ where: { id: { in: targetIds } }, select: { id: true, targetUserId: true } });
+  const ids = [...new Set([...targetIds, ...juryIds, ...reports.flatMap((r) => (r.targetUserId ? [r.targetUserId] : []))])];
+  const [users, hackathons] = await Promise.all([
+    prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }),
+    prisma.hackathon.findMany({ where: { id: { in: ids } }, select: { id: true, title: true } }),
+  ]);
+  const names = new Map([...users.map((u) => [u.id, u.name] as const), ...hackathons.map((h) => [h.id, h.title] as const)]);
+  for (const r of reports) if (r.targetUserId && names.has(r.targetUserId)) names.set(r.id, names.get(r.targetUserId)!);
+  return rows.map((r) => ({
+    id: r.id,
+    admin: r.admin.name,
+    action: r.action,
+    targetId: r.targetId,
+    target: r.targetId ? (names.get(r.targetId) ?? null) : null,
+    details: r.action === "hackathon:jury" && r.details ? r.details.split(",").map((id) => names.get(id) ?? id).join(", ") : r.details,
+    createdAt: r.createdAt.toISOString(),
+  }));
 }
 
 export { HIDDEN_MESSAGE };
