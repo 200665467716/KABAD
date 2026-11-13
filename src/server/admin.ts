@@ -4,6 +4,8 @@
  * Mentor badges: src/server/badges.ts. Hackathon review and results: src/server/hackathons.ts.
  */
 import type { Prisma } from "@/generated/prisma/client";
+import { avatarUrl } from "@/lib/avatar";
+import { dailyCounts, weekOverWeek } from "@/lib/daily-counts";
 import { requireAdmin } from "./hackathons";
 import { db, type Db } from "./db";
 import { DomainError, notFound } from "./errors";
@@ -16,34 +18,50 @@ export async function logAction(tx: Prisma.TransactionClient | Db, adminId: stri
   await tx.adminAction.create({ data: { adminId, action, targetId: targetId ?? null, details: details?.slice(0, 500) } });
 }
 
-const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000);
+/** How many days the activity charts of the dashboard cover: this week and the one before. */
+const CHART_DAYS = 14;
 
 export async function dashboard(adminId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
-  const [members, newMembers, mentors, pendingBadges, unverified, suspended, messages7d, openReports, upcomingSessions, held, openHackathons, juryHackathons, toPublish, riseProjects] = await Promise.all([
+  const now = new Date();
+  // Midnight GMT, 13 days ago: the first day of the charts.
+  const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - (CHART_DAYS - 1) * 86_400_000);
+  const [members, mentors, pendingBadges, unverified, suspended, openReports, upcomingSessions, held, openHackathons, juryHackathons, toPublish, riseProjects, signupRows, messageRows, latest] = await Promise.all([
     prisma.user.count({ where: { isAdmin: false } }),
-    prisma.user.count({ where: { isAdmin: false, createdAt: { gte: daysAgo(7) } } }),
     prisma.user.count({ where: { seniorVerifiedAt: { not: null } } }),
     prisma.mentorBadgeRequest.count({ where: { status: "PENDING" } }),
     prisma.user.count({ where: { emailVerifiedAt: null } }),
     prisma.user.count({ where: { suspendedAt: { not: null } } }),
-    prisma.message.count({ where: { kind: "TEXT", createdAt: { gte: daysAgo(7) } } }),
     prisma.report.count({ where: { status: "OPEN" } }),
-    prisma.mentoringBooking.count({ where: { status: "ACCEPTED", startsAt: { gte: new Date() } } }),
-    prisma.mentoringBooking.aggregate({ where: { status: "ACCEPTED", startsAt: { lt: new Date() } }, _sum: { minutes: true } }),
+    prisma.mentoringBooking.count({ where: { status: "ACCEPTED", startsAt: { gte: now } } }),
+    prisma.mentoringBooking.aggregate({ where: { status: "ACCEPTED", startsAt: { lt: now } }, _sum: { minutes: true } }),
     prisma.hackathon.count({ where: { status: "OPEN", publishedAt: { not: null } } }),
     prisma.hackathon.count({ where: { status: "JURY" } }),
     prisma.hackathon.count({ where: { publishedAt: null } }),
     prisma.riseProject.count(),
+    // Day by day: only the days with activity come back, dailyCounts fills the others with 0.
+    prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+      SELECT date_trunc('day', "createdAt") AS day, count(*) AS count FROM "User"
+      WHERE "isAdmin" = false AND "createdAt" >= ${since} GROUP BY 1`,
+    // Messages written by members: text, files and voice notes, not the lines KABAD adds itself.
+    prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+      SELECT date_trunc('day', "createdAt") AS day, count(*) AS count FROM "Message"
+      WHERE kind <> 'SYSTEM' AND "createdAt" >= ${since} GROUP BY 1`,
+    prisma.user.findMany({
+      where: { isAdmin: false },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, name: true, city: true, level: true, createdAt: true, emailVerifiedAt: true, seniorVerifiedAt: true, photoAt: true },
+    }),
   ]);
+  const signups = dailyCounts(signupRows, CHART_DAYS, now);
+  const messages = dailyCounts(messageRows, CHART_DAYS, now);
   return {
     members,
-    newMembers,
     mentors,
     pendingBadges,
     unverified,
     suspended,
-    messages7d,
     openReports,
     upcomingSessions,
     heldHours: Math.floor((held._sum.minutes ?? 0) / 60),
@@ -51,6 +69,20 @@ export async function dashboard(adminId: string, prisma: Db = db) {
     juryHackathons,
     toPublish,
     riseProjects,
+    signups,
+    messages,
+    signupsWeek: weekOverWeek(signups),
+    messagesWeek: weekOverWeek(messages),
+    latest: latest.map((u) => ({
+      id: u.id,
+      name: u.name,
+      city: u.city,
+      level: u.level,
+      createdAt: u.createdAt.toISOString(),
+      confirmed: u.emailVerifiedAt !== null,
+      verified: u.seniorVerifiedAt !== null,
+      photo: avatarUrl(u),
+    })),
   };
 }
 

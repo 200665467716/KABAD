@@ -53,9 +53,18 @@ export function TopBar({
   );
 }
 
-/** Page content column. */
+/**
+ * Page content column.
+ * A narrow page often stretches (flex-1) so that its action bar sits at the bottom of a phone screen. From
+ * 1024px the action bar follows the content (ActionBar is static there): the page stops stretching and keeps
+ * a small bottom margin, otherwise an empty band opened between the content and the buttons.
+ */
 export function Page({ children, className, narrow }: { children: ReactNode; className?: string; narrow?: boolean }) {
-  return <main className={cn("mx-auto grid w-full content-start gap-5.5 px-4 pt-4 pb-6 lg:px-10 lg:pt-8 lg:pb-16", narrow ? "max-w-[640px] lg:max-w-[680px]" : "max-w-[960px]", className)}>{children}</main>;
+  return (
+    <main className={cn("mx-auto grid w-full content-start gap-5.5 px-4 pt-4 pb-6 lg:px-10 lg:pt-8", narrow ? "max-w-[640px] lg:max-w-[680px] lg:pb-8" : "max-w-[960px] lg:pb-16", className, narrow && "lg:flex-none")}>
+      {children}
+    </main>
+  );
 }
 
 /** Main action of a focused screen: pinned above the phone's home bar, inline on desktop. */

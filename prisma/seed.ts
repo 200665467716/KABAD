@@ -93,12 +93,15 @@ async function main() {
   const now = new Date();
   await db.user.createMany({
     data: [
-      ...users.map(({ mentor, ...u }) => ({
+      // Joined three days apart, 130 to 100 days ago: before every other demo date (badges 95 days ago,
+      // Rise-Up projects 30 days ago), so the team's charts only show the real sign-ups of the demo.
+      ...users.map(({ mentor, ...u }, i) => ({
         ...u,
         diaspora: u.diaspora ?? false,
         role: (mentor ? "SENIOR" : "JUNIOR") as Role,
         passwordHash,
-        emailVerifiedAt: minutesAgo(60 * 24 * 100),
+        createdAt: minutesAgo(60 * 24 * (130 - i * 3)),
+        emailVerifiedAt: minutesAgo(60 * 24 * (130 - i * 3) - 20),
         seniorVerifiedAt: mentor ? minutesAgo(60 * 24 * 90) : null,
         meetingUrl: DEMO_MEET[u.id] ?? "",
         gender: DEMO_GENDER[u.id] ?? null,
