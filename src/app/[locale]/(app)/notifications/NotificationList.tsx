@@ -83,7 +83,7 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
           <Overline as="h2" id={`g-${g.id}`}>
             {g.label}
           </Overline>
-          <ul className="m-0 list-none divide-y-2 divide-line overflow-hidden rounded-lg border-2 border-line-strong bg-raised p-0">
+          <ul className="kb-stagger m-0 list-none divide-y-2 divide-line overflow-hidden rounded-lg border-2 border-line-strong bg-raised p-0">
             {g.items.map((n) => (
               <li key={n.id}>
                 <Link

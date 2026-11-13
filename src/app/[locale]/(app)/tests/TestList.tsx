@@ -35,7 +35,7 @@ export function TestList({ toTest, testing, mine }: { toTest: TestAppSummary[]; 
         {tab === "listings" ? (
           <>
             <p className="text-[13px] leading-[18px] text-muted">{t("intro")}</p>
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="kb-stagger grid gap-3 md:grid-cols-2">
               {toTest.map((a, i) => (
                 <CardLink key={a.id} href={`/tests/${a.id}`} className={i === 0 ? "shadow-pop" : undefined}>
                   <div className="flex items-center gap-3">

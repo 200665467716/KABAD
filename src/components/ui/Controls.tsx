@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 import { Button } from "./Button";
@@ -22,8 +22,31 @@ export function Segmented<T extends string>({
   stretch?: boolean;
   className?: string;
 }) {
+  const list = useRef<HTMLDivElement>(null);
+  // Where the ink pill sits, measured on the selected tab: it slides from one tab to the next.
+  // Until it is measured (server render), the selected tab paints its own ink background.
+  const [pill, setPill] = useState<{ x: number; w: number } | null>(null);
+  useLayoutEffect(() => {
+    const box = list.current;
+    if (!box) return;
+    const place = () => {
+      const tab = box.querySelector<HTMLElement>('[aria-selected="true"]');
+      setPill(tab ? { x: tab.offsetLeft, w: tab.offsetWidth } : null);
+    };
+    place();
+    const watch = new ResizeObserver(place);
+    watch.observe(box);
+    return () => watch.disconnect();
+  }, [value, items.length]);
   return (
-    <div role="tablist" aria-label={label} className={cn("gap-1 rounded-action border-2 border-line-strong bg-raised p-1", stretch ? "grid" : "inline-flex", className)} style={stretch ? { gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` } : undefined}>
+    <div ref={list} role="tablist" aria-label={label} className={cn("relative gap-1 rounded-action border-2 border-line-strong bg-raised p-1", stretch ? "grid" : "inline-flex", className)} style={stretch ? { gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` } : undefined}>
+      {pill && (
+        <span
+          aria-hidden="true"
+          className="absolute top-1 bottom-1 left-0 rounded-[10px] bg-ink transition-[transform,width] duration-250 ease-move"
+          style={{ transform: `translateX(${pill.x}px)`, width: pill.w }}
+        />
+      )}
       {items.map((it) => {
         const selected = it.value === value;
         return (
@@ -34,12 +57,12 @@ export function Segmented<T extends string>({
             aria-selected={selected}
             onClick={() => onChange(it.value)}
             className={cn(
-              "inline-flex h-10 items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-extrabold whitespace-nowrap transition-colors",
-              selected ? "bg-ink text-raised" : "text-muted hover:text-ink",
+              "relative inline-flex h-10 items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-extrabold whitespace-nowrap transition-[color,scale] duration-250 ease-move active:scale-[0.97]",
+              selected ? cn("text-raised", !pill && "bg-ink") : "text-muted hover:text-ink",
             )}
           >
             {it.label}
-            {it.count !== undefined && it.count > 0 && <span className="inline-grid h-5 min-w-5 place-items-center rounded-full bg-danger px-1.5 text-[11px] text-on-danger tabular">{it.count}</span>}
+            {it.count !== undefined && it.count > 0 && <span className="kb-pop inline-grid h-5 min-w-5 place-items-center rounded-full bg-danger px-1.5 text-[11px] text-on-danger tabular">{it.count}</span>}
           </button>
         );
       })}
@@ -56,7 +79,7 @@ export function ToggleChip({ pressed, onClick, children, icon, disabled }: { pre
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "inline-flex h-11 shrink-0 items-center gap-1 rounded-full border-2 border-line-strong px-4 text-sm font-extrabold whitespace-nowrap transition-colors disabled:border-dashed disabled:border-muted disabled:font-normal disabled:text-muted",
+        "inline-flex h-11 shrink-0 items-center gap-1 rounded-full border-2 border-line-strong px-4 text-sm font-extrabold whitespace-nowrap transition-[background-color,color,scale] duration-150 ease-kb active:scale-[0.96] disabled:border-dashed disabled:border-muted disabled:font-normal disabled:text-muted",
         pressed ? "bg-ink text-raised" : "bg-raised text-ink enabled:hover:bg-bg",
       )}
     >
@@ -88,7 +111,7 @@ export function Sheet({ open, onClose, title, children, footer }: { open: boolea
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="m-0 mt-auto w-full max-w-none bg-transparent p-0 text-ink backdrop:bg-[var(--scrim)] sm:m-auto sm:max-w-[480px]"
+      className="kb-sheet m-0 mt-auto w-full max-w-none bg-transparent p-0 text-ink backdrop:bg-[var(--scrim)] sm:m-auto sm:max-w-[480px]"
     >
       <div className="grid max-h-[88dvh] gap-4 overflow-y-auto rounded-t-xl border-2 border-b-0 border-line-strong bg-raised px-4 pt-2 pb-6 safe-bottom sm:rounded-xl sm:border-b-2 sm:px-6 sm:pt-6">
         <span className="h-1 w-10 justify-self-center rounded-full bg-line-strong/50 sm:hidden" aria-hidden="true" />

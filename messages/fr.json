@@ -13,7 +13,8 @@
     "backHome": "Retour à l’accueil",
     "seeAll": "Tout voir",
     "step": "Étape {step} sur {total}",
-    "stepShort": "{step} / {total}"
+    "stepShort": "{step} / {total}",
+    "logoHome": "KABAD, accueil"
   },
   "nav": {
     "label": "Navigation principale",

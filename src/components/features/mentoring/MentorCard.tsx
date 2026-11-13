@@ -10,7 +10,7 @@ export function MentorCard({ mentor, timeZone }: { mentor: Mentor; timeZone: str
   const format = useFormatter();
   const next = mentor.nextSlot ? format.dateTime(new Date(mentor.nextSlot), { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone }) : null;
   return (
-    <Link href={`/mentorat/mentors/${mentor.id}`} className="grid gap-3 rounded-lg border-2 border-line-strong bg-raised p-4 text-ink no-underline transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-pop">
+    <Link href={`/mentorat/mentors/${mentor.id}`} className="grid gap-3 rounded-lg border-2 border-line-strong bg-raised p-4 text-ink no-underline transition-[box-shadow,translate] duration-200 ease-kb hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none">
       <div className="flex items-center gap-3">
         <Avatar initials={initials(mentor.name)} size="lg" tone="brand" />
         <div className="grid min-w-0">

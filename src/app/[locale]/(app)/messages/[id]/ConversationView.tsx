@@ -13,6 +13,7 @@ import { ConfirmSheet, Sheet } from "@/components/ui/Controls";
 import { Alert, Avatar, DaySeparator } from "@/components/ui/Display";
 import { Select, TextField } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
+import { cn } from "@/lib/cn";
 import { api, ApiError } from "@/lib/api";
 import { GROUP_PHOTO_SIZE } from "@/lib/attachments";
 import { initials } from "@/lib/format";
@@ -42,6 +43,9 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   const time = useChatTime();
   const [detail, setDetail] = useState(initial);
   const [messages, setMessages] = useState<Shown[]>(initial.messages);
+  // Messages already on screen when the page opened, or loaded from the history: they do not animate.
+  // Only a message that arrives while the member reads (sent or received) slides in.
+  const [settled] = useState(() => new Set(initial.messages.map((m) => m.clientId ?? m.id)));
   const [hasMore, setHasMore] = useState(initial.hasMore);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -170,6 +174,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
     try {
       const page = await api<ConversationDetail>(`/api/conversations/${detail.id}?avant=${encodeURIComponent(first.createdAt)}`);
       if (list.current) keepOffset.current = list.current.scrollHeight - list.current.scrollTop;
+      for (const m of page.messages) settled.add(m.clientId ?? m.id);
       setMessages((cur) => merge(cur, page.messages));
       setHasMore(page.hasMore);
     } catch (e) {
@@ -238,18 +243,21 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
             const prev = messages[i - 1];
             const newDay = !prev || time.day(prev.createdAt) !== time.day(m.createdAt);
             const mine = m.authorId === me.id;
+            const fresh = !settled.has(m.clientId ?? m.id);
             return (
               <Fragment key={m.clientId ?? m.id}>
                 {newDay && <DaySeparator>{time.day(m.createdAt)}</DaySeparator>}
                 {m.system ? (
                   <SystemLine>{m.body}</SystemLine>
                 ) : group && !mine ? (
-                  <div className="grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2">
+                  <div className={cn("grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2", fresh && "kb-msg-in")}>
                     <Avatar initials={initials(m.authorName ?? "?")} src={photos.get(m.authorId ?? "")} size="sm" />
                     <MessageBubble text={m.body} hidden={m.hidden} attachment={m.attachment && <AttachmentView attachment={m.attachment} />} time={time.clock(m.createdAt)} author={test && m.authorId === test.ownerId ? t("appAuthor", { name: m.authorName ?? t("member") }) : (m.authorName ?? t("member"))} authorTone={tone(m.authorId)} onReport={() => setReportMessage(m.id)} />
                   </div>
                 ) : (
-                  <MessageBubble text={m.body} hidden={m.hidden} attachment={m.attachment && <AttachmentView attachment={m.attachment} mine={mine} />} time={time.clock(m.createdAt)} mine={mine} status={m.status} onRetry={() => retry(m)} onReport={mine ? undefined : () => setReportMessage(m.id)} />
+                  <div className={cn("grid", fresh && "kb-msg-in")} data-mine={mine || undefined}>
+                    <MessageBubble text={m.body} hidden={m.hidden} attachment={m.attachment && <AttachmentView attachment={m.attachment} mine={mine} />} time={time.clock(m.createdAt)} mine={mine} status={m.status} onRetry={() => retry(m)} onReport={mine ? undefined : () => setReportMessage(m.id)} />
+                  </div>
                 )}
               </Fragment>
             );

@@ -1,5 +1,5 @@
 import { Link } from "@/i18n/navigation";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { Icon, type IconName } from "./Icon";
 
@@ -86,7 +86,7 @@ export function Card({ className, interactive, featured, ...rest }: { interactiv
       className={cn(
         "grid gap-4 rounded-lg border-2 border-line-strong bg-raised p-4",
         featured && "rounded-xl shadow-pop",
-        interactive && "transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-pop",
+        interactive && "transition-[box-shadow,translate] duration-200 ease-kb hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none",
         className,
       )}
       {...rest}
@@ -98,7 +98,7 @@ export function CardLink({ className, ...rest }: ComponentProps<typeof Link>) {
   return (
     <Link
       className={cn(
-        "grid gap-3 rounded-lg border-2 border-line-strong bg-raised p-4 text-ink no-underline transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-pop",
+        "grid gap-3 rounded-lg border-2 border-line-strong bg-raised p-4 text-ink no-underline transition-[box-shadow,translate] duration-200 ease-kb hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none",
         className,
       )}
       {...rest}
@@ -141,7 +141,7 @@ const alertTones: Record<AlertTone, { box: string; icon: string; name: IconName 
 export function Alert({ tone = "info", title, children, role, className }: { tone?: AlertTone; title?: ReactNode; children: ReactNode; role?: "status" | "alert"; className?: string }) {
   const t = alertTones[tone];
   return (
-    <div role={role} className={cn("grid grid-cols-[20px_1fr] items-start gap-3 rounded-action px-4 py-3 text-sm text-ink", t.box, className)}>
+    <div role={role} className={cn(role && "kb-enter", "grid grid-cols-[20px_1fr] items-start gap-3 rounded-action px-4 py-3 text-sm text-ink", t.box, className)}>
       <Icon name={t.name} size={20} className={cn("mt-0.5", t.icon)} strokeWidth={2} />
       <p>
         {title && <span className="font-extrabold">{title} </span>}
@@ -158,7 +158,7 @@ export function Meter({ value, tone = "brand", label, className, height = "h-2" 
   const fill = tone === "accent" ? "bg-accent" : tone === "success" ? "bg-success" : "bg-brand";
   return (
     <div role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className={cn("overflow-hidden rounded-full bg-brand-wash", height, className)}>
-      <span className={cn("block h-full rounded-full", fill)} style={{ width: `${pct}%` }} />
+      <span className={cn("kb-meter block h-full rounded-full", fill)} style={{ "--kb-rest": `${100 - pct}%` } as CSSProperties} />
     </div>
   );
 }
@@ -221,7 +221,7 @@ export function Ticket({ children, before, value, after, className, href }: { ch
       </div>
     </>
   );
-  const cls = cn("grid grid-cols-[minmax(0,1fr)_84px] overflow-hidden rounded-lg border-2 border-line-strong bg-raised text-ink no-underline", href && "transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-pop", className);
+  const cls = cn("grid grid-cols-[minmax(0,1fr)_84px] overflow-hidden rounded-lg border-2 border-line-strong bg-raised text-ink no-underline", href && "transition-[box-shadow,translate] duration-150 hover:-translate-y-px hover:shadow-pop", className);
   return href ? (
     <Link href={href} className={cls}>
       {body}

@@ -7,7 +7,7 @@ export type ButtonVariant = "primary" | "ink" | "secondary" | "ghost" | "accent"
 export type ButtonSize = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap border-2 font-extrabold transition-[background-color,border-color,box-shadow,transform] duration-150 ease-[cubic-bezier(.2,0,0,1)] active:translate-y-px disabled:pointer-events-none aria-disabled:pointer-events-none select-none " +
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap border-2 font-extrabold transition-[background-color,border-color,box-shadow,translate,scale] duration-150 ease-kb active:scale-[0.97] disabled:pointer-events-none aria-disabled:pointer-events-none select-none " +
   // Disabled: slate text in weight 400 on a neutral ground, never a faded colour (charte, audit).
   "disabled:border-line disabled:bg-sunken disabled:font-normal disabled:text-muted disabled:shadow-none aria-disabled:border-line aria-disabled:bg-sunken aria-disabled:font-normal aria-disabled:text-muted";
 
@@ -73,11 +73,11 @@ export function ButtonLink({ variant, size = "md", block, icon, iconOnly, classN
 
 /** A round 44px icon-only control used in top bars. Takes the colour of its surroundings (white on the indigo header). */
 export function IconButton({ icon, label, dot, className, href, ...rest }: { icon: IconName; label: string; dot?: boolean; href?: string } & ComponentProps<"button">) {
-  const cls = cn("relative inline-grid size-11 shrink-0 place-items-center rounded-full text-current hover:bg-current/12", className);
+  const cls = cn("relative inline-grid size-11 shrink-0 place-items-center rounded-full text-current transition-[background-color,scale] duration-150 ease-kb hover:bg-current/12 active:scale-[0.92]", className);
   const inner = (
     <>
       <Icon name={icon} strokeWidth={icon === "more" ? 3 : 2} />
-      {dot && <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-accent shadow-[0_0_0_2px_var(--header)]" />}
+      {dot && <span className="kb-pop absolute top-2.5 right-2.5 size-2 rounded-full bg-accent shadow-[0_0_0_2px_var(--header)]" />}
     </>
   );
   if (href) {

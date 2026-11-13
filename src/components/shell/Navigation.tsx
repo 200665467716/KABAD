@@ -65,12 +65,12 @@ export function BottomNav() {
             key={it.href}
             href={it.href}
             aria-current={active ? "page" : undefined}
-            className={cn("relative grid h-14 min-w-0 content-center justify-items-center gap-[3px] rounded-2xl text-[11px] leading-[15px] font-bold tracking-[-0.01em] no-underline", active ? "bg-brand text-on-brand" : "text-muted")}
+            className={cn("relative grid h-14 min-w-0 content-center transition-[background-color,color,scale] duration-200 ease-kb active:scale-[0.94] justify-items-center gap-[3px] rounded-2xl text-[11px] leading-[15px] font-bold tracking-[-0.01em] no-underline", active ? "bg-brand text-on-brand" : "text-muted")}
           >
             <Icon name={it.icon} size={20} />
             {t(it.label)}
             {it.href === "/messages" && unread > 0 ? (
-              <span className="absolute top-1 left-[calc(50%+6px)] h-5 min-w-5 rounded-full bg-danger px-1.5 text-center text-[11px] leading-5 font-extrabold text-on-danger tabular" aria-label={t("unreadMessages", { count: unread })}>
+              <span className="kb-pop absolute top-1 left-[calc(50%+6px)] h-5 min-w-5 rounded-full bg-danger px-1.5 text-center text-[11px] leading-5 font-extrabold text-on-danger tabular" aria-label={t("unreadMessages", { count: unread })}>
                 {unread > 99 ? "99+" : unread}
               </span>
             ) : null}
@@ -99,34 +99,34 @@ export function SideNav() {
               key={it.href}
               href={it.href}
               aria-current={active ? "page" : undefined}
-              className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline", active ? "bg-brand text-on-brand" : "text-muted hover:bg-bg hover:text-ink")}
+              className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline transition-colors duration-150", active ? "bg-brand text-on-brand" : "text-muted hover:bg-bg hover:text-ink")}
             >
               <Icon name={it.icon} />
               {t(it.label)}
-              {it.href === "/messages" && unread > 0 ? <span className="ml-auto h-5 min-w-5 rounded-full bg-danger px-1.5 text-center text-xs leading-5 text-on-danger tabular">{unread > 99 ? "99+" : unread}</span> : null}
+              {it.href === "/messages" && unread > 0 ? <span className="kb-pop ml-auto h-5 min-w-5 rounded-full bg-danger px-1.5 text-center text-xs leading-5 text-on-danger tabular">{unread > 99 ? "99+" : unread}</span> : null}
             </Link>
           );
         })}
       </nav>
       <div className="mt-auto grid gap-1">
         <LanguageSwitcher className="px-2 pb-2" />
-        <Link href="/notifications" className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline", path === "/notifications" ? "bg-brand text-on-brand" : "text-muted hover:bg-bg hover:text-ink")}>
+        <Link href="/notifications" className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline transition-colors duration-150", path === "/notifications" ? "bg-brand text-on-brand" : "text-muted hover:bg-bg hover:text-ink")}>
           <Icon name="bell" />
           {t("notifications")}
           {me && me.unreadNotifications > 0 ? (
-            <span className="ml-auto h-5 min-w-5 rounded-full bg-danger px-1.5 text-center text-xs leading-5 text-on-danger tabular" aria-label={t("unreadNotifications", { count: me.unreadNotifications })}>
+            <span className="kb-pop ml-auto h-5 min-w-5 rounded-full bg-danger px-1.5 text-center text-xs leading-5 text-on-danger tabular" aria-label={t("unreadNotifications", { count: me.unreadNotifications })}>
               {me.unreadNotifications > 99 ? "99+" : me.unreadNotifications}
             </span>
           ) : null}
         </Link>
         {me && (
-          <Link href="/compte" className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline", path === "/compte" ? "bg-brand text-on-brand" : "text-muted hover:bg-bg hover:text-ink")}>
+          <Link href="/compte" className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline transition-colors duration-150", path === "/compte" ? "bg-brand text-on-brand" : "text-muted hover:bg-bg hover:text-ink")}>
             <Icon name="user" />
             {t("account")}
           </Link>
         )}
         {me?.isAdmin && (
-          <Link href="/admin" className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline", path === "/admin" ? "bg-brand text-on-brand" : "text-muted hover:bg-bg hover:text-ink")}>
+          <Link href="/admin" className={cn("flex h-11 items-center gap-3 rounded-md px-3 font-bold no-underline transition-colors duration-150", path === "/admin" ? "bg-brand text-on-brand" : "text-muted hover:bg-bg hover:text-ink")}>
             <Icon name="lock" />
             {t("admin")}
           </Link>

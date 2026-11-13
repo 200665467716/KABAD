@@ -206,6 +206,15 @@ Les manques relevés dans `docs/etat-et-plan-de-test.md` pour l'inscription, les
 - Migrations : `photo_de_profil`, `discussion_et_invitations_d_equipe`, `evaluation_des_seances`.
 - Tests : 48 unitaires, 77 d'intégration, 112 e2e.
 
+## Mouvement de l'application (12 novembre)
+
+- [x] Animations de l'app connectée, en CSS, sans nouvelle dépendance : fondu montant au changement de page (`<ViewTransition>` de React, déclenché par les liens, jamais par un rafraîchissement), feuilles qui montent du bas sur téléphone et apparaissent au centre sur ordinateur, boutons et onglets qui s'enfoncent à l'appui, pastille d'onglet qui glisse, listes en cascade (hackathons, mentors, Rise-Up, apps à tester, notifications, annuaire), nouveaux messages qui arrivent du côté de leur auteur, jauges qui se remplissent, pastilles de non-lus et alertes qui apparaissent.
+- Seulement `transform`, `opacity` et `clip-path` ; tout est coupé si le téléphone demande moins d'animations.
+- [x] Landing : héros raccourci (titre en deux lignes, présentation en une phrase), cartes qui se soulèvent au survol, boutons qui s'enfoncent, FAQ qui se déplie ; la cascade passe par une animation pour laisser le survol réagir sans délai.
+- [x] Landing, « Fonctionnalités » : accordéon où une seule fonctionnalité est ouverte, avec sa description et son écran (dans le téléphone de droite sur ordinateur, sous la description sur téléphone). Plus de rotation automatique.
+- [x] Le logo ramène à l'accueil sur la landing, les écrans de connexion, `/bienvenue` et la page 404.
+- [x] Accueil de l'app : sections en cascade, lignes « À faire » et carte d'équipe qui réagissent au survol et à l'appui.
+
 ## P1 — Les « Must » manquants et Africa Rise-Up (objectif : 11 novembre)
 
 > **À réaligner sur `docs/point-projet.md`** avant de les prendre : R11 à R17 décrivent encore les défis (devenus hackathons, D8), R12 à R14 le binôme de mentorat (devenu des créneaux, D9), R24 à R26 l'ancien Africa'Raise-up. Une partie est déjà couverte par la refonte. Relire chaque tâche avec l'équipe, puis la réécrire ou la retirer.

@@ -227,6 +227,11 @@
   --radius-xl: 20px;
 
   --breakpoint-lg: 1024px;
+
+  /* Courbes du mouvement : sortie franche pour ce qui entre ou sort, aller-retour pour ce qui se déplace, tiroir pour les feuilles. */
+  --ease-kb: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @layer base {
@@ -317,5 +322,147 @@
 @media (prefers-reduced-motion: reduce) {
   .kb-skel::after {
     animation: none;
+  }
+}
+
+/*
+ * Mouvement de l'application. Seulement transform et opacity (et clip-path pour les jauges) :
+ * rien ne recalcule la mise en page. Si l'on réduit les animations, la règle plus haut coupe tout.
+ */
+
+/* Changement de page (liens de l'app, type « page ») : l'ancienne s'efface vite, la nouvelle monte doucement. */
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(.kb-page) {
+  animation: kb-fade-out 120ms var(--ease-kb) both;
+}
+::view-transition-new(.kb-page) {
+  animation: kb-rise 220ms var(--ease-kb) 60ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+/* Feuilles : elles montent du bas sur téléphone, apparaissent au centre dès 640 px, et repartent comme elles sont venues. */
+.kb-sheet {
+  transform: translateY(100%);
+  transition:
+    transform 380ms var(--ease-drawer),
+    overlay 380ms allow-discrete,
+    display 380ms allow-discrete;
+}
+.kb-sheet[open] {
+  transform: none;
+}
+@starting-style {
+  .kb-sheet[open] {
+    transform: translateY(100%);
+  }
+}
+.kb-sheet::backdrop {
+  opacity: 0;
+  transition:
+    opacity 300ms var(--ease-kb),
+    overlay 380ms allow-discrete,
+    display 380ms allow-discrete;
+}
+.kb-sheet[open]::backdrop {
+  opacity: 1;
+}
+@starting-style {
+  .kb-sheet[open]::backdrop {
+    opacity: 0;
+  }
+}
+@media (min-width: 640px) {
+  .kb-sheet {
+    opacity: 0;
+    transform: scale(0.96);
+    transition:
+      opacity 220ms var(--ease-kb),
+      transform 220ms var(--ease-kb),
+      overlay 220ms allow-discrete,
+      display 220ms allow-discrete;
+  }
+  .kb-sheet[open] {
+    opacity: 1;
+    transform: none;
+  }
+  @starting-style {
+    .kb-sheet[open] {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+}
+
+/* Listes vues de temps en temps (hackathons, mentors, apps, notifications) : les éléments arrivent l'un après l'autre. */
+.kb-stagger > * {
+  animation: kb-rise 300ms var(--ease-kb) both;
+}
+.kb-stagger > :nth-child(2) { animation-delay: 40ms; }
+.kb-stagger > :nth-child(3) { animation-delay: 80ms; }
+.kb-stagger > :nth-child(4) { animation-delay: 120ms; }
+.kb-stagger > :nth-child(5) { animation-delay: 160ms; }
+.kb-stagger > :nth-child(6) { animation-delay: 200ms; }
+.kb-stagger > :nth-child(n + 7) { animation-delay: 240ms; }
+
+/* Ce qui apparaît après une action (message d'erreur, confirmation) : petit glissé pour qu'on le remarque. */
+.kb-enter {
+  animation: kb-rise 220ms var(--ease-kb) both;
+}
+
+/* Un message qui arrive pendant qu'on lit : il monte depuis le côté de son auteur. */
+.kb-msg-in {
+  transform-origin: bottom left;
+  animation: kb-msg 240ms var(--ease-kb) both;
+}
+.kb-msg-in[data-mine] {
+  transform-origin: bottom right;
+}
+
+/* Pastille de compte (non-lus) : elle saute à l'œil quand elle apparaît. */
+.kb-pop {
+  animation: kb-pop 260ms var(--ease-kb) both;
+}
+
+/* Jauge : elle se remplit au chargement, puis glisse vers sa nouvelle valeur. */
+.kb-meter {
+  clip-path: inset(0 var(--kb-rest, 100%) 0 0 round 9999px);
+  transition: clip-path 600ms var(--ease-kb);
+}
+@starting-style {
+  .kb-meter {
+    clip-path: inset(0 100% 0 0 round 9999px);
+  }
+}
+
+@keyframes kb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes kb-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes kb-msg {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+@keyframes kb-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
   }
 }

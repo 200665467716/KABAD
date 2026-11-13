@@ -39,7 +39,7 @@ export function HackathonList({ hackathons, now }: { hackathons: HackathonSummar
       {groups.map((g) => (
         <section key={g.id} aria-labelledby={`h-${g.id}`} className="grid gap-3">
           <SectionLink id={`h-${g.id}`} title={g.title} />
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="kb-stagger grid gap-3 lg:grid-cols-2">
             {g.items.map((h) => (
               <HackathonTicket key={h.id} h={h} now={now} href={h.status === "DONE" ? `/hackathons/${h.id}/resultats` : undefined} />
             ))}

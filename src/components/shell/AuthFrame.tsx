@@ -70,7 +70,11 @@ export function AuthFrame({
               <Icon name={icon} className="size-[30px]" />
             </span>
           ) : (
-            !step && <LogoMark size={56} />
+            !step && (
+              <Link href="/" aria-label={t("logoHome")} className="justify-self-start">
+                <LogoMark size={56} decorative />
+              </Link>
+            )
           )}
           <div className="grid gap-2">
             <h1 className="font-display text-2xl font-extrabold uppercase">{title}</h1>
