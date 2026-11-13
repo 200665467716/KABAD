@@ -19,6 +19,13 @@ type Weekday = (typeof WEEKDAYS)[number];
 const TIMES = Array.from({ length: 49 }, (_, i) => i * 30);
 const hm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
+/** The ranges of a day that overlap another one: marked on their pills, with the message under the day. */
+function overlaps(day: Range[]) {
+  const out = new Set<number>();
+  day.forEach((a, i) => day.forEach((b, j) => i !== j && a.startMin < b.endMin && b.startMin < a.endMin && out.add(i)));
+  return out;
+}
+
 /** Weekly ranges, days off, time zone and video link of a mentor (screen M7). */
 export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
   const t = useTranslations("mentoring");
@@ -48,8 +55,17 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
     setEditing({ day: d, index: week[d].length });
   };
   const zones = zoneChoices(timeZone);
+  // A new start at or after the end moves the end along: a range always lasts at least 30 minutes.
+  const setStart = (d: Weekday, index: number, startMin: number) =>
+    setDay(d, week[d].map((x, j) => (j === index ? { startMin, endMin: x.endMin > startMin ? x.endMin : Math.min(startMin + 60, 24 * 60) } : x)));
+  const faultyDays = WEEKDAYS.filter((d) => overlaps(week[d]).size > 0);
 
   async function save() {
+    // Overlaps are shown next to the day concerned; the server checks again (src/lib/slots.ts).
+    if (faultyDays.length > 0) {
+      document.getElementById(`md-day-${faultyDays[0]}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
     setBusy(true);
     setMessage(null);
     try {
@@ -81,8 +97,9 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
           {WEEKDAYS.map((d) => {
             const on = week[d].length > 0;
             const dayName = t(`availability.weekdays.${d}`);
+            const faulty = overlaps(week[d]);
             return (
-              <div key={d} className="grid grid-cols-[48px_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 border-line py-2.5 [&+&]:border-t-2">
+              <div key={d} id={`md-day-${d}`} className="grid grid-cols-[48px_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 border-line py-2.5 [&+&]:border-t-2">
                 <span className="text-sm font-extrabold">{t(`availability.short.${d}`)}</span>
                 <button
                   type="button"
@@ -93,9 +110,12 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
                     setEditing(null);
                     setDay(d, on ? [] : [{ startMin: 18 * 60, endMin: 20 * 60 }]);
                   }}
-                  className={cn("relative h-6.5 w-11 shrink-0 rounded-full border-2 border-line-strong", on ? "border-brand bg-brand" : "bg-raised")}
+                  className="grid h-11 w-11 shrink-0 place-items-center"
                 >
-                  <span className={cn("absolute top-[3px] size-4 rounded-full transition-[left]", on ? "left-[21px] bg-on-brand" : "left-[3px] bg-ink")} />
+                  {/* The track stays 26 px high; the button around it gives the 44 px touch area. */}
+                  <span aria-hidden="true" className={cn("relative h-6.5 w-11 rounded-full border-2 border-line-strong", on ? "border-brand bg-brand" : "bg-raised")}>
+                    <span className={cn("absolute top-[3px] size-4 rounded-full transition-[left]", on ? "left-[21px] bg-on-brand" : "left-[3px] bg-ink")} />
+                  </span>
                 </button>
                 {/* M8: each range is a pill; touching it opens its hours just below. */}
                 <div className="flex min-h-11 flex-wrap items-center justify-end gap-1.5">
@@ -108,9 +128,14 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
                             key={i}
                             type="button"
                             aria-expanded={open}
+                            aria-describedby={faulty.has(i) ? `md-overlap-${d}` : undefined}
                             aria-label={t("availability.editRange", { day: dayName, range: `${hm(r.startMin)} – ${hm(r.endMin)}` })}
                             onClick={() => setEditing(open ? null : { day: d, index: i })}
-                            className={cn("inline-flex h-9 items-center rounded-md px-2.5 text-[13px] font-extrabold tabular", open ? "bg-brand text-on-brand" : "bg-[var(--mist)] text-[var(--indigo)]")}
+                            className={cn(
+                              "inline-flex h-9 items-center rounded-md border-2 px-2.5 text-[13px] font-extrabold tabular",
+                              open ? "border-transparent bg-brand text-on-brand" : "border-transparent bg-[var(--mist)] text-[var(--indigo)]",
+                              faulty.has(i) && "border-danger",
+                            )}
                           >
                             {hm(r.startMin)} – {r.endMin === 24 * 60 ? "24:00" : hm(r.endMin)}
                           </button>
@@ -128,7 +153,7 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
                 </div>
                 {on && editing?.day === d && week[d][editing.index] && (
                   <div className="col-span-3 flex flex-wrap items-center justify-end gap-1.5 rounded-md bg-bg p-2">
-                    <select aria-label={`${dayName} ${t("availability.from")}`} value={week[d][editing.index].startMin} onChange={(e) => setDay(d, week[d].map((x, j) => (j === editing.index ? { ...x, startMin: Number(e.target.value) } : x)))} className="h-10 rounded-md border-2 border-line-strong bg-raised px-2 text-sm font-bold tabular">
+                    <select aria-label={`${dayName} ${t("availability.from")}`} value={week[d][editing.index].startMin} onChange={(e) => setStart(d, editing.index, Number(e.target.value))} className="h-10 rounded-md border-2 border-line-strong bg-raised px-2 text-sm font-bold tabular">
                       {TIMES.slice(0, -1).map((m) => (
                         <option key={m} value={m}>
                           {hm(m)}
@@ -137,7 +162,8 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
                     </select>
                     <span className="text-sm text-muted">{t("availability.to")}</span>
                     <select aria-label={`${dayName} ${t("availability.to")}`} value={week[d][editing.index].endMin} onChange={(e) => setDay(d, week[d].map((x, j) => (j === editing.index ? { ...x, endMin: Number(e.target.value) } : x)))} className="h-10 rounded-md border-2 border-line-strong bg-raised px-2 text-sm font-bold tabular">
-                      {TIMES.slice(1).map((m) => (
+                      {/* Only ends after the start: a range cannot end before it begins. */}
+                      {TIMES.filter((m) => m > week[d][editing.index].startMin).map((m) => (
                         <option key={m} value={m}>
                           {m === 24 * 60 ? "24:00" : hm(m)}
                         </option>
@@ -159,10 +185,21 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
                     </Button>
                   </div>
                 )}
+                {faulty.size > 0 && (
+                  <p id={`md-overlap-${d}`} role="alert" className="col-span-3 text-sm font-extrabold text-danger">
+                    {t("availability.overlapOn", { day: dayName })}
+                  </p>
+                )}
               </div>
             );
           })}
         </section>
+        {/* A refusal about the ranges shows under the week, not at the bottom of the page. */}
+        {message?.field === "ranges" && (
+          <Alert tone="danger" role="alert">
+            {message.text}
+          </Alert>
+        )}
 
         <section aria-labelledby="md-blocked" className="grid gap-3 rounded-lg border-2 border-line-strong bg-raised p-4">
           <div className="grid">
@@ -228,7 +265,7 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
             error={message?.field === "meetingUrl" ? message.text : undefined}
           />
         </section>
-        {message && message.field !== "meetingUrl" && (
+        {message && message.field !== "meetingUrl" && message.field !== "ranges" && (
           <Alert tone={message.tone} role={message.tone === "danger" ? "alert" : "status"}>
             {message.text}
           </Alert>

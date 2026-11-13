@@ -7,6 +7,9 @@ import type { MentorCard as Mentor } from "@/lib/domain-types";
 /** A mentor of the catalogue (screen M1): avatar, area and city, technologies, next free slot. */
 export function MentorCard({ mentor, timeZone }: { mentor: Mentor; timeZone: string }) {
   const t = useTranslations("mentoring.list");
+  const tb = useTranslations("mentoring.badge");
+  // Areas are stored in French ("Paiements et fintech"): shown in the reader's language.
+  const domain = (d: string) => (tb.has(`domainList.${d}` as "domainList.Backend") ? tb(`domainList.${d}` as "domainList.Backend") : d);
   const format = useFormatter();
   const next = mentor.nextSlot ? format.dateTime(new Date(mentor.nextSlot), { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone }) : null;
   return (
@@ -15,7 +18,7 @@ export function MentorCard({ mentor, timeZone }: { mentor: Mentor; timeZone: str
         <Avatar initials={initials(mentor.name)} size="lg" tone="brand" />
         <div className="grid min-w-0">
           <span className="truncate font-display text-base font-bold">{mentor.name}</span>
-          <span className="truncate text-[13px] text-muted">{[mentor.domains[0] ?? mentor.headline, mentor.city].filter(Boolean).join(" · ")}</span>
+          <span className="truncate text-[13px] text-muted">{[mentor.domains[0] ? domain(mentor.domains[0]) : mentor.headline, mentor.city].filter(Boolean).join(" · ")}</span>
         </div>
       </div>
       <TagList items={mentor.technologies.slice(0, 4)} />

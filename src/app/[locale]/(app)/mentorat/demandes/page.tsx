@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getFormatter, getLocale, getTranslations } from "next-intl/server";
 import { Suspense } from "react";
-import { Link } from "@/i18n/navigation";
+import { Link, redirect } from "@/i18n/navigation";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { Avatar, Card } from "@/components/ui/Display";
 import { AnswerRequest } from "@/components/features/mentoring/AnswerRequest";
@@ -22,12 +22,14 @@ async function RequestsData({ searchParams }: { searchParams: Promise<{ onglet?:
   const { onglet } = await searchParams;
   const accepted = onglet === "acceptees";
   const [b, t, format] = await Promise.all([myBookings(user.id), getTranslations("mentoring.requests"), getFormatter()]);
+  // A member without the badge and without any request to answer has nothing to do here.
+  if (!user.seniorVerifiedAt && b.toAnswer.length === 0 && b.asMentorAccepted.length === 0) redirect({ href: "/mentorat", locale: await getLocale() });
   const list: BookingView[] = accepted ? [...b.asMentorAccepted].reverse() : b.toAnswer;
   const tz = user.timeZone;
   const when = (r: BookingView) => {
     const at = new Date(r.startsAt);
     const end = new Date(at.getTime() + r.minutes * 60_000);
-    const hm = (d: Date) => format.dateTime(d, { hour: "2-digit", minute: "2-digit", timeZone: tz });
+    const hm = (d: Date) => format.dateTime(d, { hour: "numeric", minute: "2-digit", timeZone: tz });
     return t("range", { day: format.dateTime(at, { weekday: "short", day: "numeric", month: "short", timeZone: tz }), start: hm(at), end: hm(end) });
   };
   const tab = (href: string, label: string, on: boolean) => (
@@ -44,7 +46,7 @@ async function RequestsData({ searchParams }: { searchParams: Promise<{ onglet?:
       {list.length === 0 ? (
         <p className="py-8 text-center text-muted">{accepted ? t("emptyAccepted") : t("emptyToAnswer")}</p>
       ) : (
-        list.map((r) => (
+        list.map((r, i) => (
           <Card key={r.id} className="gap-3">
             <div className="flex items-center gap-3">
               <Avatar initials={initials(r.mentee.name)} size="md" tone="brand" />
@@ -67,7 +69,8 @@ async function RequestsData({ searchParams }: { searchParams: Promise<{ onglet?:
                 {t("open")}
               </Link>
             ) : (
-              <AnswerRequest id={r.id} name={r.mentee.name} />
+              // One indigo button per screen: only the first request's "Accept" is indigo, the next ones are in ink.
+              <AnswerRequest id={r.id} name={r.mentee.name} primary={i === 0} />
             )}
           </Card>
         ))

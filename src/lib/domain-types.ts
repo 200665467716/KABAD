@@ -74,7 +74,7 @@ export type MentorDetail = MentorCard & {
 
 export type BookingStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "CANCELLED";
 
-export type BookingPerson = { id: string; name: string; city: string; headline: string };
+export type BookingPerson = { id: string; name: string; city: string; headline: string; gender: "FEMALE" | "MALE" | null };
 
 export type BookingView = {
   id: string;
