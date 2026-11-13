@@ -57,7 +57,8 @@ export function TestAppForm() {
       });
       router.replace(`/tests/${id}`);
     } catch (err) {
-      setError({ field: err instanceof ApiError ? err.field : undefined, text: err instanceof ApiError ? err.message : t("form.error") });
+      // "steps.2" is about the steps box.
+      setError({ field: err instanceof ApiError ? err.field?.split(".")[0] : undefined, text: err instanceof ApiError ? err.message : t("form.error") });
       setBusy(false);
     }
   }
@@ -123,7 +124,8 @@ export function TestAppForm() {
           )}
         </fieldset>
         <Alert tone="info">{t("form.groupInfo")}</Alert>
-        {error && (
+        {/* An error tied to a field is already shown under it. */}
+        {error && !["name", "url", "platforms", "steps", "pitch", "task"].includes(error.field ?? "") && (
           <Alert tone="danger" role="alert">
             {error.text}
           </Alert>

@@ -239,15 +239,20 @@ export const testQuestionSchema = z.object({
   answer: trimmed(1, 60, "Indique la bonne réponse.", "60 caractères au plus."),
 });
 
+/** The choices offered by T3: the server accepts nothing else. */
+export const TEST_SLOTS = [5, 8, 10, 20] as const;
+export const TEST_MINUTES = [10, 15, 30] as const;
+
+// Fields in the order of screen T3: the first error reported is the highest one on the screen.
 export const testAppSchema = z.object({
   name: trimmed(2, 40, "Donne le nom de l’application.", "40 caractères au plus."),
-  platforms: z.array(z.enum(["WEB", "ANDROID", "IOS"])).min(1, "Choisis au moins une plateforme.").max(3),
   url: z.url({ protocol: /^https$/, message: "Indique le lien https de l’application." }).max(300),
-  minutes: z.number().int().min(5, "5 minutes au moins.").max(30, "Un test dure 30 minutes au plus."),
-  slots: z.number().int().min(1).max(50, "50 testeurs au plus."),
+  platforms: z.array(z.enum(["WEB", "ANDROID", "IOS"])).min(1, "Choisis au moins une plateforme.").max(3),
+  slots: z.number().refine((n) => (TEST_SLOTS as readonly number[]).includes(n), "Choisis 5, 8, 10 ou 20 testeurs."),
+  minutes: z.number().refine((n) => (TEST_MINUTES as readonly number[]).includes(n), "Choisis une durée de 10, 15 ou 30 minutes."),
+  steps: z.array(trimmed(5, 200, "Chaque étape fait 5 caractères au moins.", "200 caractères au plus.")).min(1, "Ajoute au moins une étape.").max(5, "5 étapes au plus."),
   pitch: trimmed(20, 500, "Présente l’application en une ou deux phrases.", "500 caractères au plus."),
   task: trimmed(10, 200, "Décris la tâche à accomplir.", "200 caractères au plus."),
-  steps: z.array(trimmed(5, 200, "Chaque étape fait 5 caractères au moins.", "200 caractères au plus.")).min(1, "Ajoute au moins une étape.").max(5, "5 étapes au plus."),
   questions: z.array(testQuestionSchema).max(3, "3 questions au plus.").default([]),
 });
 

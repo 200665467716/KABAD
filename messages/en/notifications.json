@@ -33,6 +33,7 @@
       "riseJoined": " joined your project “{title}”.",
       "riseEvent": ": “{title}” on {at}.",
       "riseEventSoon": ": “{title}” starts in {minutes} min.",
+      "riseEventCancelled": ": “{title}”, planned on {at}, is cancelled.",
       "testJoined": " joined the testers of “{title}”.",
       "testReport": " sent a test report on “{title}”.",
       "testReportValidated": " approved your test report on “{title}”.",

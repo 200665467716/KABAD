@@ -328,7 +328,7 @@ describe("Africa Rise-Up", () => {
     await closeRoom("kossi", id, room.id, prisma);
     expect((await getEvent("kossi", id, room.id, prisma)).live).toBe(false);
     expect((await getProject("fatou", id, prisma)).event).toBeNull();
-    await refused(closeRoom("yao", id, room.id, prisma), "not_live");
+    await refused(closeRoom("yao", id, room.id, prisma), "over");
     await openRoom("fatou", id, { title: "Point capteurs", meetingUrl: meet }, prisma);
   });
 
@@ -336,11 +336,13 @@ describe("Africa Rise-Up", () => {
     const { id } = await createProject("yao", { name: "Forages au Sahel", domain: "WATER", summary: "Une carte des forages.", problem: "x".repeat(40), skills: [] }, prisma);
     await joinProject("kossi", id, {}, prisma);
     const before = await prisma.notification.count({ where: { userId: "kossi" } });
-    const startsAt = new Date(Date.now() + 30 * 60_000).toISOString();
+    // Deux heures avant : le rappel part une heure avant, à part de l’annonce.
+    const startsAt = new Date(Date.now() + 2 * 3600_000).toISOString();
+    const inAnHour = new Date(Date.now() + 70 * 60_000);
     await createEvent("yao", id, { title: "Point discret", agenda: "Entre nous.", startsAt, minutes: 30, meetingUrl: "https://meet.google.com/abc-defg-hij", notify: false }, prisma);
-    expect(await remindRiseEvents(new Date(), prisma)).toBe(0);
+    expect(await remindRiseEvents(inAnHour, prisma)).toBe(0);
     await createEvent("yao", id, { title: "Point d’étape", agenda: "Avancement.", startsAt, minutes: 30, meetingUrl: "https://meet.google.com/abc-defg-hij", notify: true }, prisma);
-    expect(await remindRiseEvents(new Date(), prisma)).toBe(1);
+    expect(await remindRiseEvents(inAnHour, prisma)).toBe(1);
     // One notification when the event is scheduled, one reminder: both for the second event only.
     expect((await prisma.notification.count({ where: { userId: "kossi" } })) - before).toBe(2);
   });

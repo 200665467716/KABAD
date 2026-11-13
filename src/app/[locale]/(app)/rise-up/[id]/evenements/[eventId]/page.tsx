@@ -36,7 +36,7 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
       <Page narrow className="flex-1">
         <section className="grid gap-3 rounded-xl bg-ink p-5 text-raised">
           <div className="flex items-center justify-between gap-3">
-            {e.live ? <Badge tone="live" className="bg-raised/10">{t("live")}</Badge> : <Badge tone="neutral">{ended ? t("ended") : t("upcoming")}</Badge>}
+            {e.live ? <Badge tone="live" className="bg-raised/10">{t("live")}</Badge> : <Badge tone="neutral">{e.cancelled ? t("cancelled") : ended ? t("ended") : t("upcoming")}</Badge>}
             <RiseSymbol size={36} leaf="#f2b705" className="text-accent" />
           </div>
           <h2 className="font-display text-2xl font-extrabold uppercase">{e.title}</h2>
@@ -66,7 +66,9 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
               <ButtonLink href={e.meetingUrl} target="_blank" rel="noreferrer" size="lg" block icon="video" variant={e.live ? "primary" : "secondary"}>
                 {t("join")}
               </ButtonLink>
-              {e.live ? e.canClose && <CloseRoomButton projectId={id} eventId={eventId} /> : <CalendarButton title={e.title} description={e.agenda} url={e.meetingUrl} startsAt={e.startsAt} minutes={e.minutes} label={t("calendar")} />}
+              {!e.live && <CalendarButton title={e.title} description={e.agenda} url={e.meetingUrl} startsAt={e.startsAt} minutes={e.minutes} label={t("calendar")} />}
+              {/* A room opened on the spot has no agenda; an event not started yet is cancelled rather than closed. */}
+              {e.canClose && <CloseRoomButton projectId={id} eventId={eventId} mode={!e.live ? "cancel" : e.agenda ? "end" : "room"} />}
             </>
           ) : (
             <ButtonLink href={`/rise-up/${id}`} size="lg" block>

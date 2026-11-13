@@ -7,7 +7,9 @@
  * - members schedule events (checkpoint, workshop…) held on a Google Meet link, which is required;
  *   the other members are notified, and an event is "live" while it runs;
  * - a member opens a room at any time: an event that starts now, on a Google Meet link. One room at a
- *   time per project; its author or the project's initiator closes it.
+ *   time per project; its author or the project's initiator closes it;
+ * - the same two people cancel an event that has not started yet: it leaves the project, its reminder
+ *   is not sent, and the members who were told about it are told it is cancelled.
  */
 import { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
@@ -148,7 +150,9 @@ export async function joinProject(userId: string, projectId: string, input: { sk
       await tx.riseMember.create({ data: { projectId, userId, skill: input.skill ?? "" } });
       if (p.conversationId) await joinCommunityGroup(tx, p.conversationId, userId);
       const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
-      await pushNotifications(tx, [{ userId: p.initiatorId, actor: me.name, key: "riseJoined", params: { title: p.name }, href: `/rise-up/${projectId}`, icon: "users", tone: "accent" }]);
+      // A member who leaves then joins again is announced to the initiator once only.
+      const told = await tx.notification.findFirst({ where: { userId: p.initiatorId, key: "riseJoined", actor: me.name, href: `/rise-up/${projectId}` }, select: { id: true } });
+      if (!told) await pushNotifications(tx, [{ userId: p.initiatorId, actor: me.name, key: "riseJoined", params: { title: p.name }, href: `/rise-up/${projectId}`, icon: "users", tone: "accent" }]);
       return { ok: true };
     });
   } catch (e) {
@@ -202,7 +206,8 @@ export async function createEvent(userId: string, projectId: string, input: { ti
     const p = await tx.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { name: true, members: { select: { userId: true, user: { select: { timeZone: true } } } } } });
     const e = await tx.riseEvent.create({
       // « Prévenir les membres » décoché : ni notification maintenant, ni rappel une heure avant.
-      data: { projectId, createdById: userId, title: input.title, agenda: input.agenda, startsAt, minutes: input.minutes, meetingUrl: input.meetingUrl, remind: input.notify },
+      // Less than an hour before it starts, the notice sent now already plays the reminder: it is marked as sent.
+      data: { projectId, createdById: userId, title: input.title, agenda: input.agenda, startsAt, minutes: input.minutes, meetingUrl: input.meetingUrl, remind: input.notify, remindedAt: input.notify && startsAt.getTime() - Date.now() <= 3600_000 ? new Date() : null },
     });
     if (input.notify) {
       await pushNotifications(
@@ -237,14 +242,36 @@ export async function openRoom(userId: string, projectId: string, input: { title
   });
 }
 
-/** Closes a live room or event before its planned end. Its author and the project's initiator may do it. */
+/** An event ended before it started was cancelled. */
+const isCancelled = (e: Timed) => e.endedAt !== null && e.endedAt.getTime() < e.startsAt.getTime();
+
+/**
+ * Closes a live room or event before its planned end, or cancels an event that has not started yet.
+ * Its author and the project's initiator may do it. Both end the event the same way (endedAt):
+ * it leaves the project's screens, and the reminder job skips it.
+ */
 export async function closeRoom(userId: string, projectId: string, eventId: string, prisma: Db = db) {
-  const e = await prisma.riseEvent.findUnique({ where: { id: eventId }, select: { projectId: true, createdById: true, startsAt: true, minutes: true, endedAt: true, project: { select: { initiatorId: true } } } });
+  const e = await prisma.riseEvent.findUnique({
+    where: { id: eventId },
+    select: { projectId: true, createdById: true, title: true, startsAt: true, minutes: true, endedAt: true, remind: true, project: { select: { name: true, initiatorId: true, members: { select: { userId: true, user: { select: { timeZone: true } } } } } } },
+  });
   if (!e || e.projectId !== projectId) throw notFound("Événement introuvable.");
-  if (e.createdById !== userId && e.project.initiatorId !== userId) throw forbidden("Seul son auteur ou l’initiateur du projet ferme un salon.");
-  if (!isLive(e)) throw new DomainError("not_live", "Ce salon n’est pas en cours.", 409);
-  await prisma.riseEvent.updateMany({ where: { id: eventId, endedAt: null }, data: { endedAt: new Date() } });
-  return { ok: true };
+  if (e.createdById !== userId && e.project.initiatorId !== userId) throw forbidden("Seul son auteur ou l’initiateur du projet ferme ou annule cet événement.");
+  if (isOver(e)) throw new DomainError("over", "Cet événement est déjà terminé.", 409);
+  const now = new Date();
+  const upcoming = e.startsAt.getTime() > now.getTime();
+  return prisma.$transaction(async (tx) => {
+    // endedAt: null in the condition: two taps at once end it only once, and notify only once.
+    const { count } = await tx.riseEvent.updateMany({ where: { id: eventId, endedAt: null }, data: { endedAt: now } });
+    // The members told when it was scheduled are told it is cancelled.
+    if (count === 1 && upcoming && e.remind) {
+      await pushNotifications(
+        tx,
+        e.project.members.filter((m) => m.userId !== userId).map((m) => ({ userId: m.userId, actor: e.project.name, key: "riseEventCancelled", params: { title: e.title, at: e.startsAt.toISOString(), tz: m.user.timeZone }, href: `/rise-up/${projectId}`, icon: "radio", tone: "neutral" })),
+      );
+    }
+    return { ok: true, cancelled: upcoming };
+  });
 }
 
 export async function getEvent(viewerId: string | null, projectId: string, eventId: string, prisma: Db = db) {
@@ -258,7 +285,9 @@ export async function getEvent(viewerId: string | null, projectId: string, event
     meetingUrl: isMember ? view.meetingUrl : "",
     isMember,
     ended: isOver(e),
-    canClose: view.live && viewerId !== null && (e.createdBy?.id === viewerId || e.project.initiatorId === viewerId),
+    cancelled: isCancelled(e),
+    // A live event is closed, an upcoming one cancelled; an event over is left as it is.
+    canClose: !isOver(e) && viewerId !== null && (e.createdBy?.id === viewerId || e.project.initiatorId === viewerId),
     createdBy: e.createdBy,
   };
 }

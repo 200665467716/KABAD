@@ -100,11 +100,26 @@
       "joinProject": "Rejoindre le projet",
       "by": "Programmé par {name}",
       "external": "La visio s’ouvre dans un nouvel onglet.",
-      "close": "Fermer le salon",
-      "closeTitle": "Fermer le salon ?",
-      "closeText": "Le salon ne sera plus affiché en direct dans le projet. La visio Google Meet se termine de son côté.",
-      "closeConfirm": "Fermer",
-      "closeError": "Le salon n’a pas été fermé. Réessaie."
+      "cancelled": "Annulé",
+      "room": {
+        "action": "Fermer le salon",
+        "title": "Fermer le salon ?",
+        "text": "Le salon ne sera plus affiché en direct dans le projet. La visio Google Meet se termine de son côté.",
+        "error": "Le salon n’a pas été fermé. Réessaie."
+      },
+      "end": {
+        "action": "Terminer l’événement",
+        "title": "Terminer l’événement ?",
+        "text": "L’événement ne sera plus affiché en direct dans le projet. La visio Google Meet se termine de son côté.",
+        "error": "L’événement n’a pas été terminé. Réessaie."
+      },
+      "cancel": {
+        "action": "Annuler l’événement",
+        "title": "Annuler l’événement ?",
+        "text": "Il disparaît du projet et son rappel n’est pas envoyé. Les membres prévenus reçoivent une notification.",
+        "keep": "Garder l’événement",
+        "error": "L’événement n’a pas été annulé. Réessaie."
+      }
     },
     "newEvent": {
       "metaTitle": "Programmer un événement",
@@ -113,6 +128,7 @@
       "eventTitle": "Titre",
       "date": "Date",
       "time": "Heure",
+      "timeHint": "Heure de {city}, le fuseau de ton profil.",
       "duration": "Durée",
       "minutes": "{count} min",
       "agenda": "Ordre du jour",

@@ -314,37 +314,43 @@ function PinnedTasks({ test }: { test: NonNullable<ConversationDetail["test"]> }
   const [open, setOpen] = useState(true);
   const [error, setError] = useState(false);
   const tester = test.doneSteps !== null;
+  // Ticks sent in a row: the list from the server is applied only once the last one has answered,
+  // otherwise an older answer would erase the ticks made since.
+  const pending = useRef(0);
 
   async function toggle(index: number, next: boolean) {
-    const before = done;
+    const apply = (d: number[], on: boolean) => (on ? [...new Set([...d, index])] : d.filter((i) => i !== index));
     setError(false);
-    setDone(next ? [...done, index] : done.filter((i) => i !== index));
+    setDone((d) => apply(d, next));
+    pending.current += 1;
     try {
       const r = await api<{ doneSteps: number[] }>(`/api/tests/${test.id}/steps`, { method: "PUT", body: { index, done: next } });
-      setDone(r.doneSteps);
+      if (pending.current === 1) setDone(r.doneSteps);
     } catch {
-      setDone(before);
+      setDone((d) => apply(d, !next));
       setError(true);
+    } finally {
+      pending.current -= 1;
     }
   }
 
   return (
     <section aria-label={t("pinnedLabel")} className="mx-auto mt-3 grid w-[calc(100%-28px)] max-w-[732px] gap-2 rounded-lg border-2 border-line-strong bg-raised px-3.5 py-3">
       <div className="flex items-center justify-between gap-2.5">
-        <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex min-h-9 items-center gap-1.5 text-xs font-extrabold tracking-wide text-muted uppercase">
+        <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex min-h-11 items-center gap-1.5 text-xs font-extrabold tracking-wide text-muted uppercase">
           {t("pinned")}
           {tester && <span className="tabular">· {done.length}/{test.steps.length}</span>}
           <Icon name="chevron" size={16} className={open ? "-rotate-90" : "rotate-90"} />
         </button>
         {/* A plain <a>: the app lives outside KABAD. */}
-        <a href={test.url} target="_blank" rel="noreferrer" className={buttonClass({ variant: "ink", size: "sm", className: "h-9 px-3 text-[13px] no-underline" })}>
+        <a href={test.url} target="_blank" rel="noreferrer" className={buttonClass({ variant: "ink", size: "sm", className: "h-11 px-3 text-[13px] no-underline" })}>
           {t("installApp")}
         </a>
       </div>
       {open &&
         test.steps.map((step, i) =>
           tester ? (
-            <label key={i} className="flex min-h-8 cursor-pointer items-center gap-2.5 text-sm font-bold">
+            <label key={i} className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-bold">
               <input type="checkbox" checked={done.includes(i)} onChange={(e) => toggle(i, e.target.checked)} className="size-5 shrink-0 accent-[var(--brand)]" />
               <span className={done.includes(i) ? "text-muted line-through" : undefined}>{step}</span>
             </label>
