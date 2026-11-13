@@ -47,7 +47,7 @@ async function hackathonLine(h: HackathonSummary) {
 
 async function HomeData() {
   const user = await pageUser("/accueil");
-  const [t, format] = await Promise.all([getTranslations("home"), getFormatter()]);
+  const [t, tWhy, format] = await Promise.all([getTranslations("home"), getTranslations("auth.suggestions.why"), getFormatter()]);
   const [bookings, hackathons, entries, projects, tests, people, invitations, bell, missions] = await Promise.all([
     myBookings(user.id),
     listHackathons(user.id),
@@ -249,7 +249,7 @@ async function HomeData() {
                     <span className="text-[13px] text-muted">{[p.headline, p.city].filter(Boolean).join(" · ")}</span>
                   </span>
                   {p.verified && <Badge tone="brand">{t("devs.mentor")}</Badge>}
-                  <span className="text-xs font-extrabold text-brand-text">{p.why}</span>
+                  <span className="text-xs font-extrabold text-brand-text">{tWhy(p.why.key, { tech: p.why.tech ?? "" })}</span>
                 </Link>
               ))}
             </div>

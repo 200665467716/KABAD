@@ -8,10 +8,12 @@ import { Alert } from "@/components/ui/Display";
 import { TextArea, TextField } from "@/components/ui/Field";
 import { ToggleChip } from "@/components/ui/Controls";
 import { useRouter } from "@/i18n/navigation";
+import { choiceLabel } from "@/lib/choice-labels";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import type { BadgeRequestView } from "@/lib/domain-types";
 import { badgeRequestSchema, TECH_CHOICES } from "@/lib/schemas";
+import { useErrorText } from "@/lib/use-error-text";
 
 const DOMAINS = ["Backend", "Frontend", "Mobile", "Cloud et DevOps", "Data et IA", "Paiements et fintech", "Sécurité", "Produit et UX"] as const;
 const EXPERIENCE = ["3-5", "5-10", "10+"] as const;
@@ -24,6 +26,8 @@ const TECH_MAX = 12;
 /** `stack` is the member's profile: their technologies are picked from the start (B1). */
 export function BadgeForm({ initial, updating, stack }: { initial: BadgeRequestView | null; updating: boolean; stack: string[] }) {
   const t = useTranslations("mentoring");
+  const say = useErrorText();
+  const tc = useTranslations("common.choices");
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [domains, setDomains] = useState<string[]>(initial?.domains ?? []);
@@ -66,7 +70,7 @@ export function BadgeForm({ initial, updating, stack }: { initial: BadgeRequestV
     const found: Record<string, string> = {};
     for (const i of parsed.error.issues) {
       const k = String(i.path[0]);
-      if ((!only || only.includes(k)) && !found[k]) found[k] = i.message;
+      if ((!only || only.includes(k)) && !found[k]) found[k] = say(i.message);
     }
     return { data: null, errors: found };
   }
@@ -143,7 +147,7 @@ export function BadgeForm({ initial, updating, stack }: { initial: BadgeRequestV
                   const on = technologies.includes(x);
                   return (
                     <ToggleChip key={x} pressed={on} disabled={!on && technologies.length >= TECH_MAX} onClick={() => setTechnologies(on ? technologies.filter((y) => y !== x) : [...technologies, x])}>
-                      {x}
+                      {choiceLabel(x, tc)}
                     </ToggleChip>
                   );
                 })}

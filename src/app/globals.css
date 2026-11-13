@@ -238,6 +238,19 @@
   html {
     -webkit-text-size-adjust: 100%;
   }
+  /*
+   * Barre d'onglets du téléphone (BottomNav, data-bottom-nav) : 2 px de bord, 8 px en haut, 56 px d'onglets,
+   * puis la zone sûre (.safe-bottom). Les ActionBar se collent juste au-dessus, au lieu de passer dessous.
+   * Sans barre d'onglets (écrans de saisie), elles restent au bas de l'écran et gardent la zone sûre.
+   */
+  :root {
+    --bottom-nav-h: 0px;
+    --action-bar-safe: env(safe-area-inset-bottom, 0px);
+  }
+  :root:has([data-bottom-nav]) {
+    --bottom-nav-h: calc(66px + max(8px, env(safe-area-inset-bottom, 0px)));
+    --action-bar-safe: 0px;
+  }
   body {
     background: var(--bg);
     color: var(--text);

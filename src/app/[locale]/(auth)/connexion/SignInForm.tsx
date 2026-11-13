@@ -56,7 +56,7 @@ export function SignInForm({ demo }: { demo: boolean }) {
             </Button>
             <p className="text-center text-sm">
               {t("noAccount")}{" "}
-              <Link href="/inscription" className="font-extrabold text-brand-text no-underline">
+              <Link href="/inscription" className="-my-3 inline-flex min-h-11 items-center font-extrabold text-brand-text no-underline">
                 {t("create")}
               </Link>
             </p>
@@ -73,7 +73,7 @@ export function SignInForm({ demo }: { demo: boolean }) {
             required
             error={attemptsLeft !== null ? (attemptsLeft > 0 ? t("wrongPassword", { count: attemptsLeft }) : t("wrongPasswordLast")) : undefined}
             labelAside={
-              <Link href="/mot-de-passe-oublie" className="text-sm font-extrabold text-brand-text no-underline">
+              <Link href="/mot-de-passe-oublie" className="-my-3 inline-flex min-h-11 items-center text-sm font-extrabold text-brand-text no-underline">
                 {t("forgot")}
               </Link>
             }

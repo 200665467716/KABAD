@@ -1,6 +1,7 @@
 import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { ZodError, type ZodType } from "zod";
+import { zodFallbackError } from "@/lib/schemas";
 import { DomainError } from "./errors";
 import { requestLocale, translateError } from "./error-language";
 
@@ -21,7 +22,8 @@ export async function readJson<T>(request: Request, schema: ZodType<T>): Promise
   } catch {
     throw new DomainError("bad_json", "Requête invalide.", 400);
   }
-  return schema.parse(body);
+  // Le message de repli est passé ici aussi : il ne dépend pas de l'ordre de chargement de z.config.
+  return schema.parse(body, { error: zodFallbackError });
 }
 
 /**

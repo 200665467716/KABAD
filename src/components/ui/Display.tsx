@@ -239,7 +239,7 @@ export function SectionLink({ id, title, href, label }: { id?: string; title: Re
         {title}
       </h2>
       {href && (
-        <Link href={href} className="text-sm font-extrabold text-brand-text no-underline">
+        <Link href={href} className="-my-3 inline-flex min-h-11 items-center text-sm font-extrabold text-brand-text no-underline">
           {label}
         </Link>
       )}

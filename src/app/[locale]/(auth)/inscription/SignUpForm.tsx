@@ -10,6 +10,7 @@ import { Checkbox, TextField } from "@/components/ui/Field";
 import { Link, useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
 import { signupSchema } from "@/lib/schemas";
+import { useErrorText } from "@/lib/use-error-text";
 
 type Errors = Partial<Record<"name" | "email" | "password" | "terms" | "form", ReactNode>>;
 
@@ -17,6 +18,7 @@ type Errors = Partial<Record<"name" | "email" | "password" | "terms" | "form", R
 export function SignUpForm() {
   const t = useTranslations("auth.signUp");
   const router = useRouter();
+  const say = useErrorText();
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
   // Consent is never pre-ticked, and « Continuer » stays off until it is given.
@@ -28,7 +30,7 @@ export function SignUpForm() {
     const input = { name: String(data.get("name") ?? ""), email: String(data.get("email") ?? ""), password: String(data.get("password") ?? "") };
     const next: Errors = {};
     const parsed = signupSchema.safeParse(input);
-    if (!parsed.success) for (const issue of parsed.error.issues) next[issue.path[0] as keyof Errors] ??= issue.message;
+    if (!parsed.success) for (const issue of parsed.error.issues) next[issue.path[0] as keyof Errors] ??= say(issue.message);
     if (!data.get("terms")) next.terms = t("termsRequired");
     setErrors(next);
     if (Object.keys(next).length > 0) return;
@@ -70,7 +72,7 @@ export function SignUpForm() {
             </Button>
             <p className="text-center text-sm">
               {t("already")}{" "}
-              <Link href="/connexion" className="font-extrabold text-brand-text no-underline">
+              <Link href="/connexion" className="-my-3 inline-flex min-h-11 items-center font-extrabold text-brand-text no-underline">
                 {t("signIn")}
               </Link>
             </p>

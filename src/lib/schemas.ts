@@ -5,6 +5,19 @@ import { PASSWORD_NO_DIGIT, PASSWORD_TOO_SHORT, passwordRules } from "./password
 import { MAX_PRIZES } from "./prize";
 import { normalizeRepoUrl, REPO_URL } from "./repo";
 
+/**
+ * Message des règles qui n'ont pas le leur : jamais le texte anglais de Zod (« Too big: expected… »).
+ * En français, il sert aussi de clé à sa traduction (src/server/error-messages.en.json).
+ * Un message écrit dans une règle reste prioritaire.
+ */
+export const zodFallbackError = (issue: { code: string; origin?: string }): string => {
+  const list = issue.origin === "array" || issue.origin === "set";
+  if (issue.code === "too_big") return issue.origin === "number" ? "Ce nombre est trop grand." : list ? "Il y a trop d’éléments." : "Ce texte est trop long.";
+  if (issue.code === "too_small") return issue.origin === "number" ? "Ce nombre est trop petit." : list ? "Il manque des éléments." : "Ce texte est trop court.";
+  return "Données invalides.";
+};
+z.config({ customError: zodFallbackError });
+
 /** A new password: 8 characters at least, with at least one digit (src/lib/password.ts). */
 function newPassword() {
   return z

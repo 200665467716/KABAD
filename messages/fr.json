@@ -14,7 +14,22 @@
     "seeAll": "Tout voir",
     "step": "Étape {step} sur {total}",
     "stepShort": "{step} / {total}",
-    "logoHome": "KABAD, accueil"
+    "logoHome": "KABAD, accueil",
+    "choices": {
+      "BJ": "Bénin",
+      "BF": "Burkina Faso",
+      "CM": "Cameroun",
+      "CI": "Côte d’Ivoire",
+      "GH": "Ghana",
+      "ML": "Mali",
+      "NE": "Niger",
+      "NG": "Nigeria",
+      "CD": "RD Congo",
+      "SN": "Sénégal",
+      "TG": "Togo",
+      "otherCountry": "Autre pays",
+      "dataAi": "Data et IA"
+    }
   },
   "nav": {
     "label": "Navigation principale",

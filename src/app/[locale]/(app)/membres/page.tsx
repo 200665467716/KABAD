@@ -6,6 +6,7 @@ import { Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
+import { choiceLabel } from "@/lib/choice-labels";
 import { COUNTRIES } from "@/lib/schemas";
 import { popularStacks, searchMembers } from "@/server/members";
 import { pageUser } from "@/server/page";
@@ -40,7 +41,7 @@ function Chip({ href, on, children }: { href: string; on: boolean; children: Rea
 
 async function MembersData({ searchParams }: { searchParams: Promise<Search> }) {
   const user = await pageUser("/membres");
-  const [t, locale] = await Promise.all([getTranslations("profile.members"), getLocale()]);
+  const [t, tc, locale] = await Promise.all([getTranslations("profile.members"), getTranslations("common.choices"), getLocale()]);
   const sp = await searchParams;
   const role = sp.role === "senior" ? "SENIOR" : sp.role === "junior" ? "JUNIOR" : undefined;
   const page = Math.max(0, Number.parseInt(sp.page ?? "0", 10) || 0);
@@ -57,7 +58,9 @@ async function MembersData({ searchParams }: { searchParams: Promise<Search> }) 
           <select name="pays" defaultValue={sp.pays ?? ""} aria-label={t("country")} className="order-last col-span-2 h-11 min-w-0 rounded-md border-2 border-line-strong bg-raised px-2 text-sm sm:order-none sm:col-span-1">
             <option value="">{t("allCountries")}</option>
             {COUNTRIES.map((c) => (
-              <option key={c}>{c}</option>
+              <option key={c} value={c}>
+                {choiceLabel(c, tc)}
+              </option>
             ))}
           </select>
           {sp.role && <input type="hidden" name="role" value={sp.role} />}

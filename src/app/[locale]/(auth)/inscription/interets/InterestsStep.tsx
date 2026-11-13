@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ToggleChip } from "@/components/ui/Controls";
 import { Alert } from "@/components/ui/Display";
 import { useRouter } from "@/i18n/navigation";
+import { choiceLabel } from "@/lib/choice-labels";
 import { api, ApiError } from "@/lib/api";
 import { GOALS, TECH_CHOICES } from "@/lib/schemas";
 
@@ -16,6 +17,7 @@ const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x
 export function InterestsStep({ initial }: { initial: { stack: string[]; goals: string[] } }) {
   const t = useTranslations("auth.interests");
   const tg = useTranslations("auth.goals");
+  const tc = useTranslations("common.choices");
   const router = useRouter();
   // Technologies added later from the profile stay selected even if they are not in the list.
   const choices = [...new Set([...TECH_CHOICES, ...initial.stack])];
@@ -59,7 +61,7 @@ export function InterestsStep({ initial }: { initial: { stack: string[]; goals: 
         <div className="flex flex-wrap gap-2">
           {choices.map((c) => (
             <ToggleChip key={c} pressed={stack.includes(c)} onClick={() => setStack((s) => toggle(s, c))}>
-              {c}
+              {choiceLabel(c, tc)}
             </ToggleChip>
           ))}
         </div>

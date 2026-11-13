@@ -22,7 +22,8 @@ export type MemberCard = {
   photo: string | null;
 };
 
-export type Recommendation = MemberCard & { why: string };
+/** Pourquoi le membre est suggéré : une clé de auth.suggestions.why, avec les technologies communes s’il y en a. */
+export type Recommendation = MemberCard & { why: { key: "mentorIn" | "shared" | "sameCity" | "sameCountry" | "mentorAvailable" | "active"; tech?: string } };
 
 /** A member in the directory, with where the viewer stands with them. */
 export type DirectoryEntry = MemberCard & { relation: "contact" | "invited" | "invited_you" | "none"; conversationId: string | null; invitationId: string | null };

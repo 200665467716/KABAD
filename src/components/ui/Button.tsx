@@ -27,7 +27,8 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "h-10 rounded-md px-4 text-sm",
+  // 44 px de haut, comme toutes les zones tactiles de la charte.
+  sm: "h-11 rounded-md px-4 text-sm",
   md: "h-12 rounded-md px-5 text-[15px]",
   lg: "h-13 rounded-action px-6 text-base",
 };
@@ -43,7 +44,7 @@ type Common = {
 };
 
 export function buttonClass({ variant = "primary", size = "md", block, iconOnly, className }: Omit<Common, "children" | "icon">) {
-  return cn(base, variants[variant], sizes[size], block && "w-full", iconOnly && (size === "sm" ? "w-10 px-0" : size === "lg" ? "w-13 px-0" : "w-12 px-0"), className);
+  return cn(base, variants[variant], sizes[size], block && "w-full", iconOnly && (size === "sm" ? "w-11 px-0" : size === "lg" ? "w-13 px-0" : "w-12 px-0"), className);
 }
 
 function Content({ icon, children, size }: { icon?: IconName; children?: ReactNode; size: ButtonSize }) {
