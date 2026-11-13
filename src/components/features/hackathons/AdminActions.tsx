@@ -59,7 +59,7 @@ function JuryPicker({ hackathonId, mentors, current }: { hackathonId: string; me
         <Button size="sm" variant="secondary" onClick={() => setOpen(false)} disabled={busy}>
           {t("cancel")}
         </Button>
-        <Button size="sm" onClick={save} disabled={busy || picked.length !== 3}>
+        <Button size="sm" variant="ink" onClick={save} disabled={busy || picked.length !== 3}>
           {t("saveJury")}
         </Button>
       </div>
@@ -78,7 +78,8 @@ export function AdminActions({ id, status, published, mentors, jury }: { id: str
   return (
     <div className="flex flex-wrap items-start gap-2">
       {!published && (
-        <ActionButton url={`/api/hackathons/${id}/publish`} variant="primary" size="sm" confirm={t("publishConfirm")}>
+        // En encre, pas en indigo : la page de l'admin montre ces actions pour chaque hackathon, et un écran n'a qu'un bouton indigo.
+        <ActionButton url={`/api/hackathons/${id}/publish`} variant="ink" size="sm" confirm={t("publishConfirm")}>
           {t("publish")}
         </ActionButton>
       )}
@@ -89,7 +90,7 @@ export function AdminActions({ id, status, published, mentors, jury }: { id: str
         </ActionButton>
       )}
       {status === "JURY" && (
-        <ActionButton url={`/api/hackathons/${id}/results`} variant="primary" size="sm" confirm={t("resultsConfirm")}>
+        <ActionButton url={`/api/hackathons/${id}/results`} variant="ink" size="sm" confirm={t("resultsConfirm")}>
           {t("results")}
         </ActionButton>
       )}

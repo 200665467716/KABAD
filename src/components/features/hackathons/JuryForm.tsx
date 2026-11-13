@@ -62,7 +62,7 @@ export function JuryForm({ hackathonId, item }: { hackathonId: string; item: Jur
 
   return (
     <>
-      <TopBar back={`/hackathons/${hackathonId}`} title={t("solution", { index: s.index })} subtitle={t("anonymous", { title: item.hackathonTitle })} actions={<span className="pr-1 text-sm font-bold text-muted tabular">{item.scored} / {item.total}</span>}>
+      <TopBar back={`/hackathons/${hackathonId}`} title={t("solution", { index: s.index })} subtitle={t("anonymous", { title: item.hackathonTitle })} actions={<span className="pr-1 text-sm font-bold text-on-header tabular">{item.scored} / {item.total}</span>}>
         <Meter value={item.total ? item.scored / item.total : 0} label={t("progress")} height="h-1" />
       </TopBar>
       <Page narrow className="flex-1">

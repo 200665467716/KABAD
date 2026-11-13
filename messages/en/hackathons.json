@@ -58,7 +58,7 @@
       "noPrize": "No prize for this hackathon.",
       "prizeOrder": "Prizes are handed over by the organizer, in the order of the ranking.",
       "instructorsCount": "{count, plural, one {# KABAD mentor} other {# KABAD mentors}}",
-      "instructorsText": "coach the teams during the event.",
+      "instructorsText": "{count, plural, one {coaches the teams during the event.} other {coach the teams during the event.}}",
       "jury": "Jury:",
       "entries": "{teams, plural, =0 {No team has entered yet.} one {# team entered} other {# teams entered}}{participants, plural, =0 {} one { · # participant} other { · # participants}}",
       "manage": "Manage the hackathon",
@@ -69,7 +69,9 @@
       "seeResults": "See the results",
       "join": "Take part",
       "youJudge": "You are on the jury",
-      "closed": "Registrations closed"
+      "closed": "Registrations closed",
+      "pendingMentorText": "The KABAD team reviews this hackathon before publishing it. You can already see it because you were offered an instructor mission.",
+      "notPublished": "Not published yet"
     },
     "register": {
       "title": "Take part",
@@ -159,7 +161,8 @@
       "inviteSent": "Invitation sent · waiting",
       "inviteCancel": "Cancel",
       "invite": "Invite a teammate",
-      "teamWord": "Team"
+      "teamWord": "Team",
+      "fullHint": "Your team is full with the invitations still waiting: cancel one to accept a request."
     },
     "submit": {
       "title": "Submit",
@@ -240,7 +243,21 @@
       "propose": "Offer",
       "proposed": "Offered",
       "proposeLabel": "Offer the mission to {name}",
-      "proposedLabel": "Mission offered to {name}"
+      "proposedLabel": "Mission offered to {name}",
+      "errors": {
+        "title": "Give the hackathon a name (at least 5 characters).",
+        "organizer": "Enter the organizer.",
+        "city": "Enter the city of the hackathon.",
+        "start": "Enter the start.",
+        "end": "Enter the end.",
+        "endBeforeStart": "The end must come after the start.",
+        "closes": "Enter when registrations close.",
+        "closesAfterStart": "Registrations close at the latest when the hackathon starts.",
+        "closesPast": "Registrations must close in the future.",
+        "stack": "Enter the expected technologies.",
+        "description": "Describe the challenge (at least 30 characters).",
+        "rulesUrl": "The rules must be an https link."
+      }
     },
     "instructors": {
       "title": "Instructors",
@@ -341,7 +358,8 @@
       "ranking": "Ranking",
       "you": "(you)",
       "captain": "Captain: {name}",
-      "prizeWon": "Prize: {prize}"
+      "prizeWon": "Prize: {prize}",
+      "empty": "No solution was sent: there is no ranking for this hackathon."
     },
     "admin": {
       "title": "Hackathons",

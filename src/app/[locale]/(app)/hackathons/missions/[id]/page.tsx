@@ -34,7 +34,8 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <>
-      <TopBar back="/hackathons" title={t("title")} />
+      {/* Once answered, the mission is no longer "offered". */}
+      <TopBar back="/hackathons" title={m.status === "PROPOSED" ? t("title") : m.status === "ACCEPTED" ? t("accepted") : t("declined")} />
       <Page narrow>
         <div className="flex items-center gap-3">
           <Avatar initials={initials(h.organizerName)} size="lg" tone="neutral" />

@@ -58,7 +58,7 @@
       "noPrize": "Pas de prix pour ce hackathon.",
       "prizeOrder": "Les prix sont remis par l’organisateur, dans l’ordre du classement.",
       "instructorsCount": "{count, plural, one {# mentor KABAD} other {# mentors KABAD}}",
-      "instructorsText": "accompagnent les équipes pendant l’événement.",
+      "instructorsText": "{count, plural, one {accompagne les équipes pendant l’événement.} other {accompagnent les équipes pendant l’événement.}}",
       "jury": "Jury :",
       "entries": "{teams, plural, =0 {Aucune équipe inscrite pour l’instant.} one {# équipe inscrite} other {# équipes inscrites}}{participants, plural, =0 {} one { · # participant} other { · # participants}}",
       "manage": "Gérer le hackathon",
@@ -69,7 +69,9 @@
       "seeResults": "Voir les résultats",
       "join": "Participer",
       "youJudge": "Tu fais partie du jury",
-      "closed": "Inscriptions closes"
+      "closed": "Inscriptions closes",
+      "pendingMentorText": "L’équipe KABAD relit ce hackathon avant de le publier. Tu le vois déjà parce qu’on t’a proposé une mission d’instructeur.",
+      "notPublished": "Pas encore publié"
     },
     "register": {
       "title": "Participer",
@@ -125,7 +127,7 @@
       "title": "Mon équipe",
       "titleSolo": "Ma participation",
       "loading": "Chargement de l’équipe…",
-      "count": "{title} · {count} membres sur {max}",
+      "count": "{title} · {count, plural, one {# membre} other {# membres}} sur {max}",
       "daysShort": "{days} j",
       "hoursShort": "{hours} h",
       "due": "Rendu de la solution",
@@ -159,17 +161,18 @@
       "inviteSent": "Invitation envoyée · en attente",
       "inviteCancel": "Annuler",
       "invite": "Inviter un coéquipier",
-      "teamWord": "Équipe"
+      "teamWord": "Équipe",
+      "fullHint": "Équipe complète avec les invitations en attente : annule une invitation pour accepter une demande."
     },
     "submit": {
       "title": "Soumettre",
       "loading": "Chargement…",
-      "heading": "Votre solution",
+      "heading": "La solution de l’équipe",
       "projectName": "Nom du projet",
       "repo": "Lien du dépôt",
       "demo": "Démo ou vidéo",
       "optional": "Facultatif",
-      "explanation": "Ce que fait votre solution",
+      "explanation": "Ce que fait la solution",
       "agree": "Toute l’équipe a relu et valide la soumission.",
       "send": "Envoyer la solution",
       "update": "Mettre à jour la solution",
@@ -240,7 +243,21 @@
       "propose": "Proposer",
       "proposed": "Proposée",
       "proposeLabel": "Proposer la mission à {name}",
-      "proposedLabel": "Mission proposée à {name}"
+      "proposedLabel": "Mission proposée à {name}",
+      "errors": {
+        "title": "Donne un nom au hackathon (5 caractères au moins).",
+        "organizer": "Indique l’organisateur.",
+        "city": "Indique la ville du hackathon.",
+        "start": "Indique le début.",
+        "end": "Indique la fin.",
+        "endBeforeStart": "La fin doit venir après le début.",
+        "closes": "Indique la clôture des inscriptions.",
+        "closesAfterStart": "Les inscriptions se closent au plus tard au début du hackathon.",
+        "closesPast": "La clôture des inscriptions doit être dans le futur.",
+        "stack": "Indique les technologies attendues.",
+        "description": "Décris le défi (30 caractères au moins).",
+        "rulesUrl": "Le règlement doit être un lien https."
+      }
     },
     "instructors": {
       "title": "Instructeurs",
@@ -339,9 +356,10 @@
       "yourMark": "Ta note : {mark} sur 20",
       "noComment": "Le jury n’a pas laissé de commentaire.",
       "ranking": "Classement",
-      "you": "(vous)",
+      "you": "(toi)",
       "captain": "Chef d’équipe : {name}",
-      "prizeWon": "Prix : {prize}"
+      "prizeWon": "Prix : {prize}",
+      "empty": "Aucune solution n’a été soumise : pas de classement pour ce hackathon."
     },
     "admin": {
       "title": "Hackathons",

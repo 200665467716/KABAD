@@ -43,6 +43,9 @@
       "teamInvited": " t’invite dans l’équipe {team} ({title}).",
       "teamInviteAccepted": " a rejoint ton équipe {team} ({title}).",
       "teamInviteDeclined": " ne rejoint pas ton équipe {team} ({title}).",
+      "teamMemberLeft": " a quitté ton équipe {team} ({title}).",
+      "teamCaptainHandedOver": " a quitté l’équipe {team} ({title}) : tu en es maintenant le chef d’équipe.",
+      "juryToScore": " est terminé : des solutions attendent ta note.",
       "sessionRated": " a noté votre séance « {topic} » : {rating} sur 5."
     }
   }
