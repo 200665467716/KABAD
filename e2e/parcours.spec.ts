@@ -103,24 +103,27 @@ test("badge mentor : la demande de Moussa est validée par l’équipe, qui la v
   await moussa.context().close();
 });
 
-test("hackathon : Aïcha demande à rejoindre l’équipe Kora, son chef l’accepte", async ({ browser }) => {
-  const aicha = await signIn(browser, "aicha.kouassi@exemple.ci", "/hackathons/fintech-inclusion/participer");
-  await aicha.getByRole("radio", { name: /Rejoindre une équipe/ }).check();
+test("hackathon : Awa demande à rejoindre l’équipe Kora, son chef l’accepte", async ({ browser }) => {
+  // Awa: her instructor mission is only proposed. Aïcha, an accepted instructor, may not take part.
+  const awa = await signIn(browser, "awa.diop@exemple.sn", "/hackathons/fintech-inclusion/participer");
+  await awa.getByRole("radio", { name: /Rejoindre une équipe/ }).check();
   // H3: the rules first, then "Demander" on the team sends the request at once.
-  await aicha.getByRole("checkbox", { name: /J’accepte/ }).check();
-  await aicha.getByRole("listitem").filter({ hasText: "Équipe Kora" }).getByRole("button", { name: /Demander/ }).click();
-  await expect(aicha.getByText("Demande envoyée.")).toBeVisible();
+  await awa.getByRole("checkbox", { name: /J’accepte/ }).check();
+  await awa.getByRole("listitem").filter({ hasText: "Équipe Kora" }).getByRole("button", { name: /Demander/ }).click();
+  await expect(awa.getByText("Demande envoyée.")).toBeVisible();
 
   const chidi = await signIn(browser, "chidi.okafor@exemple.ng", "/hackathons/fintech-inclusion/equipe");
   await chidi.getByRole("button", { name: "Accepter" }).first().click();
-  await expect(chidi.getByText("Aïcha Kouassi")).toBeVisible();
-  // H4: the team has its discussion in the messaging; Aïcha, just accepted, is in it.
+  // Awa's name is already on the request: wait for the answer to be saved, the request then leaves the list.
+  await expect(chidi.getByRole("button", { name: "Accepter" })).toHaveCount(0);
+  await expect(chidi.getByText("Awa Diop")).toBeVisible();
+  // H4: the team has its discussion in the messaging; Awa, just accepted, is in it.
   await chidi.getByRole("button", { name: "Discussion de l’équipe" }).click();
   await expect(chidi.getByRole("heading", { name: "Équipe Kora" })).toBeVisible();
   await chidi.getByRole("button", { name: "Infos du groupe" }).click();
-  await expect(chidi.getByRole("dialog").getByRole("link", { name: "Aïcha Kouassi" })).toBeVisible();
+  await expect(chidi.getByRole("dialog").getByRole("link", { name: "Awa Diop" })).toBeVisible();
   await expect(chidi.getByRole("dialog").getByRole("link", { name: "Voir mon équipe" })).toBeVisible();
-  await aicha.context().close();
+  await awa.context().close();
   await chidi.context().close();
 });
 

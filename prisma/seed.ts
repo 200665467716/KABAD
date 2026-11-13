@@ -241,6 +241,20 @@ async function main() {
       { hackathonId: "fintech-inclusion", mentorId: "aicha", fee: 75_000, status: "ACCEPTED", answeredAt: at(-2) },
     ],
   });
+  // The instructors' group their missions opened: FinLab, who created the hackathon, leads it.
+  const instructors = await conversation(
+    "GROUP",
+    ["finlab", "ibrahim", "aicha"],
+    [
+      [null, "Groupe des instructeurs de « Fintech pour l’inclusion » : organisation, modalités et questions des équipes.", 60 * 48 + 30],
+      [null, "Ibrahim a rejoint le groupe", 60 * 48],
+      [null, "Aïcha a rejoint le groupe", 60 * 48 - 10],
+      ["finlab", "Bienvenue à vous deux ! Chacun suivra deux équipes pendant le hackathon : je vous envoie la répartition demain.", 60 * 20],
+      ["aicha", "Parfait. Je veux bien les équipes qui travaillent sur le mobile money.", 60 * 19],
+    ],
+    { name: "Instructeurs · Fintech pour l’inclusion", theme: "Hackathon", createdById: "finlab" },
+  );
+  await db.hackathon.update({ where: { id: "fintech-inclusion" }, data: { instructorsConversationId: instructors } });
 
   // Solo entries of the finished and judged hackathons.
   for (const [hackathonId, list] of Object.entries({ raccourcisseur: ["chidi", "fatou", "yao"], "inscription-accessible": ["kossi", "fatou", "chidi"] })) {
