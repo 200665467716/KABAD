@@ -44,6 +44,9 @@
       "teamInvited": " invites you to join team {team} ({title}).",
       "teamInviteAccepted": " joined your team {team} ({title}).",
       "teamInviteDeclined": " won’t be joining your team {team} ({title}).",
+      "teamMemberLeft": " left your team {team} ({title}).",
+      "teamCaptainHandedOver": " left the team {team} ({title}): you are now its captain.",
+      "juryToScore": " is over: solutions are waiting for your marks.",
       "sessionRated": " rated your session “{topic}”: {rating} out of 5."
     }
   }

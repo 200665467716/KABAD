@@ -89,16 +89,20 @@ export async function remindRiseEvents(now = new Date(), prisma: Db = db) {
   });
 }
 
-/** Hackathons past their end move to the jury; their participants are told. */
+/** Hackathons past their end move to the jury; their participants are told, and the jurors that solutions wait for their marks. */
 export async function closeEndedHackathons(now = new Date(), prisma: Db = db) {
   return prisma.$transaction(async (tx: Tx) => {
-    const rows = await tx.hackathon.findMany({ where: { status: "OPEN", endsAt: { lte: now } }, select: { id: true, title: true, teams: { select: { members: { select: { userId: true } } } } } });
+    const rows = await tx.hackathon.findMany({
+      where: { status: "OPEN", endsAt: { lte: now } },
+      select: { id: true, title: true, teams: { select: { members: { select: { userId: true } } } }, jurors: { select: { userId: true } }, _count: { select: { submissions: true } } },
+    });
     if (rows.length === 0) return 0;
     await tx.hackathon.updateMany({ where: { id: { in: rows.map((r) => r.id) }, status: "OPEN" }, data: { status: "JURY" } });
-    await pushNotifications(
-      tx,
-      rows.flatMap((h) => h.teams.flatMap((t) => t.members.map((m) => ({ userId: m.userId, actor: h.title, key: "hackathonEnded" as const, href: `/hackathons/${h.id}`, icon: "trophy" as const, tone: "accent" as const })))),
-    );
+    await pushNotifications(tx, [
+      ...rows.flatMap((h) => h.teams.flatMap((t) => t.members.map((m) => ({ userId: m.userId, actor: h.title, key: "hackathonEnded" as const, href: `/hackathons/${h.id}`, icon: "trophy" as const, tone: "brand" as const })))),
+      // Without any solution, the jury has nothing to score.
+      ...rows.filter((h) => h._count.submissions > 0).flatMap((h) => h.jurors.map((j) => ({ userId: j.userId, actor: h.title, key: "juryToScore" as const, href: `/hackathons/${h.id}/jury`, icon: "trophy" as const, tone: "brand" as const }))),
+    ]);
     return rows.length;
   });
 }

@@ -17,7 +17,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("title"), robots: { index: false } };
 }
 
-const TONE = { OPEN: "brand", JURY: "accent", DONE: "success" } as const;
+// Le maïs reste à Africa Rise-Up : un hackathon en jury est en neutre.
+const TONE = { OPEN: "brand", JURY: "neutral", DONE: "success" } as const;
 
 async function Data() {
   const user = await adminUser("/admin/hackathons");
@@ -36,7 +37,7 @@ async function Data() {
         {rows.map((h, i) => (
           <Card key={h.id} className="gap-2.5">
             <div className="flex flex-wrap items-center gap-2">
-              {h.published ? <Badge tone={TONE[h.status]}>{t(`status.${h.status}`)}</Badge> : <Badge tone="accent">{t("toReview")}</Badge>}
+              {h.published ? <Badge tone={TONE[h.status]}>{t(`status.${h.status}`)}</Badge> : <Badge icon="clock">{t("toReview")}</Badge>}
               <Link href={`/hackathons/${h.id}`} className="font-extrabold text-ink">
                 {h.title}
               </Link>

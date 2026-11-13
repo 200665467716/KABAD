@@ -621,7 +621,12 @@ export async function joinCommunityGroup(tx: Prisma.TransactionClient, conversat
 
 export async function leaveCommunityGroup(tx: Prisma.TransactionClient, conversationId: string, userId: string) {
   const { count } = await tx.conversationMember.deleteMany({ where: { conversationId, userId } });
-  if (count) await notify(tx, { t: "conversation", conversationId, recipients: [userId] });
+  if (!count) return;
+  await notify(tx, { t: "conversation", conversationId, recipients: [userId] });
+  // Like an arrival, a departure leaves a line in the group.
+  const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+  const everyone = (await tx.conversationMember.findMany({ where: { conversationId }, select: { userId: true } })).map((m) => m.userId);
+  await announceChange(tx, conversationId, everyone, `${firstName(me.name)} a quitté le groupe`);
 }
 
 /** The group passes to another of its members: a hackathon team whose captain left. */
@@ -629,6 +634,9 @@ export async function handOverCommunityGroup(tx: Prisma.TransactionClient, conve
   await tx.conversationMember.updateMany({ where: { conversationId, role: "OWNER" }, data: { role: "MEMBER" } });
   await tx.conversationMember.updateMany({ where: { conversationId, userId: ownerId }, data: { role: "OWNER" } });
   await tx.conversation.update({ where: { id: conversationId }, data: { createdById: ownerId } });
+  const owner = await tx.user.findUniqueOrThrow({ where: { id: ownerId }, select: { name: true } });
+  const everyone = (await tx.conversationMember.findMany({ where: { conversationId }, select: { userId: true } })).map((m) => m.userId);
+  await announceChange(tx, conversationId, everyone, `${firstName(owner.name)} est maintenant responsable du groupe`);
 }
 
 /** The group disappears with what it followed: a hackathon team left by its last member. */

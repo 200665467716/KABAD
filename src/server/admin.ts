@@ -273,7 +273,7 @@ export async function setJury(adminId: string, hackathonId: string, jurorIds: st
     await tx.hackathonJuror.deleteMany({ where: { hackathonId } });
     await tx.hackathonJuror.createMany({ data: jurors.map((userId) => ({ hackathonId, userId })) });
     const added = jurors.filter((id) => !before.includes(id));
-    await pushNotifications(tx, added.map((userId) => ({ userId, actor: "KABAD", key: "juryAppointed" as const, params: { title: h.title }, href: `/hackathons/${hackathonId}`, icon: "trophy" as const, tone: "accent" as const })));
+    await pushNotifications(tx, added.map((userId) => ({ userId, actor: "KABAD", key: "juryAppointed" as const, params: { title: h.title }, href: `/hackathons/${hackathonId}`, icon: "trophy" as const, tone: "brand" as const })));
     await logAction(tx, adminId, "hackathon:jury", hackathonId, jurors.join(","));
     return { ok: true };
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { AuthFrame } from "@/components/shell/AuthFrame";
@@ -11,11 +11,11 @@ import { Checkbox, Select, TextArea, TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
 import type { MentorCard } from "@/lib/domain-types";
 import { initials } from "@/lib/format";
+import { checkStep1, checkStep2, HACKATHON_LEVELS as LEVELS, type OrganizeError } from "@/lib/hackathon-form";
 import { MAX_PRIZES } from "@/lib/prize";
 
 type Format = "ONLINE" | "ONSITE" | "HYBRID";
 const SIZES = { solo: [1, 1], soloOrTeam: [1, 5], range25: [2, 5], range34: [3, 4] } as const;
-const LEVELS = ["Tous niveaux", "Débutant", "Intermédiaire", "Avancé"] as const;
 
 /** "2026-11-14T08:00" from the field, sent as an ISO date with the browser's offset. */
 const iso = (local: string) => (local ? new Date(local).toISOString() : "");
@@ -50,19 +50,46 @@ export function OrganizeForm({ defaultOrganizer, mentors }: { defaultOrganizer: 
   });
   // H8: the mentors the mission will be offered to.
   const [proposed, setProposed] = useState<string[]>([]);
-  const [error, setError] = useState<{ field?: string; text: string } | null>(null);
+  // Errors written under their field, all at once; `error` is the one the server gives for the rest.
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+  // The field to focus once its step is on screen: the first one in error. A new object each time, so that the same field gets the focus again.
+  const [focus, setFocus] = useState<{ field: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
-  const err = (k: string) => (error?.field === k ? error.text : undefined);
+  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => {
+    setF((x) => ({ ...x, [k]: v }));
+    // A field the member corrects loses its message.
+    setErrors((e) => (k in e ? Object.fromEntries(Object.entries(e).filter(([x]) => x !== k)) : e));
+  };
+  const err = (k: string) => errors[k];
   const step1Fields = ["title", "organizerName", "city", "startsAt", "endsAt", "closesAt", "teamMin", "stack"];
   const step2Fields = ["description", "prizes", "rulesUrl"];
   // These errors are written under their field; the others in a banner.
   const shownUnderField = ["title", "organizerName", "city", "startsAt", "endsAt", "closesAt", "stack", "description", "rulesUrl", "instructorFee"];
   const fee = Number(f.instructorFee) > 0;
 
+  useEffect(() => {
+    if (!focus) return;
+    const el = document.getElementById(focus.field === "prizes" ? "prize-0" : focus.field);
+    el?.focus({ preventScroll: true });
+    // Centered, so that the bar at the bottom does not hide the field and its message.
+    el?.scrollIntoView({ block: "center" });
+  }, [focus]);
+
+  /** Checks a step and moves on only if nothing is wrong; otherwise every error shows and the first field gets the focus. */
+  function next(found: Record<string, OrganizeError>, to: 2 | 3) {
+    const text = Object.fromEntries(Object.entries(found).map(([k, v]) => [k, t(`errors.${v}`)]));
+    setErrors(text);
+    setError(null);
+    const first = Object.keys(found)[0];
+    if (first) setFocus({ field: first });
+    else setStep(to);
+  }
+
   async function submit() {
     setBusy(true);
     setError(null);
+    setErrors({});
     const [teamMin, teamMax] = SIZES[f.size];
     try {
       const { id } = await api<{ id: string }>("/api/hackathons", {
@@ -91,21 +118,24 @@ export function OrganizeForm({ defaultOrganizer, mentors }: { defaultOrganizer: 
       router.push(`/hackathons/${id}`);
     } catch (x) {
       const field = x instanceof ApiError ? x.field : undefined;
-      setError({ field, text: x instanceof ApiError ? x.message : t("failed") });
+      const text = x instanceof ApiError ? x.message : t("failed");
+      if (field && shownUnderField.includes(field)) setErrors({ [field]: text });
+      else setError(text);
       if (field && step1Fields.includes(field)) setStep(1);
       else if (field && step2Fields.includes(field)) setStep(2);
+      if (field) setFocus({ field });
       setBusy(false);
     }
   }
 
   const footer =
     step === 1 ? (
-      <Button size="lg" block onClick={() => setStep(2)} disabled={!f.title.trim() || !f.startsAt || !f.endsAt || !f.closesAt}>
+      <Button size="lg" block onClick={() => next(checkStep1(f), 2)}>
         {t("continue")}
       </Button>
     ) : step === 2 ? (
       <>
-        <Button size="lg" block onClick={() => setStep(3)} disabled={f.description.trim().length < 30}>
+        <Button size="lg" block onClick={() => next(checkStep2(f), 3)}>
           {t("continue")}
         </Button>
         <Button variant="ghost" onClick={() => setStep(1)}>
@@ -140,7 +170,7 @@ export function OrganizeForm({ defaultOrganizer, mentors }: { defaultOrganizer: 
             </div>
           </fieldset>
           {f.format !== "ONLINE" && <TextField id="city" label={t("city")} value={f.city} maxLength={60} onChange={(e) => set("city", e.target.value)} error={err("city")} />}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid items-start gap-3 sm:grid-cols-2">
             <TextField id="startsAt" type="datetime-local" label={t("start")} value={f.startsAt} onChange={(e) => set("startsAt", e.target.value)} error={err("startsAt")} />
             <TextField id="endsAt" type="datetime-local" label={t("end")} value={f.endsAt} onChange={(e) => set("endsAt", e.target.value)} error={err("endsAt")} />
           </div>
@@ -227,9 +257,9 @@ export function OrganizeForm({ defaultOrganizer, mentors }: { defaultOrganizer: 
           <p className="text-sm text-muted">{t("review")}</p>
         </div>
       )}
-      {error && !shownUnderField.includes(error.field ?? "") && (
+      {error && (
         <Alert tone="danger" role="alert">
-          {error.text}
+          {error}
         </Alert>
       )}
     </AuthFrame>

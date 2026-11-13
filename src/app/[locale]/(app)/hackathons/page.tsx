@@ -46,7 +46,7 @@ async function Data() {
           {proposed.map((m) => (
             <Card key={m.id} interactive className="gap-2">
               <Link href={`/hackathons/missions/${m.id}`} className="grid gap-1 text-ink no-underline">
-                <Badge tone="accent">{t("missionPaid")}</Badge>
+                <Badge tone="brand">{t("missionPaid")}</Badge>
                 <b>{m.hackathon.title}</b>
                 <span className="text-[13px] text-muted">{t("missionFrom", { organizer: m.hackathon.organizerName })}</span>
               </Link>

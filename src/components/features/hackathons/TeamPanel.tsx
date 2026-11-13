@@ -12,7 +12,10 @@ import type { TeamView } from "@/lib/domain-types";
 import { ActionButton } from "./ActionButton";
 import { MatePicker } from "./MatePicker";
 
-/** The captain's tools: requests to join, the open call ("cherche un·e designer"), and leaving the team. */
+/**
+ * The captain's tools: requests to join, the open call ("cherche un·e designer"), and leaving the team.
+ * `full` counts the invitations still waiting: each one holds a place until it is answered or cancelled.
+ */
 export function TeamPanel({ team, meId, hackathonId, canChange, full, placesLeft }: { team: TeamView; meId: string; hackathonId: string; canChange: boolean; full: boolean; placesLeft: number }) {
   const t = useTranslations("hackathons.team");
   const router = useRouter();
@@ -71,10 +74,17 @@ export function TeamPanel({ team, meId, hackathonId, canChange, full, placesLeft
                 <ActionButton url={`/api/team-requests/${r.id}`} body={{ accept: false }} size="sm" block>
                   {t("decline")}
                 </ActionButton>
-                <ActionButton url={`/api/team-requests/${r.id}`} body={{ accept: true }} variant="primary" size="sm" block>
-                  {full ? t("full") : t("accept")}
-                </ActionButton>
+                {full ? (
+                  <Button size="sm" variant="ink" block disabled>
+                    {t("full")}
+                  </Button>
+                ) : (
+                  <ActionButton url={`/api/team-requests/${r.id}`} body={{ accept: true }} variant="ink" size="sm" block>
+                    {t("accept")}
+                  </ActionButton>
+                )}
               </div>
+              {full && team.invites.length > 0 && <p className="text-[13px] text-muted">{t("fullHint")}</p>}
             </Card>
           ))}
         </section>
