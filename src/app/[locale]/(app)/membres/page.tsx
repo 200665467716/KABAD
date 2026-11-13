@@ -77,7 +77,8 @@ async function MembersData({ searchParams }: { searchParams: Promise<Search> }) 
             {t("mentors")}
           </Chip>
         </div>
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label={t("tech")}>
+        {/* Sur téléphone, la rangée défile ; sur grand écran, elle passe à la ligne pour que chaque puce reste visible. */}
+        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0" role="group" aria-label={t("tech")}>
           {stacks.map((t) => (
             <Chip key={t} href={hrefWith(sp, { tech: sp.tech === t ? undefined : t })} on={sp.tech === t}>
               {t}

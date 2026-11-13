@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { auditLog } from "@/server/admin";
 import { adminUser } from "@/server/admin-page";
+import { splitResolution } from "@/lib/report-decision";
 import { AdminNav } from "../AdminNav";
 import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
@@ -12,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("metaTitle"), robots: { index: false } };
 }
 
-/** Audit action code → its label key in admin.journal.actions; unknown codes are shown as is. */
+/** Code d’une action → la clé de son libellé dans admin.journal.actions. Un code inconnu a un libellé générique. */
 const ACTIONS = {
   "report:dismiss": "reportDismiss",
   "report:hide": "reportHide",
@@ -26,6 +27,13 @@ const ACTIONS = {
   "challenge:close": "challengeClose",
   "challenge:publish": "challengePublish",
   "payout:sent": "payoutSent",
+  "badge:grant": "badgeGrant",
+  "badge:refuse": "badgeRefuse",
+  "badge:revoke": "badgeRevoke",
+  "hackathon:jury": "hackathonJury",
+  "hackathon:publish": "hackathonPublish",
+  "hackathon:close": "hackathonClose",
+  "hackathon:publish_results": "hackathonPublishResults",
 } as const;
 
 function actionKey(action: string) {
@@ -39,8 +47,10 @@ async function Data() {
   const format = await getFormatter();
   const actionLabel = (action: string) => {
     const key = actionKey(action);
-    return key ? t(`actions.${key}`) : action;
+    return key ? t(`actions.${key}`) : t("actions.unknown", { code: action });
   };
+  // Les décisions sur un signalement gardaient leur libellé français en tête (« Contenu retiré : … ») : on ne montre que la note.
+  const details = (r: (typeof rows)[number]) => (r.details && r.action.startsWith("report:") ? splitResolution(r.details).note : r.details);
   return (
     <Page narrow>
       <AdminNav current="/admin/journal" />
@@ -50,7 +60,8 @@ async function Data() {
           <li key={r.id} className="grid gap-0.5 px-4 py-3 text-sm">
             <span>
               <b>{r.admin}</b> {actionLabel(r.action)}
-              {r.details ? ` : ${r.details}` : ""}
+              {r.target ? ` · ${r.target}` : ""}
+              {details(r) ? ` : ${details(r)}` : ""}
             </span>
             <span className="text-xs text-muted">{format.relativeTime(new Date(r.createdAt))}</span>
           </li>

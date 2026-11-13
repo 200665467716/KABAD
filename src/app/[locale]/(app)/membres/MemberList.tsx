@@ -36,7 +36,7 @@ export function MemberList({ members }: { members: DirectoryEntry[] }) {
                     {t("write")}
                   </ButtonLink>
                 ) : relation === "invited_you" ? (
-                  <ButtonLink href={`/messages/invitations/${m.invitationId}`} size="sm">
+                  <ButtonLink href={`/messages/invitations/${m.invitationId}`} size="sm" variant="ink">
                     {t("seeInvitation")}
                   </ButtonLink>
                 ) : relation === "invited" ? (

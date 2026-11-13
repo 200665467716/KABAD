@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { io, type Socket } from "socket.io-client";
+import { hardNavigate } from "./hard-navigate";
 import type { ChatMessage } from "./messaging-types";
 
 export type RealtimeEvents = {
@@ -28,6 +29,16 @@ function getSocket() {
         .then((d: { token: string }) => cb({ token: d.token }))
         .catch(() => cb({}));
     },
+  });
+  // Le serveur ferme lui-même la connexion quand la session est retirée (suspension, déconnexion partout).
+  // Si la session n'est plus valide, la page ouverte part vers la connexion sans attendre un rechargement.
+  socket.on("disconnect", (reason) => {
+    if (reason !== "io server disconnect") return;
+    fetch("/api/me", { credentials: "same-origin" })
+      .then((r) => {
+        if (r.status === 401) hardNavigate("/connexion");
+      })
+      .catch(() => {});
   });
   return socket;
 }

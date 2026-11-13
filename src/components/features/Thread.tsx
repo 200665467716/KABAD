@@ -1,8 +1,9 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { localizeSystemText } from "@/lib/system-text";
 
 /** Splits a message on ``` fences: odd parts are code. */
 function parts(text: string) {
@@ -52,6 +53,7 @@ export function MessageBubble({
   onRetry?: () => void;
 }) {
   const t = useTranslations("messaging.bubble");
+  const locale = useLocale();
   return (
     <div
       className={cn(
@@ -63,17 +65,18 @@ export function MessageBubble({
     >
       {author && <span className={cn("text-xs font-extrabold", authorTone === "accent" ? "text-accent-text" : "text-brand-text")}>{author}</span>}
       {!hidden && attachment}
-      {hidden ? <p className="text-sm italic opacity-80">{text}</p> : text ? <MessageBody text={text} /> : null}
+      {hidden ? <p className="text-sm italic opacity-80">{localizeSystemText(text, locale)}</p> : text ? <MessageBody text={text} /> : null}
       <span className="justify-self-end text-[11px] font-bold opacity-75 tabular">
         {status === "sending" ? t("sending") : status === "failed" ? t("failed") : time}
       </span>
       {onReport && !hidden && (
-        <button type="button" onClick={onReport} className="justify-self-start text-xs text-muted underline-offset-2 hover:underline">
+        // Zone tactile de 44 px sans grossir la bulle : la marge négative rend la hauteur ajoutée.
+        <button type="button" onClick={onReport} className="-my-3.5 min-h-11 justify-self-start text-xs text-muted underline-offset-2 hover:underline">
           {t("report")}
         </button>
       )}
       {status === "failed" && onRetry && (
-        <button type="button" onClick={onRetry} className="justify-self-end text-xs font-bold underline">
+        <button type="button" onClick={onRetry} className="-my-3.5 min-h-11 justify-self-end text-xs font-bold underline">
           {t("retry")}
         </button>
       )}
@@ -81,6 +84,8 @@ export function MessageBubble({
   );
 }
 
+/** Une ligne écrite par l'application (« Yao a rejoint le groupe »), enregistrée en français et traduite à l'affichage. */
 export function SystemLine({ children }: { children: string }) {
-  return <p className="max-w-[86%] justify-self-center text-center text-xs text-muted">{children}</p>;
+  const locale = useLocale();
+  return <p className="max-w-[86%] justify-self-center text-center text-xs text-muted">{localizeSystemText(children, locale)}</p>;
 }

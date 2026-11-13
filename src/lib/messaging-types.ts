@@ -52,7 +52,7 @@ export type ConversationDetail = {
   messages: ChatMessage[];
 };
 
-export type InvitationFrom = { id: string; name: string; city: string; country: string; stack: string[]; years: number; role: "JUNIOR" | "SENIOR" };
+export type InvitationFrom = { id: string; name: string; city: string; country: string; stack: string[]; years: number; role: "JUNIOR" | "SENIOR"; photo: string | null };
 
 export type ReceivedInvitation = { id: string; message: string; createdAt: string; from: InvitationFrom };
 
@@ -60,4 +60,4 @@ export type InvitationDetail = ReceivedInvitation & { status: "PENDING" | "ACCEP
 
 export type Contact = { id: string; name: string; city: string; role: "JUNIOR" | "SENIOR"; stack: string[]; photo: string | null };
 
-export type SentInvitation = { id: string; toId: string; message: string; createdAt: string; to: { name: string; city: string } };
+export type SentInvitation = { id: string; toId: string; message: string; createdAt: string; to: { name: string; city: string; photo: string | null } };

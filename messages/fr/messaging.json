@@ -48,7 +48,7 @@
       "error": "La réponse n’est pas partie. Réessaie.",
       "noMessage": "Sans message",
       "declineTitle": "Refuser l’invitation ?",
-      "declineText": "{name} ne sera pas prévenu. Tu pourras toujours l’inviter plus tard.",
+      "declineText": "Aucune notification n’est envoyée à {name}. Tu pourras toujours l’inviter plus tard.",
       "declined": "Invitation refusée."
     },
     "invitation": {
@@ -60,14 +60,14 @@
       "years": "{count, plural, one {# an} other {# ans}}",
       "mentor": "Mentor",
       "alreadyAnswered": "Tu as déjà répondu à cette invitation.",
-      "note": "{name} ne peut rien t’envoyer d’autre tant que tu n’as pas accepté. En cas de refus, personne n’est prévenu.",
+      "note": "{name} ne peut rien t’envoyer d’autre tant que tu n’as pas accepté. En cas de refus, aucune notification n’est envoyée.",
       "accept": "Accepter",
       "accepting": "Ouverture…",
       "decline": "Refuser",
       "declining": "Refus…",
       "error": "La réponse n’est pas partie. Réessaie.",
       "declineTitle": "Refuser l’invitation ?",
-      "declineText": "{name} ne sera pas prévenu. Tu pourras toujours l’inviter plus tard."
+      "declineText": "Aucune notification n’est envoyée à {name}. Tu pourras toujours l’inviter plus tard."
     },
     "conversation": {
       "metaTitle": "Conversation",
@@ -96,6 +96,7 @@
       "tooLong": "Un message fait {max} caractères au plus.",
       "voiceSending": "Message vocal…",
       "uploadFailed": "Le fichier n’a pas été envoyé. Réessaie.",
+      "fileTooBig": "Le fichier fait 2 Mo au plus.",
       "groupInfo": "Infos du groupe",
       "pinned": "Épinglé · consignes",
       "pinnedLabel": "Consignes épinglées",

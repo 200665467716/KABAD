@@ -9,16 +9,25 @@ import { Alert, Badge, Card } from "@/components/ui/Display";
 import { TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
 import type { ReportContext, ReportDecision } from "@/server/admin";
+import { splitResolution } from "@/lib/report-decision";
+import { REPORT_REASONS } from "@/lib/schemas";
 
 function ReportCard({ r }: { r: ReportContext }) {
   const router = useRouter();
   const t = useTranslations("admin");
+  const tr = useTranslations("messaging.report");
   const format = useFormatter();
   const now = useNow();
   const target = r.target;
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<ReportDecision | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Le motif est enregistré en français (la valeur de REPORT_REASONS) : on affiche son libellé dans la langue du lecteur.
+  const reasonIndex = (REPORT_REASONS as readonly string[]).indexOf(r.reason);
+  const reason = reasonIndex >= 0 ? tr(`reasons.r${reasonIndex}` as "reasons.r0") : r.reason;
+  const resolution = splitResolution(r.resolution ?? "");
+  const decisionText = [resolution.decision ? t(`reports.decisions.${resolution.decision}`) : "", resolution.note].filter(Boolean).join(" : ");
 
   async function decide(decision: ReportDecision) {
     if ((decision === "warn" || decision === "suspend") && note.trim().length < 5) return setError(t("reports.needNote"));
@@ -36,7 +45,7 @@ function ReportCard({ r }: { r: ReportContext }) {
   return (
     <Card className="gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone="danger">{r.reason}</Badge>
+        <Badge tone="danger">{reason}</Badge>
         <Badge>{t(`reports.target.${r.targetType}`)}</Badge>
         <span className="text-xs text-muted">
           {t.rich("reports.meta", {
@@ -76,7 +85,7 @@ function ReportCard({ r }: { r: ReportContext }) {
         </ul>
       )}
       {r.status === "REVIEWED" ? (
-        <p className="text-sm text-muted">{t("reports.decision", { resolution: r.resolution ?? "" })}</p>
+        <p className="text-sm text-muted">{t("reports.decision", { resolution: decisionText })}</p>
       ) : (
         <>
           <TextField id={`note-${r.id}`} label={t("reports.noteLabel")} value={note} maxLength={250} onChange={(e) => setNote(e.target.value)} />
