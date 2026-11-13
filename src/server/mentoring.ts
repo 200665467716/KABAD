@@ -12,6 +12,7 @@ import { DomainError, forbidden, notFound } from "./errors";
 import { pushNotifications } from "./notifications";
 import { freeSlots, isOfferedSlot, rangesProblem, type WeeklyRange } from "@/lib/slots";
 import { MAX_PENDING_BOOKINGS, SESSION_MINUTES } from "@/lib/mentoring";
+import { avatarUrl } from "@/lib/avatar";
 import type { AvailabilityView, BookingView, MentorCard, MentorDetail } from "@/lib/domain-types";
 
 /** How far ahead slots are offered. */
@@ -59,14 +60,15 @@ const mentorWhere = { seniorVerifiedAt: { not: null }, suspendedAt: null } as co
 
 /** The catalogue of badged mentors, optionally narrowed to one area ("Paiements et fintech"). */
 export async function listMentors(opts: { domain?: string; excludeId?: string } = {}, prisma: Db = db): Promise<MentorCard[]> {
-  const users = await prisma.user.findMany({ where: { ...mentorWhere, ...(opts.excludeId ? { id: { not: opts.excludeId } } : {}) }, select: { id: true, name: true, city: true, country: true, headline: true }, orderBy: { name: "asc" } });
+  const users = await prisma.user.findMany({ where: { ...mentorWhere, ...(opts.excludeId ? { id: { not: opts.excludeId } } : {}) }, select: { id: true, name: true, city: true, country: true, headline: true, photoAt: true }, orderBy: { name: "asc" } });
   const ids = users.map((u) => u.id);
   const from = new Date();
   const to = new Date(from.getTime() + 14 * 86_400_000);
   const [badges, slots, held] = await Promise.all([badgeOf(prisma, ids), slotsOf(prisma, ids, from, to), sessionsHeld(prisma, ids)]);
   return users
-    .map((u) => ({
+    .map(({ photoAt, ...u }) => ({
       ...u,
+      photo: avatarUrl({ id: u.id, photoAt }),
       domains: badges.get(u.id)?.domains ?? [],
       technologies: badges.get(u.id)?.technologies ?? [],
       nextSlot: slots.get(u.id)?.free[0]?.toISOString() ?? null,
@@ -78,8 +80,9 @@ export async function listMentors(opts: { domain?: string; excludeId?: string } 
 }
 
 export async function getMentor(mentorId: string, prisma: Db = db): Promise<MentorDetail> {
-  const u = await prisma.user.findFirst({ where: { id: mentorId, ...mentorWhere }, select: { id: true, name: true, city: true, country: true, headline: true, bio: true, timeZone: true, gender: true } });
-  if (!u) throw notFound("Mentor introuvable.");
+  const found = await prisma.user.findFirst({ where: { id: mentorId, ...mentorWhere }, select: { id: true, name: true, city: true, country: true, headline: true, bio: true, timeZone: true, gender: true, photoAt: true } });
+  if (!found) throw notFound("Mentor introuvable.");
+  const { photoAt, ...u } = found;
   const from = new Date();
   const to = new Date(from.getTime() + BOOKING_WINDOW_DAYS * 86_400_000);
   const [badges, slots, held, rating] = await Promise.all([badgeOf(prisma, [u.id]), slotsOf(prisma, [u.id], from, to), sessionsHeld(prisma, [u.id]), ratingOf(prisma, u.id)]);
@@ -87,6 +90,7 @@ export async function getMentor(mentorId: string, prisma: Db = db): Promise<Ment
   const badge = badges.get(u.id);
   return {
     ...u,
+    photo: avatarUrl({ id: u.id, photoAt }),
     domains: badge?.domains ?? [],
     technologies: badge?.technologies ?? [],
     topics: badge?.topics ?? "",

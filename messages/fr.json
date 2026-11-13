@@ -32,8 +32,13 @@
     "signOut": "Se déconnecter",
     "unreadMessages": "{count, plural, one {# message non lu} other {# messages non lus}}",
     "unreadNotifications": "{count, plural, one {# non lue} other {# non lues}}",
-    "senior": "Senior",
-    "junior": "Junior"
+    "levels": {
+      "ASPIRANT": "Aspirant",
+      "DEBUTANT": "Débutant",
+      "INTERMEDIAIRE": "Intermédiaire",
+      "SENIOR": "Senior"
+    },
+    "mentor": "Mentor"
   },
   "language": {
     "label": "Langue",

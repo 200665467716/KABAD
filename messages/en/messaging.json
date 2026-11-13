@@ -67,7 +67,12 @@
       "declining": "Declining…",
       "error": "Your answer wasn’t sent. Try again.",
       "declineTitle": "Decline the invitation?",
-      "declineText": "{name} won’t be told. You can still invite them later."
+      "declineText": "{name} won’t be told. You can still invite them later.",
+      "mentorVerified": "Mentor verified by KABAD",
+      "presentation": "Their presentation",
+      "acceptedAlready": "You accepted {name}’s invitation: your conversation is open.",
+      "declinedAlready": "You declined {name}’s invitation.",
+      "write": "Write"
     },
     "conversation": {
       "metaTitle": "Conversation",

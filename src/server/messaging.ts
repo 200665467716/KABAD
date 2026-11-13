@@ -232,7 +232,7 @@ export async function getConversation(userId: string, conversationId: string, op
     test: c.testApp
       ? { id: c.testApp.id, url: c.testApp.url, steps: c.testApp.steps, platforms: c.testApp.platforms, ownerId: c.testApp.ownerId, doneSteps: c.testApp.participants[0]?.doneSteps ?? null }
       : null,
-    members: c.members.map((x) => ({ id: x.user.id, name: x.user.name, owner: x.role === "OWNER", photo: avatarUrl(x.user) })),
+    members: c.members.map((x) => ({ id: x.user.id, name: x.user.name, owner: x.role === "OWNER", photo: avatarUrl(x.user), mentor: x.user.role === "SENIOR" })),
     lastReadAt: m.lastReadAt.toISOString(),
     hasMore: rows.length > limit,
     messages: rows.slice(0, limit).reverse().map((row) => masked(toChat(row), mine)),
@@ -378,17 +378,21 @@ export async function listContacts(userId: string, prisma: Db = db) {
   return rows.map(({ contact: { photoAt, ...c } }) => ({ ...c, photo: avatarUrl({ id: c.id, photoAt }) }));
 }
 
+/** What a member reads of whoever invites them: who they are, their level, and their presentation (P8). */
+const fromSelect = { id: true, name: true, city: true, country: true, stack: true, years: true, role: true, level: true, headline: true, bio: true, photoAt: true } as const;
+const toFrom = ({ photoAt, ...f }: Prisma.UserGetPayload<{ select: typeof fromSelect }>) => ({ ...f, photo: avatarUrl({ id: f.id, photoAt }) });
+
 export async function listInvitations(userId: string, prisma: Db = db) {
   const [received, sent] = await Promise.all([
     prisma.invitation.findMany({
       where: { toId: userId, status: "PENDING" },
       orderBy: { createdAt: "desc" },
-      include: { from: { select: { id: true, name: true, city: true, country: true, stack: true, years: true, role: true } } },
+      include: { from: { select: fromSelect } },
     }),
     prisma.invitation.findMany({ where: { fromId: userId, status: "PENDING" }, orderBy: { createdAt: "desc" }, select: { id: true, toId: true, message: true, createdAt: true, to: { select: { name: true, city: true } } } }),
   ]);
   return {
-    received: received.map((i) => ({ id: i.id, message: i.message, createdAt: i.createdAt.toISOString(), from: i.from })),
+    received: received.map((i) => ({ id: i.id, message: i.message, createdAt: i.createdAt.toISOString(), from: toFrom(i.from) })),
     sent: sent.map((i) => ({ id: i.id, toId: i.toId, message: i.message, createdAt: i.createdAt.toISOString(), to: i.to })),
   };
 }
@@ -396,14 +400,14 @@ export async function listInvitations(userId: string, prisma: Db = db) {
 export async function getInvitation(userId: string, invitationId: string, prisma: Db = db): Promise<InvitationDetail> {
   const i = await prisma.invitation.findUnique({
     where: { id: invitationId },
-    include: { from: { select: { id: true, name: true, city: true, country: true, stack: true, years: true, role: true } } },
+    include: { from: { select: fromSelect } },
   });
   if (!i || i.toId !== userId) throw notFound("Invitation introuvable.");
   let conversationId: string | null = null;
   if (i.status === "ACCEPTED") {
     conversationId = (await prisma.conversation.findUnique({ where: { directKey: directKey(i.fromId, i.toId) }, select: { id: true } }))?.id ?? null;
   }
-  return { id: i.id, status: i.status, message: i.message, createdAt: i.createdAt.toISOString(), from: i.from, conversationId };
+  return { id: i.id, status: i.status, message: i.message, createdAt: i.createdAt.toISOString(), from: toFrom(i.from), conversationId };
 }
 
 export async function sendInvitation(fromId: string, input: { toId: string; message: string }, prisma: Db = db) {

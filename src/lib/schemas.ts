@@ -96,6 +96,9 @@ export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 
 /* Profile */
 
+/** The presentation of a profile, read on the public profile and with each invitation (P8, P17). */
+export const BIO_MAX = 1000;
+
 export const STACK_CHOICES = ["TypeScript", "React", "Node.js", "Python", "PostgreSQL", "Flutter", "PHP", "Java"] as const;
 export const COUNTRIES = ["Bénin", "Burkina Faso", "Cameroun", "Côte d’Ivoire", "Ghana", "Mali", "Niger", "Nigeria", "RD Congo", "Sénégal", "Togo", "Autre pays"] as const;
 
@@ -120,7 +123,7 @@ export const profileSchema = z.object({
   goals: z.array(z.enum(GOALS)).max(GOALS.length).optional(),
   profileLink: profileUrl.optional(),
   headline: z.string().trim().max(80).optional(),
-  bio: z.string().trim().max(600).optional(),
+  bio: z.string().trim().max(BIO_MAX, `La présentation fait ${BIO_MAX} caractères au plus.`).optional(),
   years: z.number().int().min(0).max(50).optional(),
   timeZone: z.string().max(40).optional(),
   // null: the member prefers not to say; the texts stay neutral.

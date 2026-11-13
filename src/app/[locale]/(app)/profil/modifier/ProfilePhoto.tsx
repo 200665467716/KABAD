@@ -48,7 +48,7 @@ export function ProfilePhoto({ name, initial }: { name: string; initial: string 
   }
 
   return (
-    <section aria-label={t("photo")} className="grid gap-2">
+    <section id="photo" aria-label={t("photo")} className="grid scroll-mt-24 gap-2">
       <div className="flex items-center gap-3.5">
         <Avatar initials={initials(name)} src={photo} size="xl" tone="accent" />
         <div className="flex flex-wrap gap-2">

@@ -156,8 +156,8 @@ async function main() {
   }
   await db.invitation.createMany({
     data: [
-      { fromId: "nadia", toId: "kossi", message: "Bonjour Kossi, j’ai vu ton projet de paiement régional. Je travaille sur la détection de fraude : on en parle ?", createdAt: minutesAgo(73) },
-      { fromId: "edem", toId: "kossi", message: "Salut, je cherche des testeurs à Lomé pour Marché Vert. Tu aurais 15 minutes cette semaine ?", createdAt: minutesAgo(60 * 20) },
+      { id: "invitation-nadia", fromId: "nadia", toId: "kossi", message: "Bonjour Kossi, j’ai vu ton projet de paiement régional. Je travaille sur la détection de fraude : on en parle ?", createdAt: minutesAgo(73) },
+      { id: "invitation-edem", fromId: "edem", toId: "kossi", message: "Salut, je cherche des testeurs à Lomé pour Marché Vert. Tu aurais 15 minutes cette semaine ?", createdAt: minutesAgo(60 * 20) },
       { fromId: "kossi", toId: "chidi", message: "Salut Chidi, on fait tous les deux du backend Node.js. Ça te dit d’échanger sur les webhooks ?", createdAt: minutesAgo(60 * 30) },
     ],
   });
@@ -334,7 +334,7 @@ async function main() {
   await db.notification.createMany({
     data: [
       n("kossi", "Awa Diop", "bookingAccepted", { at: thursday.toISOString(), tz: "Africa/Lome" }, " a accepté ta séance de jeudi à 15 h.", "/mentorat/seances/seance-momo", "check", "success", 35),
-      n("kossi", "Nadia Bello", "invitationReceived", undefined, " t’invite à échanger.", "/messages/invitations", "user", "brand", 73),
+      n("kossi", "Nadia Bello", "invitationReceived", undefined, " t’invite à échanger.", "/messages/invitations/invitation-nadia", "user", "brand", 73),
       n("kossi", "Suivre les forages d’eau potable au Sahel", "riseEvent", { title: "Choisir les capteurs de niveau", at: minutesAgo(15).toISOString(), tz: "Africa/Lome" }, " : « Choisir les capteurs de niveau ».", "/rise-up/forages-sahel", "radio", "accent", 15),
       n("kossi", "Edem Amouzou", "testJoined", { title: "Kalo" }, " a rejoint les testeurs de « Kalo ».", "/tests/kalo", "users", "brand", 60 * 26, true),
       n("kossi", "Collectif Santé Dakar", "hackathonProposed", { title: "Santé connectée" }, " propose le hackathon « Santé connectée ».", "/hackathons/sante-connectee", "trophy", "accent", 60 * 24 * 2, true),

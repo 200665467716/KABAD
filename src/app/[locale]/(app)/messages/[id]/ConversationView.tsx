@@ -281,7 +281,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
             <Avatar initials={initials(detail.title)} src={detail.photo} size="sm" square tone="neutral" />
           ) : detail.other ? (
             <Link href={`/profil/${detail.other.id}`} aria-label={t("profileOf", { name: detail.other.name })}>
-              <Avatar initials={initials(detail.other.name)} src={detail.other.photo} size="sm" />
+              <Avatar initials={initials(detail.other.name)} src={detail.other.photo} size="sm" verified={detail.other.role === "SENIOR"} />
             </Link>
           ) : null
         }
@@ -690,7 +690,7 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
         <ul className="m-0 list-none divide-y divide-line rounded-lg border border-line p-0">
           {detail.members.map((m) => (
             <li key={m.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5">
-              <Avatar initials={initials(m.name)} src={m.photo} size="sm" />
+              <Avatar initials={initials(m.name)} src={m.photo} size="sm" verified={m.mentor} />
               <span className="grid">
                 <Link href={`/profil/${m.id}`} className="text-sm font-bold text-ink no-underline">
                   {m.id === meId ? tc("you") : m.name}

@@ -7,6 +7,7 @@ import {
   createReport,
   getConversation,
   getGroupPhoto,
+  getInvitation,
   listConversations,
   listInvitations,
   markRead,
@@ -49,6 +50,14 @@ describe("invitations", () => {
     expect(conv.kind).toBe("DIRECT");
     expect(conv.messages.map((m) => m.body)).toEqual(["Bonjour Moussa", "Moussa a accepté l’invitation"]);
     expect(await prisma.contact.count()).toBe(2);
+  });
+
+  it("the invited member reads the sender's presentation, level and headline before answering (P8)", async () => {
+    await prisma.user.update({ where: { id: "kossi" }, data: { bio: "Je construis un paiement régional.", headline: "Développeur web", level: "INTERMEDIAIRE" } });
+    const { id } = await sendInvitation("kossi", { toId: "moussa", message: "" }, prisma);
+    const i = await getInvitation("moussa", id, prisma);
+    expect(i.from).toMatchObject({ name: "Kossi", bio: "Je construis un paiement régional.", headline: "Développeur web", level: "INTERMEDIAIRE", photo: null });
+    expect((await listInvitations("moussa", prisma)).received[0].from.bio).toBe("Je construis un paiement régional.");
   });
 
   it("sends an invitation without a message, kept by the sender until it is answered", async () => {

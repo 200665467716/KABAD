@@ -1,3 +1,4 @@
+import { avatarUrl } from "@/lib/avatar";
 import { requireUser } from "@/server/auth";
 import { readJson, route } from "@/server/http";
 import { updateProfile } from "@/server/members";
@@ -19,6 +20,7 @@ export const GET = route(async () => {
     locale: user.locale,
     isAdmin: user.isAdmin,
     isMentor: user.seniorVerifiedAt !== null,
+    photo: avatarUrl(user),
     emailVerified: user.emailVerifiedAt !== null,
     unreadMessages,
     unreadNotifications: notifications,

@@ -14,6 +14,8 @@ export type Me = {
   isAdmin: boolean;
   /** Holds the mentor badge. */
   isMentor: boolean;
+  /** Address of the profile photo, or null. */
+  photo: string | null;
   emailVerified: boolean;
   unreadMessages: number;
   unreadNotifications: number;

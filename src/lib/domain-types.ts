@@ -47,6 +47,8 @@ export type MentorCard = {
   city: string;
   country: string;
   headline: string;
+  /** Address of the profile photo, or null. */
+  photo: string | null;
   domains: string[];
   technologies: string[];
   /** Next free slot, or null when the mentor has none in the coming weeks. */

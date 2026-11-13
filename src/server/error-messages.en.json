@@ -343,6 +343,7 @@
     { "fr": "^Un message fait (\\d+) caractères au plus\\.$", "en": "A message can be $1 characters at most." },
     { "fr": "^Le nom du groupe fait (\\d+) caractères au plus\\.$", "en": "The group name can be $1 characters at most." },
     { "fr": "^La description fait (\\d+) caractères au plus\\.$", "en": "The description can be $1 characters at most." },
+    { "fr": "^La présentation fait (\\d+) caractères au plus\\.$", "en": "The presentation can be $1 characters at most." },
     { "fr": "^(\\d+) caractères au plus\\.$", "en": "$1 characters at most." }
   ]
 }

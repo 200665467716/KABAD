@@ -33,7 +33,9 @@
       "signOut": "Sign out",
       "signOutTitle": "Sign out?",
       "signOutText": "You will have to sign in again with your e-mail and your password.",
-      "signOutStay": "Stay signed in"
+      "signOutStay": "Stay signed in",
+      "mentorVerified": "Mentor verified by KABAD",
+      "changePhoto": "Change my profile photo"
     },
     "edit": {
       "title": "Edit my profile",
@@ -44,7 +46,7 @@
       "headline": "What you do",
       "headlineHint": "For example: Web developer, Data analyst.",
       "bio": "About you",
-      "bioHint": "A few sentences about you and what you build.",
+      "bioHint": "Who you are, what you build. It shows on your profile and goes with your invitations.",
       "profileLink": "GitHub or LinkedIn profile",
       "profileLinkHint": "github.com/… or linkedin.com/…",
       "stack": "Your technologies",
@@ -93,7 +95,8 @@
       "invite": "Invite",
       "invited": "Invitation sent",
       "book": "Book a session",
-      "others": "See other members"
+      "others": "See other members",
+      "mentorVerified": "Mentor verified by KABAD"
     },
     "notifications": {
       "title": "Notifications",

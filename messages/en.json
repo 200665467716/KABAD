@@ -32,8 +32,13 @@
     "signOut": "Sign out",
     "unreadMessages": "{count, plural, one {# unread message} other {# unread messages}}",
     "unreadNotifications": "{count, plural, one {# unread} other {# unread}}",
-    "senior": "Senior",
-    "junior": "Junior"
+    "levels": {
+      "ASPIRANT": "Aspiring",
+      "DEBUTANT": "Beginner",
+      "INTERMEDIAIRE": "Intermediate",
+      "SENIOR": "Senior"
+    },
+    "mentor": "Mentor"
   },
   "language": {
     "label": "Language",

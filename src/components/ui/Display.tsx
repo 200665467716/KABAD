@@ -45,12 +45,41 @@ const avatarTones: Record<AvatarTone, string> = {
   solidAccent: "bg-accent text-on-accent",
 };
 
-/** `src`: a photo (a group's) shown in place of the initials. It is decorative: the name is always written next to it. */
-export function Avatar({ initials, size = "md", tone = "brand", square, className, src }: { initials: ReactNode; size?: AvatarSize; tone?: AvatarTone; square?: boolean; className?: string; src?: string | null }) {
-  return (
-    <span aria-hidden="true" className={cn("inline-grid shrink-0 place-items-center overflow-hidden font-extrabold select-none", square ? "rounded-lg" : "rounded-full", avatarSizes[size], avatarTones[tone], className)}>
+const sealSizes: Record<AvatarSize, string> = { sm: "size-4 -right-0.5 -bottom-0.5", md: "size-5 -right-0.5 -bottom-0.5", lg: "size-6 -right-0.5 -bottom-0.5", xl: "size-8 right-0 bottom-0" };
+
+/**
+ * `src`: a photo shown in place of the initials. It is decorative: the name is always written next to it.
+ * `verified`: a mentor verified by KABAD carries the seal on their avatar, wherever they appear (P20).
+ */
+export function Avatar({ initials, size = "md", tone = "brand", square, className, src, verified }: { initials: ReactNode; size?: AvatarSize; tone?: AvatarTone; square?: boolean; className?: string; src?: string | null; verified?: boolean }) {
+  const face = (
+    <span aria-hidden="true" className={cn("inline-grid shrink-0 place-items-center overflow-hidden font-extrabold select-none", square ? "rounded-lg" : "rounded-full", avatarSizes[size], avatarTones[tone], !verified && className)}>
       {/* eslint-disable-next-line @next/next/no-img-element -- private file behind a session, not optimisable */}
       {src ? <img src={src} alt="" className="size-full object-cover" /> : initials}
+    </span>
+  );
+  if (!verified) return face;
+  return (
+    <span aria-hidden="true" className={cn("relative inline-grid shrink-0", className)}>
+      {face}
+      <span className={cn("absolute grid place-items-center rounded-full bg-brand text-on-brand shadow-[0_0_0_2px_var(--bg-raised)]", sealSizes[size])}>
+        <Icon name="seal" size={16} strokeWidth={2.4} className="size-[85%]" />
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The badge of a mentor verified by KABAD (P9, P20): an indigo seal, set apart from the levels
+ * (aspirant, beginner, intermediate, senior), which say how experienced a member is, not whether KABAD verified them.
+ */
+export function MentorBadge({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span className={cn("inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-brand pr-3 pl-1 text-xs font-extrabold text-on-brand", className)}>
+      <span className="grid size-5 place-items-center rounded-full bg-on-brand text-brand" aria-hidden="true">
+        <Icon name="seal" size={16} strokeWidth={2.4} className="size-4" />
+      </span>
+      {children}
     </span>
   );
 }

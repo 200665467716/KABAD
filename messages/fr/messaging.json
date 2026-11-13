@@ -67,7 +67,12 @@
       "declining": "Refus…",
       "error": "La réponse n’est pas partie. Réessaie.",
       "declineTitle": "Refuser l’invitation ?",
-      "declineText": "{name} ne sera pas prévenu. Tu pourras toujours l’inviter plus tard."
+      "declineText": "{name} ne sera pas prévenu. Tu pourras toujours l’inviter plus tard.",
+      "mentorVerified": "Mentor vérifié par KABAD",
+      "presentation": "Sa présentation",
+      "acceptedAlready": "Tu as accepté l’invitation de {name} : votre conversation est ouverte.",
+      "declinedAlready": "Tu as refusé l’invitation de {name}.",
+      "write": "Écrire"
     },
     "conversation": {
       "metaTitle": "Conversation",

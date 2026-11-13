@@ -54,7 +54,7 @@ export type ConversationDetail = {
   linked: { kind: "test" | "rise" | "team" | "instructors"; id: string } | null;
   /** The testers' group of an app (T4): its tasks, the install link, and what this member ticked (null for the author). */
   test: { id: string; url: string; steps: string[]; platforms: Array<"WEB" | "ANDROID" | "IOS">; ownerId: string; doneSteps: number[] | null } | null;
-  members: Array<{ id: string; name: string; owner: boolean; photo: string | null }>;
+  members: Array<{ id: string; name: string; owner: boolean; photo: string | null; mentor: boolean }>;
   lastReadAt: string;
   hasMore: boolean;
   messages: ChatMessage[];
@@ -62,7 +62,20 @@ export type ConversationDetail = {
   pinned: ChatMessage[];
 };
 
-export type InvitationFrom = { id: string; name: string; city: string; country: string; stack: string[]; years: number; role: "JUNIOR" | "SENIOR" };
+export type InvitationFrom = {
+  id: string;
+  name: string;
+  city: string;
+  country: string;
+  stack: string[];
+  years: number;
+  role: "JUNIOR" | "SENIOR";
+  level: "ASPIRANT" | "DEBUTANT" | "INTERMEDIAIRE" | "SENIOR";
+  headline: string;
+  /** The sender's presentation, read before answering (P8). */
+  bio: string;
+  photo: string | null;
+};
 
 export type ReceivedInvitation = { id: string; message: string; createdAt: string; from: InvitationFrom };
 
