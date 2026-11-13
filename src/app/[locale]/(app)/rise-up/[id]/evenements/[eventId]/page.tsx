@@ -10,7 +10,7 @@ import { Link } from "@/i18n/navigation";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 import { getEvent } from "@/server/rise";
-import { CalendarButton } from "./CalendarButton";
+import { AddToCalendar } from "@/components/features/AddToCalendar";
 import { CloseRoomButton } from "./CloseRoomButton";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -66,7 +66,7 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
               <ButtonLink href={e.meetingUrl} target="_blank" rel="noreferrer" size="lg" block icon="video" variant={e.live ? "primary" : "secondary"}>
                 {t("join")}
               </ButtonLink>
-              {e.live ? e.canClose && <CloseRoomButton projectId={id} eventId={eventId} /> : <CalendarButton title={e.title} description={e.agenda} url={e.meetingUrl} startsAt={e.startsAt} minutes={e.minutes} label={t("calendar")} />}
+              {e.live ? e.canClose && <CloseRoomButton projectId={id} eventId={eventId} /> : <AddToCalendar event={{ id: e.id, title: e.title, description: e.agenda, startsAt: e.startsAt, minutes: e.minutes, url: e.meetingUrl }} />}
             </>
           ) : (
             <ButtonLink href={`/rise-up/${id}`} size="lg" block>

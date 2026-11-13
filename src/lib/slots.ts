@@ -134,3 +134,42 @@ export function isOfferedSlot(at: Date, q: Omit<SlotQuery, "from" | "to">): bool
   const to = new Date(at.getTime() + 1);
   return freeSlots({ ...q, from, to }).some((s) => s.getTime() === at.getTime());
 }
+
+/** The most days blocked at once, as the server allows (src/lib/schemas.ts, availabilitySchema). */
+export const MAX_BLOCKED_DAYS = 60;
+
+/** "2026-11-20" + n days, in calendar days (no time zone involved). */
+function addDays(day: string, n: number): string {
+  const d = new Date(`${day}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * The days from `from` to `to`, both included (P17: block a holiday in one go). An end before the start, or no end,
+ * gives the start day alone; the list stops at `max` days.
+ */
+export function daysBetween(from: string, to: string | null | undefined, max = MAX_BLOCKED_DAYS): string[] {
+  if (!to || to <= from) return [from];
+  const out: string[] = [];
+  for (let day = from; day <= to && out.length < max; day = addDays(day, 1)) out.push(day);
+  return out;
+}
+
+export type BlockedDay = { day: string; reason: string };
+
+/** Consecutive days with the same reason, shown as one line « du 20 au 24 novembre ». The days are sorted first. */
+export function groupDays(days: BlockedDay[]): Array<{ from: string; to: string; reason: string; days: string[] }> {
+  const sorted = [...days].sort((a, b) => a.day.localeCompare(b.day));
+  const out: Array<{ from: string; to: string; reason: string; days: string[] }> = [];
+  for (const d of sorted) {
+    const last = out[out.length - 1];
+    if (last && last.reason === d.reason && addDays(last.to, 1) === d.day) {
+      last.to = d.day;
+      last.days.push(d.day);
+    } else {
+      out.push({ from: d.day, to: d.day, reason: d.reason, days: [d.day] });
+    }
+  }
+  return out;
+}

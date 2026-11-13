@@ -13,7 +13,12 @@
     "backHome": "Back to home",
     "seeAll": "See all",
     "step": "Step {step} of {total}",
-    "stepShort": "{step} / {total}"
+    "stepShort": "{step} / {total}",
+    "calendar": {
+      "google": "Add to Google Calendar",
+      "other": "Other calendar:",
+      "ics": ".ics file"
+    }
   },
   "nav": {
     "label": "Main navigation",

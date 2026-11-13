@@ -73,10 +73,11 @@ export function Avatar({ initials, size = "md", tone = "brand", square, classNam
  * The badge of a mentor verified by KABAD (P9, P20): an indigo seal, set apart from the levels
  * (aspirant, beginner, intermediate, senior), which say how experienced a member is, not whether KABAD verified them.
  */
-export function MentorBadge({ children, className }: { children: ReactNode; className?: string }) {
+/** `light`: on an indigo or ink ground, the badge turns white. */
+export function MentorBadge({ children, className, light }: { children: ReactNode; className?: string; light?: boolean }) {
   return (
-    <span className={cn("inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-brand pr-3 pl-1 text-xs font-extrabold text-on-brand", className)}>
-      <span className="grid size-5 place-items-center rounded-full bg-on-brand text-brand" aria-hidden="true">
+    <span className={cn("inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full pr-3 pl-1 text-xs font-extrabold", light ? "bg-raised text-brand-text" : "bg-brand text-on-brand", className)}>
+      <span className={cn("grid size-5 place-items-center rounded-full", light ? "bg-brand text-on-brand" : "bg-on-brand text-brand")} aria-hidden="true">
         <Icon name="seal" size={16} strokeWidth={2.4} className="size-4" />
       </span>
       {children}

@@ -13,7 +13,12 @@
     "backHome": "Retour à l’accueil",
     "seeAll": "Tout voir",
     "step": "Étape {step} sur {total}",
-    "stepShort": "{step} / {total}"
+    "stepShort": "{step} / {total}",
+    "calendar": {
+      "google": "Ajouter à Google Agenda",
+      "other": "Autre agenda :",
+      "ics": "Fichier .ics"
+    }
   },
   "nav": {
     "label": "Navigation principale",

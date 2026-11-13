@@ -4,7 +4,8 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink } from "@/components/ui/Button";
-import { Avatar, Badge, Overline, TagList } from "@/components/ui/Display";
+import { Band } from "@/components/ui/Band";
+import { Avatar, MentorBadge, Overline, TagList } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { Link } from "@/i18n/navigation";
 import { formatClock, initials } from "@/lib/format";
@@ -30,16 +31,17 @@ async function MentorData({ params }: { params: Promise<{ id: string }> }) {
   const user = await pageUser(`/mentorat/mentors/${id}`);
   const mentor = await orNotFound(getMentor(id));
   if (!mentor) notFound();
-  const [t, format, locale] = await Promise.all([getTranslations("mentoring.profile"), getFormatter(), getLocale()]);
+  const [t, tb, format, locale] = await Promise.all([getTranslations("mentoring.profile"), getTranslations("mentoring.badge"), getFormatter(), getLocale()]);
   const self = mentor.id === user.id;
   const gender = mentor.gender ?? "other";
   // One subject per line when the mentor wrote several.
   const topics = mentor.topics.split("\n").map((x) => x.trim()).filter(Boolean);
   const links = [
-    { label: "GitHub", href: mentor.links.github },
-    { label: "LinkedIn", href: mentor.links.linkedin },
-    { label: t("portfolio"), href: mentor.links.portfolio },
-  ].filter((l): l is { label: string; href: string } => Boolean(l.href));
+    { label: "GitHub", href: mentor.links.github, icon: "code" as const },
+    { label: "LinkedIn", href: mentor.links.linkedin, icon: "user" as const },
+    { label: t("portfolio"), href: mentor.links.portfolio, icon: "globe" as const },
+  ].filter((l): l is { label: string; href: string; icon: "code" | "user" | "globe" } => Boolean(l.href));
+  const experience = (["3-5", "5-10", "10+"] as const).find((x) => x === mentor.experience);
   const today = dayOf(new Date(), user.timeZone);
   const next = mentor.slots.slice(0, 3).map((iso) => {
     const at = new Date(iso);
@@ -48,23 +50,35 @@ async function MentorData({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       <Page narrow className="flex-1 gap-5">
-        <section aria-label={mentor.name} className="grid gap-3">
-          <div className="flex items-center gap-3">
-            <Avatar initials={initials(mentor.name)} size="lg" tone="brand" />
-            <div className="grid min-w-0 flex-1 gap-0.5">
-              <h2 className="font-display text-lg leading-6 font-extrabold">{mentor.name}</h2>
-              <span className="text-sm text-muted">{[mentor.jobTitle || mentor.headline, mentor.city].filter(Boolean).join(" · ")}</span>
+        {/* P9: the mentor's card stands out, an indigo header with the seal, then three figures. It is the one featured card of the screen. */}
+        <section aria-label={mentor.name} className="overflow-hidden rounded-xl border-2 border-line-strong bg-raised shadow-pop">
+          <div className="grid justify-items-center gap-2 bg-header px-4 pt-6 pb-4 text-center text-on-header">
+            <Avatar initials={initials(mentor.name)} src={mentor.photo} size="xl" tone="neutral" verified />
+            <h2 className="font-display text-xl leading-7 font-extrabold">{mentor.name}</h2>
+            <span className="text-sm opacity-85">{[mentor.jobTitle || mentor.headline, mentor.city].filter(Boolean).join(" · ")}</span>
+            <MentorBadge light>{t("verified", { gender })}</MentorBadge>
+          </div>
+          <Band />
+          <dl className="m-0 grid grid-cols-3 divide-x-2 divide-line border-b-2 border-line text-center">
+            <div className="grid min-w-0 content-start gap-0.5 px-1.5 py-3">
+              <dd className="m-0 font-display text-base leading-6 font-extrabold break-words sm:text-xl tabular">{mentor.sessionsHeld}</dd>
+              <dt className="text-[10px] leading-tight font-extrabold tracking-[0.04em] text-muted uppercase sm:text-[11px]">{t("statSessions", { count: mentor.sessionsHeld })}</dt>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="success" icon="check">
-              {t("verified", { gender })}
-            </Badge>
-            <span className="text-xs font-extrabold text-brand-text">{t("sessionsHeld", { count: mentor.sessionsHeld })}</span>
-            {mentor.rating && <span className="text-xs font-extrabold text-brand-text">· {t("rating", { average: mentor.rating.average, count: mentor.rating.count })}</span>}
-          </div>
-          {mentor.bio && <p className="text-[15px] leading-[22px]">{mentor.bio}</p>}
-          <TagList items={[...mentor.domains, ...mentor.technologies]} />
+            <div className="grid min-w-0 content-start gap-0.5 px-1.5 py-3">
+              <dd className="m-0 font-display text-base leading-6 font-extrabold break-words sm:text-xl">{experience ? tb(`experienceOptions.${experience}`) : "—"}</dd>
+              <dt className="text-[10px] leading-tight font-extrabold tracking-[0.04em] text-muted uppercase sm:text-[11px]">{t("statExperience")}</dt>
+            </div>
+            <div className="grid min-w-0 content-start gap-0.5 px-1.5 py-3">
+              <dd className="m-0 font-display text-base leading-6 font-extrabold break-words sm:text-xl tabular">{mentor.rating ? `${format.number(mentor.rating.average, { maximumFractionDigits: 1 })} / 5` : t("statNew")}</dd>
+              <dt className="text-[10px] leading-tight font-extrabold tracking-[0.04em] text-muted uppercase sm:text-[11px]">{mentor.rating ? t("statRatings", { count: mentor.rating.count }) : t("statRating")}</dt>
+            </div>
+          </dl>
+          {(mentor.bio || mentor.domains.length + mentor.technologies.length > 0) && (
+            <div className="grid gap-3 p-4">
+              {mentor.bio && <p className="text-[15px] leading-[22px]">{mentor.bio}</p>}
+              <TagList items={[...mentor.domains, ...mentor.technologies]} />
+            </div>
+          )}
         </section>
 
         {topics.length > 0 && (
@@ -75,14 +89,14 @@ async function MentorData({ params }: { params: Promise<{ id: string }> }) {
             {topics.length === 1 ? (
               <p className="text-[15px] leading-[22px]">{topics[0]}</p>
             ) : (
-              <ul className="m-0 grid list-none gap-2 p-0">
-                {topics.map((topic) => (
-                  <li key={topic} className="flex items-start gap-2 text-[15px] leading-[22px]">
-                    <Icon name="check" size={18} className="mt-0.5 shrink-0 text-success" />
+              <ol className="m-0 grid list-none gap-2 p-0">
+                {topics.map((topic, i) => (
+                  <li key={topic} className="grid grid-cols-[32px_minmax(0,1fr)] items-center gap-3 rounded-lg border-2 border-line-strong bg-raised px-3 py-2.5 text-[15px] leading-[21px]">
+                    <span className="grid size-8 place-items-center rounded-full bg-brand-wash font-display text-sm font-extrabold text-brand-text">{i + 1}</span>
                     {topic}
                   </li>
                 ))}
-              </ul>
+              </ol>
             )}
           </section>
         )}
@@ -95,8 +109,9 @@ async function MentorData({ params }: { params: Promise<{ id: string }> }) {
             <div className="flex flex-wrap gap-2">
               {links.map((l) => (
                 <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2.5 rounded-action border-2 border-line-strong bg-raised px-3 text-sm font-extrabold text-ink no-underline hover:bg-bg">
-                  <Icon name="external" size={18} />
+                  <Icon name={l.icon} size={18} />
                   {l.label}
+                  <Icon name="external" size={16} className="text-muted" />
                 </a>
               ))}
             </div>

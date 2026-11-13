@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import type { AvailabilityView } from "@/lib/domain-types";
-import { suggestRange } from "@/lib/slots";
+import { daysBetween, groupDays, MAX_BLOCKED_DAYS, suggestRange } from "@/lib/slots";
 import { zoneChoices, zoneCity } from "@/lib/time-zones";
 
 type Range = { startMin: number; endMin: number };
@@ -32,6 +32,8 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
   const [editing, setEditing] = useState<{ day: Weekday; index: number } | null>(null);
   const [blocked, setBlocked] = useState(initial.blocked.map((b) => ({ day: b.day, reason: b.reason ?? "" })));
   const [newDay, setNewDay] = useState("");
+  // P17: an end date blocks every day of the period in one go (holidays, exams…).
+  const [newEnd, setNewEnd] = useState("");
   const [newReason, setNewReason] = useState("");
   const [timeZone, setTimeZone] = useState(initial.timeZone);
   const [meetingUrl, setMeetingUrl] = useState(initial.meetingUrl);
@@ -175,15 +177,17 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
             <p className="text-sm text-muted">{t("availability.noBlocked")}</p>
           ) : (
             <ul className="grid gap-1.5">
-              {blocked.map((b) => {
-                const label = format.dateTime(new Date(`${b.day}T12:00:00Z`), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+              {/* Consecutive days with the same reason are one line, removed together. */}
+              {groupDays(blocked).map((g) => {
+                const day = (d: string, withDay = true) => format.dateTime(new Date(`${d}T12:00:00Z`), { ...(withDay ? { weekday: "long" as const } : {}), day: "numeric", month: "long", timeZone: "UTC" });
+                const label = g.days.length === 1 ? day(g.from) : t("availability.blockedRange", { from: day(g.from, false), to: day(g.to, false), count: g.days.length });
                 return (
-                  <li key={b.day} className="flex items-center gap-2 rounded-md bg-bg px-3 py-1.5">
+                  <li key={g.from} className="flex items-center gap-2 rounded-md bg-bg px-3 py-1.5">
                     <span className="min-w-0 flex-1 text-sm">
-                      <b className="capitalize">{label}</b>
-                      {b.reason ? ` · ${b.reason}` : ""}
+                      <b className="first-letter:uppercase">{label}</b>
+                      {g.reason ? ` · ${g.reason}` : ""}
                     </span>
-                    <button type="button" aria-label={t("availability.removeBlocked", { day: label })} onClick={() => setBlocked(blocked.filter((x) => x.day !== b.day))} className="inline-grid size-10 place-items-center rounded-full text-muted hover:bg-raised">
+                    <button type="button" aria-label={t("availability.removeBlocked", { day: label })} onClick={() => setBlocked(blocked.filter((x) => !g.days.includes(x.day)))} className="inline-grid size-10 place-items-center rounded-full text-muted hover:bg-raised">
                       <Icon name="close" size={18} />
                     </button>
                   </li>
@@ -191,19 +195,24 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
               })}
             </ul>
           )}
-          <div className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-end">
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
             <TextField id="blocked-day" type="date" label={t("availability.blockedDay")} value={newDay} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setNewDay(e.target.value)} />
-            <TextField id="blocked-reason" label={t("availability.blockedReason")} value={newReason} maxLength={80} onChange={(e) => setNewReason(e.target.value)} />
+            <TextField id="blocked-end" type="date" label={t("availability.blockedEnd")} hint={t("availability.blockedEndHint")} value={newEnd} min={newDay || new Date().toISOString().slice(0, 10)} onChange={(e) => setNewEnd(e.target.value)} />
+            <TextField id="blocked-reason" label={t("availability.blockedReason")} value={newReason} maxLength={80} onChange={(e) => setNewReason(e.target.value)} className="sm:col-span-2" />
             <Button
               variant="secondary"
-              disabled={!newDay || blocked.some((b) => b.day === newDay)}
+              className="sm:col-span-2 sm:justify-self-start"
+              disabled={!newDay || blocked.length >= MAX_BLOCKED_DAYS}
               onClick={() => {
-                setBlocked([...blocked, { day: newDay, reason: newReason.trim() }].sort((a, b) => a.day.localeCompare(b.day)));
+                const taken = new Set(blocked.map((b) => b.day));
+                const added = daysBetween(newDay, newEnd, MAX_BLOCKED_DAYS - blocked.length).filter((d) => !taken.has(d));
+                setBlocked([...blocked, ...added.map((day) => ({ day, reason: newReason.trim() }))].sort((a, b) => a.day.localeCompare(b.day)));
                 setNewDay("");
+                setNewEnd("");
                 setNewReason("");
               }}
             >
-              {t("availability.addBlocked")}
+              {newEnd && newEnd > newDay ? t("availability.addBlockedRange", { count: daysBetween(newDay, newEnd).length }) : t("availability.addBlocked")}
             </Button>
           </div>
         </section>
