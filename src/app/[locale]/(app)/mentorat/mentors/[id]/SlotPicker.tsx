@@ -47,7 +47,7 @@ export function SlotPicker({ mentorId, slots, taken = [], timeZone, zone }: { me
   const weekdays = Array.from({ length: 7 }, (_, i) => format.dateTime(new Date(Date.UTC(2026, 10, 2 + i)), { weekday: "short", timeZone: "UTC" }));
   // The free slots of the day and, among them in order of time, those someone already booked.
   const daySlots = day ? [...(byDay.get(day) ?? []), ...taken.filter((s) => dayOf(s, timeZone) === day)].sort() : [];
-  const time = (iso: string) => format.dateTime(new Date(iso), { hour: "2-digit", minute: "2-digit", timeZone });
+  const time = (iso: string) => format.dateTime(new Date(iso), { hour: "numeric", minute: "2-digit", timeZone });
 
   if (slots.length === 0) return <p className="rounded-action bg-bg px-4 py-6 text-center text-muted">{t("noSlots")}</p>;
 

@@ -103,7 +103,8 @@
       "earlier": "Earlier",
       "none": "No notifications yet.",
       "allRead": "You’ve read everything. Nothing new for now.",
-      "unreadDot": "Unread"
+      "unreadDot": "Unread",
+      "unreadLabel": "Unread:"
     },
     "account": {
       "title": "My account",

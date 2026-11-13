@@ -82,13 +82,13 @@
     "session": {
       "metaTitle": "Séance de mentorat",
       "pendingTitle": "Demande envoyée",
-      "pendingText": "{name} va lire ta demande. Tu recevras une notification dès qu’il ou elle répond.",
+      "pendingText": "{name} va lire ta demande. Tu recevras une notification dès {gender, select, FEMALE {qu’elle répond} MALE {qu’il répond} other {qu’il ou elle répond}}.",
       "acceptedTitle": "Séance confirmée",
       "acceptedText": "{name} a accepté ta demande. Vous avez reçu tous les deux la confirmation et le lien Google Meet.",
       "declinedTitle": "Séance refusée",
       "declinedText": "{name} ne peut pas assurer cette séance.",
       "cancelledTitle": "Séance annulée",
-      "cancelledText": "Cette séance n’aura pas lieu.",
+      "cancelledText": "Cette séance avec {name} n’aura pas lieu.",
       "mentorPendingTitle": "Demande à traiter",
       "mentorPendingText": "{name} souhaite cette séance. Lis son problème avant de répondre.",
       "mentorAcceptedText": "Tu as accepté cette séance avec {name}.",
@@ -122,7 +122,14 @@
       "copied": "Lien copié",
       "ratingFrom": "La note de {name}",
       "ratingMine": "Ta note",
-      "ratingValue": "{rating} sur 5"
+      "ratingValue": "{rating} sur 5",
+      "mentorDeclinedTitle": "Demande refusée",
+      "mentorDeclinedText": "Tu as refusé cette séance avec {name}.",
+      "heldTitle": "Séance terminée",
+      "heldText": "Ta séance avec {name} a eu lieu.",
+      "theirRequest": "Sa demande",
+      "linkValue": "Lien utile : {url}",
+      "ratingComment": "« {comment} »"
     },
     "requests": {
       "title": "Demandes reçues",
@@ -186,7 +193,8 @@
       "askBadge": "Demander le badge",
       "editRange": "Modifier la plage du {day}, {range}",
       "remove": "Retirer",
-      "done": "OK"
+      "done": "OK",
+      "overlapOn": "Deux plages du {day} se chevauchent. Change les heures de l’une d’elles."
     },
     "badge": {
       "metaTitle": "Badge mentor",
@@ -254,6 +262,8 @@
       "refusedTitle": "Demande non validée",
       "refusedText": "L’équipe KABAD n’a pas validé ta demande. Tu peux en envoyer une nouvelle en tenant compte du motif.",
       "refusedReason": "Motif : {reason}",
+      "revokedTitle": "Badge mentor retiré",
+      "revokedText": "L’équipe KABAD t’a retiré le badge mentor. Tu peux envoyer une nouvelle demande en tenant compte du motif.",
       "retry": "Envoyer une nouvelle demande",
       "technologiesCount": "{count} / {max}",
       "technologiesOther": "Une autre technologie",

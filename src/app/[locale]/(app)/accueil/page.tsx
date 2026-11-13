@@ -114,6 +114,8 @@ async function HomeData() {
                 <Link href={`/mentorat/seances/${next.id}`} className="text-md font-extrabold text-ink no-underline">
                   {next.topic}
                 </Link>
+                {/* The day, next to the hour of the time block: "in 3 days" alone does not say which one. */}
+                <span className="text-sm font-bold first-letter:uppercase">{format.dateTime(new Date(next.startsAt), { weekday: "long", day: "numeric", month: "long", timeZone: user.timeZone })}</span>
                 <span className="flex items-center gap-2 text-sm text-muted">
                   <Avatar initials={initials(other.name)} size="sm" tone="neutral" />
                   <span>

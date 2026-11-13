@@ -143,7 +143,8 @@ export function BadgeForm({ initial, updating, stack }: { initial: BadgeRequestV
                   const on = technologies.includes(x);
                   return (
                     <ToggleChip key={x} pressed={on} disabled={!on && technologies.length >= TECH_MAX} onClick={() => setTechnologies(on ? technologies.filter((y) => y !== x) : [...technologies, x])}>
-                      {x}
+                      {/* "Data et IA" is also an area: written in the reader's language. */}
+                      {t.has(`badge.domainList.${x}` as "badge.domainList.Backend") ? t(`badge.domainList.${x}` as "badge.domainList.Backend") : x}
                     </ToggleChip>
                   );
                 })}

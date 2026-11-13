@@ -103,7 +103,8 @@
       "earlier": "Plus tôt",
       "none": "Aucune notification pour l’instant.",
       "allRead": "Tu as tout lu. Rien de nouveau pour l’instant.",
-      "unreadDot": "Non lue"
+      "unreadDot": "Non lue",
+      "unreadLabel": "Non lue :"
     },
     "account": {
       "title": "Mon compte",

@@ -23,17 +23,19 @@ export async function generateMetadata(): Promise<Metadata> {
 async function SlotsData({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await pageUser(`/mentorat/mentors/${id}/creneaux`);
-  const mentor = await orNotFound(getMentor(id));
+  const mentor = await orNotFound(getMentor(id, undefined, user.id));
   // A mentor does not book their own slots.
   if (!mentor || mentor.id === user.id) notFound();
-  const t = await getTranslations("mentoring.profile");
+  const [t, tb] = await Promise.all([getTranslations("mentoring.profile"), getTranslations("mentoring.badge")]);
+  const area = mentor.domains[0];
+  const domain = area && tb.has(`domainList.${area}` as "domainList.Backend") ? tb(`domainList.${area}` as "domainList.Backend") : area;
   return (
     <Page narrow className="gap-4.5">
       <section aria-label={mentor.name} className="flex items-center gap-3">
         <Avatar initials={initials(mentor.name)} tone="brand" />
         <div className="grid min-w-0 flex-1">
           <span className="font-display text-base font-bold">{mentor.name}</span>
-          <span className="text-[13px] text-muted">{mentor.domains[0] ? t("session", { domain: mentor.domains[0] }) : t("sessionNoDomain")}</span>
+          <span className="text-[13px] text-muted">{domain ? t("session", { domain }) : t("sessionNoDomain")}</span>
         </div>
         <Badge tone="success" icon="check">
           {t("verifiedShort", { gender: mentor.gender ?? "other" })}

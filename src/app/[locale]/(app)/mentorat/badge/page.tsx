@@ -7,7 +7,7 @@ import { Badge, Card, Overline, Tag } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { MentorCard } from "@/components/features/mentoring/MentorCard";
 import type { BadgeRequestView } from "@/lib/domain-types";
-import { myBadgeRequest } from "@/server/badges";
+import { badgeRevocation, myBadgeRequest } from "@/server/badges";
 import { getMentor } from "@/server/mentoring";
 import { pageUser } from "@/server/page";
 import { BadgeForm } from "./BadgeForm";
@@ -111,12 +111,15 @@ async function BadgeData({ searchParams }: { searchParams: Promise<{ modifier?: 
   const [{ modifier, nouvelle }, r, t] = await Promise.all([searchParams, myBadgeRequest(user.id), getTranslations("mentoring.badge")]);
   if (user.seniorVerifiedAt) return <Granted userId={user.id} timeZone={user.timeZone} />;
   if (r?.status === "PENDING" && !modifier) return <Pending r={r} />;
-  if (r?.status === "REFUSED" && !nouvelle) {
+  // The badge was taken back: say so and why, as for a refusal, before offering a new request.
+  const revoked = r?.status === "APPROVED" && !nouvelle ? await badgeRevocation(user.id) : null;
+  if ((r?.status === "REFUSED" || revoked) && !nouvelle) {
+    const reason = revoked ? revoked.reason : r?.refusalReason;
     return (
       <>
         <Page narrow className="gap-5">
-          <Hero icon="info" tone="neutral" title={t("refusedTitle")} text={t("refusedText")} />
-          {r.refusalReason && <Card className="text-sm">{t("refusedReason", { reason: r.refusalReason })}</Card>}
+          <Hero icon="info" tone="neutral" title={revoked ? t("revokedTitle") : t("refusedTitle")} text={revoked ? t("revokedText") : t("refusedText")} />
+          {reason && <Card className="text-sm">{t("refusedReason", { reason })}</Card>}
         </Page>
         <ActionBar>
           <ButtonLink href="/mentorat/badge?nouvelle=1" size="lg" block>
@@ -126,7 +129,7 @@ async function BadgeData({ searchParams }: { searchParams: Promise<{ modifier?: 
       </>
     );
   }
-  return <BadgeForm initial={r && (r.status === "PENDING" || r.status === "REFUSED") ? r : null} updating={r?.status === "PENDING"} stack={user.stack} />;
+  return <BadgeForm initial={r} updating={r?.status === "PENDING"} stack={user.stack} />;
 }
 
 export default async function BadgePage({ searchParams }: PageProps<"/[locale]/mentorat/badge">) {

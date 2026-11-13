@@ -1,8 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { DomainError } from "@/server/errors";
-import { answerBooking, bookSlot, cancelBooking, getMentor, saveAvailability } from "@/server/mentoring";
+import { answerBooking, bookSlot, cancelBooking, getMentor, listMentors, saveAvailability } from "@/server/mentoring";
 import { revokeBadge } from "@/server/admin";
-import { requestBadge, reviewBadge } from "@/server/badges";
+import { badgeRevocation, requestBadge, reviewBadge } from "@/server/badges";
 import { answerJoinRequest, getHackathon, getResults, publishResults, register, scoreSubmission, submitSolution } from "@/server/hackathons";
 import { createTestApp, joinTest, leaveTest, setStep } from "@/server/community-tests";
 import { leaveGroup, listConversations } from "@/server/messaging";
@@ -89,6 +89,44 @@ describe("mentorat par créneaux", () => {
     await bookSlot("yao", { ...booking(slot), mentorId: "nadia" }, prisma);
   });
 
+  it("un mentor n’a pas deux séances à la même heure, comme dev et comme mentor, à la réservation et à l’acceptation", async () => {
+    const [slot] = await awaOpensEveryDay();
+    await saveAvailability("nadia", { timeZone: "Africa/Lome", meetingUrl: MEET, ranges: [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({ weekday, startMin: 9 * 60, endMin: 18 * 60 })), blocked: [] }, prisma);
+    // Nadia, as a dev, books Awa at that time: her own slot at that time is no longer offered, nor bookable.
+    await bookSlot("nadia", booking(slot), prisma);
+    expect((await getMentor("nadia", prisma)).slots).not.toContain(slot);
+    await refused(bookSlot("yao", { ...booking(slot), mentorId: "nadia" }, prisma), "slot_taken");
+    // The same, the other way round: Awa holds a session as a mentor, she cannot book one as a dev at that time.
+    await refused(bookSlot("awa", { ...booking(slot), mentorId: "nadia" }, prisma), "clash");
+    // The calendar shown to a dev leaves out the times they are already busy.
+    expect((await getMentor("awa", prisma, "nadia")).slots).not.toContain(slot);
+  });
+
+  it("à l’acceptation, le serveur revérifie que le mentor et le dev sont libres", async () => {
+    const [slot] = await awaOpensEveryDay();
+    await saveAvailability("nadia", { timeZone: "Africa/Lome", meetingUrl: MEET, ranges: [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({ weekday, startMin: 9 * 60, endMin: 18 * 60 })), blocked: [] }, prisma);
+    const { id } = await bookSlot("yao", { ...booking(slot), mentorId: "nadia" }, prisma);
+    // A session written straight in the base (old data, or a race lost before this rule): Nadia is a dev at that time.
+    await prisma.mentoringBooking.create({ data: { mentorId: "awa", menteeId: "nadia", startsAt: new Date(slot), topic: "API", problem: "Je bloque sur les webhooks." } });
+    await refused(answerBooking("nadia", id, { accept: true }, prisma), "clash_mentor");
+    expect((await prisma.mentoringBooking.findUniqueOrThrow({ where: { id } })).status).toBe("PENDING");
+    // Declining stays possible.
+    expect((await answerBooking("nadia", id, { accept: false }, prisma)).status).toBe("DECLINED");
+
+    // The dev who asked is busy too: the mentor cannot accept.
+    await prisma.mentoringBooking.deleteMany({});
+    const other = await bookSlot("yao", { ...booking(slot), mentorId: "nadia" }, prisma);
+    await prisma.mentoringBooking.create({ data: { mentorId: "awa", menteeId: "yao", startsAt: new Date(slot), topic: "API", problem: "Je bloque sur les webhooks.", status: "ACCEPTED" } });
+    await refused(answerBooking("nadia", other.id, { accept: true }, prisma), "clash_mentee");
+  });
+
+  it("le catalogue montre d’abord les mentors qui ont un créneau proche, puis ceux qui n’en ont pas", async () => {
+    await awaOpensEveryDay();
+    const mentors = await listMentors({}, prisma);
+    expect(mentors[0].id).toBe("awa");
+    expect(mentors.slice(1).every((m) => m.nextSlot === null)).toBe(true);
+  });
+
   it("une séance annulée prévient l’autre membre, libère le créneau, et ne s’annule qu’une fois", async () => {
     const [slot] = await awaOpensEveryDay();
     const { id } = await bookSlot("kossi", booking(slot), prisma);
@@ -132,6 +170,16 @@ describe("badge mentor", () => {
     expect(kossi.seniorVerifiedAt).not.toBeNull();
     expect(kossi.role).toBe("SENIOR");
     await refused(reviewBadge("equipe", id, { approve: true }, prisma), "reviewed");
+  });
+
+  it("après un retrait, l’écran du badge retrouve le motif ; une nouvelle demande l’efface", async () => {
+    const { id } = await requestBadge("kossi", input, prisma);
+    await reviewBadge("equipe", id, { approve: true }, prisma);
+    expect(await badgeRevocation("kossi", prisma)).toBeNull();
+    await revokeBadge("equipe", "kossi", "Fausses informations", prisma);
+    expect(await badgeRevocation("kossi", prisma)).toEqual({ reason: "Fausses informations" });
+    await requestBadge("kossi", input, prisma);
+    expect(await badgeRevocation("kossi", prisma)).toBeNull();
   });
 
   it("deux envois de la demande au même instant ne font qu’une demande", async () => {

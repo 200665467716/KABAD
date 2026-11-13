@@ -67,7 +67,7 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
   ].filter((g) => g.items.length > 0);
   const when = (n: NotificationView) => {
     const d = new Date(n.createdAt);
-    return age(n) <= 0 ? format.dateTime(d, { hour: "2-digit", minute: "2-digit" }) : format.dateTime(d, age(n) < 7 * 86_400_000 ? { weekday: "short" } : { day: "numeric", month: "short" });
+    return age(n) <= 0 ? format.dateTime(d, { hour: "numeric", minute: "2-digit" }) : format.dateTime(d, age(n) < 7 * 86_400_000 ? { weekday: "short" } : { day: "numeric", month: "short" });
   };
 
   return (
@@ -97,7 +97,7 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
                     <Icon name={n.icon} size={18} />
                   </span>
                   <span className="text-sm leading-5">
-                    {n.unread && <span className="sr-only">{t("unreadDot")} : </span>}
+                    {n.unread && <span className="sr-only">{t("unreadLabel")} </span>}
                     <b>{n.actor}</b>
                     {/^[\s:]/.test(textOf(n)) ? "" : " "}
                     {textOf(n)}

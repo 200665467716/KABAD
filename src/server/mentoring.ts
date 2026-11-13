@@ -3,6 +3,7 @@
  * - only members holding the mentor badge open slots; KABAD cuts their weekly ranges into 30-minute slots;
  * - a member books a free slot with a topic and a precise problem; one slot holds one active booking
  *   (a partial unique index in PostgreSQL settles two clicks at the same instant);
+ * - one person holds one session at a time, as a dev or as a mentor: checked when booking and again when accepting;
  * - the mentor accepts or declines; accepting gives both of them the video link;
  * - a request not answered before its slot starts lapses (worker, src/server/jobs.ts); it can no longer be accepted.
  */
@@ -31,23 +32,59 @@ async function badgeOf(prisma: Tx, userIds: string[]) {
   return out;
 }
 
-async function slotsOf(prisma: Tx, mentorIds: string[], from: Date, to: Date) {
+const ACTIVE = ["PENDING", "ACCEPTED"] as const;
+const SPAN = SESSION_MINUTES * 60_000;
+
+/** Active sessions (asked or accepted) of these people, as a dev or as a mentor, that overlap a session starting at `startsAt`. */
+function overlapping(userIds: string[], startsAt: Date) {
+  return {
+    OR: [{ menteeId: { in: userIds } }, { mentorId: { in: userIds } }],
+    status: { in: [...ACTIVE] },
+    startsAt: { gt: new Date(startsAt.getTime() - SPAN), lt: new Date(startsAt.getTime() + SPAN) },
+  } satisfies Prisma.MentoringBookingWhereInput;
+}
+
+/** True when a slot overlaps one of these session starts. */
+const clashes = (slot: Date, starts: Date[]) => starts.some((s) => Math.abs(s.getTime() - slot.getTime()) < SPAN);
+
+/** `viewerId`: the member looking at the calendar; slots where they already have a session are shown as taken. */
+async function slotsOf(prisma: Tx, mentorIds: string[], from: Date, to: Date, viewerId?: string) {
   const now = new Date();
+  const people = viewerId ? [...mentorIds, viewerId] : mentorIds;
+  const window = { gt: new Date(from.getTime() - SPAN), lt: new Date(to.getTime() + SPAN) };
   const [mentors, taken] = await Promise.all([
     prisma.user.findMany({
       where: { id: { in: mentorIds } },
       select: { id: true, timeZone: true, availability: { select: { weekday: true, startMin: true, endMin: true } }, blockedDates: { select: { day: true } } },
     }),
-    prisma.mentoringBooking.findMany({ where: { mentorId: { in: mentorIds }, status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gte: from, lt: to } }, select: { mentorId: true, startsAt: true } }),
+    // A mentor is busy during their sessions as a mentor, and also during those they booked as a dev.
+    prisma.mentoringBooking.findMany({ where: { OR: [{ mentorId: { in: people } }, { menteeId: { in: people } }], status: { in: [...ACTIVE] }, startsAt: window }, select: { mentorId: true, menteeId: true, startsAt: true } }),
   ]);
+  const busyOf = (id: string) => taken.filter((t) => t.mentorId === id || t.menteeId === id).map((t) => t.startsAt);
+  const viewerBusy = viewerId ? busyOf(viewerId) : [];
   // For each mentor: the slots still free, and those already booked (shown crossed out on the calendar).
   const out = new Map<string, { free: Date[]; taken: Date[] }>();
   for (const m of mentors) {
-    const booked = new Set(taken.filter((t) => t.mentorId === m.id).map((t) => t.startsAt.getTime()));
+    const busy = [...busyOf(m.id), ...viewerBusy];
     const open = freeSlots({ ranges: m.availability, timeZone: m.timeZone, from, to, now, blocked: m.blockedDates.map((b) => b.day.toISOString().slice(0, 10)) });
-    out.set(m.id, { free: open.filter((d) => !booked.has(d.getTime())), taken: open.filter((d) => booked.has(d.getTime())) });
+    out.set(m.id, { free: open.filter((d) => !clashes(d, busy)), taken: open.filter((d) => clashes(d, busy)) });
   }
   return out;
+}
+
+/**
+ * One person, one session at a time, as a dev or as a mentor. Checked inside the transaction that writes,
+ * after locking both people: two requests at the same instant wait for each other instead of both passing.
+ */
+async function assertFree(tx: Prisma.TransactionClient, people: { menteeId: string; mentorId: string }, startsAt: Date, exceptId?: string) {
+  const ids = [people.menteeId, people.mentorId].sort();
+  // Always in the same order (by id), so that two transactions never wait for each other in a loop.
+  for (const id of ids) await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${id} FOR UPDATE`;
+  const rows = await tx.mentoringBooking.findMany({ where: { ...overlapping(ids, startsAt), ...(exceptId ? { id: { not: exceptId } } : {}) }, select: { menteeId: true, mentorId: true } });
+  return {
+    menteeBusy: rows.some((r) => r.menteeId === people.menteeId || r.mentorId === people.menteeId),
+    mentorBusy: rows.some((r) => r.menteeId === people.mentorId || r.mentorId === people.mentorId),
+  };
 }
 
 async function sessionsHeld(prisma: Tx, mentorIds: string[]) {
@@ -74,15 +111,17 @@ export async function listMentors(opts: { domain?: string; excludeId?: string } 
     }))
     .filter((m) => !opts.domain || m.domains.includes(opts.domain))
     // Mentors with a slot soon come first.
-    .sort((a, b) => (a.nextSlot ?? "~").localeCompare(b.nextSlot ?? "~"));
+    // ISO dates compare as plain strings; a mentor without a slot goes last (localeCompare put "~" before digits).
+    .sort((a, b) => (a.nextSlot === b.nextSlot ? 0 : a.nextSlot === null ? 1 : b.nextSlot === null ? -1 : a.nextSlot < b.nextSlot ? -1 : 1));
 }
 
-export async function getMentor(mentorId: string, prisma: Db = db): Promise<MentorDetail> {
+/** `viewerId`: the member who looks; their own sessions are taken off the slots offered to them. */
+export async function getMentor(mentorId: string, prisma: Db = db, viewerId?: string): Promise<MentorDetail> {
   const u = await prisma.user.findFirst({ where: { id: mentorId, ...mentorWhere }, select: { id: true, name: true, city: true, country: true, headline: true, bio: true, timeZone: true, gender: true } });
   if (!u) throw notFound("Mentor introuvable.");
   const from = new Date();
   const to = new Date(from.getTime() + BOOKING_WINDOW_DAYS * 86_400_000);
-  const [badges, slots, held, rating] = await Promise.all([badgeOf(prisma, [u.id]), slotsOf(prisma, [u.id], from, to), sessionsHeld(prisma, [u.id]), ratingOf(prisma, u.id)]);
+  const [badges, slots, held, rating] = await Promise.all([badgeOf(prisma, [u.id]), slotsOf(prisma, [u.id], from, to, viewerId), sessionsHeld(prisma, [u.id]), ratingOf(prisma, u.id)]);
   const all = slots.get(u.id)?.free ?? [];
   const badge = badges.get(u.id);
   return {
@@ -111,20 +150,14 @@ export async function bookSlot(menteeId: string, input: { mentorId: string; star
   if (Number.isNaN(startsAt.getTime())) throw new DomainError("bad_slot", "Créneau invalide.", 400, "startsAt");
   // The calendar shows 30 days: a request sent by hand for a later date is refused too.
   if (startsAt.getTime() > Date.now() + BOOKING_WINDOW_DAYS * 86_400_000) throw new DomainError("too_far", `Tu peux réserver jusqu’à ${BOOKING_WINDOW_DAYS} jours à l’avance.`, 409, "startsAt");
-  const span = SESSION_MINUTES * 60_000;
-  const [mentor, mentee, blocked, pending, clash] = await Promise.all([
+  const [mentor, mentee, blocked, pending] = await Promise.all([
     prisma.user.findFirst({ where: { id: input.mentorId, ...mentorWhere }, select: { id: true, name: true, timeZone: true, availability: { select: { weekday: true, startMin: true, endMin: true } }, blockedDates: { select: { day: true } } } }),
     prisma.user.findUniqueOrThrow({ where: { id: menteeId }, select: { name: true } }),
     prisma.block.count({ where: { OR: [{ blockerId: menteeId, blockedId: input.mentorId }, { blockerId: input.mentorId, blockedId: menteeId }] } }),
     prisma.mentoringBooking.count({ where: { menteeId, status: "PENDING" } }),
-    // One person, one session at a time: asked or held, as a dev or as a mentor.
-    prisma.mentoringBooking.count({
-      where: { OR: [{ menteeId }, { mentorId: menteeId }], status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gt: new Date(startsAt.getTime() - span), lt: new Date(startsAt.getTime() + span) } },
-    }),
   ]);
   if (!mentor) throw notFound("Mentor introuvable.");
   if (blocked) throw forbidden("Tu ne peux pas réserver de séance avec ce mentor.");
-  if (clash) throw new DomainError("clash", "Tu as déjà une séance à cette heure. Choisis un autre créneau.", 409, "startsAt");
   if (pending >= MAX_PENDING_BOOKINGS) throw new DomainError("too_many", `Tu attends déjà ${MAX_PENDING_BOOKINGS} réponses. Attends qu’un mentor réponde avant d’en demander d’autres.`, 429);
   const offered = isOfferedSlot(startsAt, {
     ranges: mentor.availability,
@@ -136,6 +169,10 @@ export async function bookSlot(menteeId: string, input: { mentorId: string; star
 
   try {
     return await prisma.$transaction(async (tx) => {
+      // One person, one session at a time: asked or held, as a dev or as a mentor, for both of them.
+      const busy = await assertFree(tx, { menteeId, mentorId: mentor.id }, startsAt);
+      if (busy.menteeBusy) throw new DomainError("clash", "Tu as déjà une séance à cette heure. Choisis un autre créneau.", 409, "startsAt");
+      if (busy.mentorBusy) throw new DomainError("slot_taken", "Ce mentor n’est plus libre à cette heure. Choisis un autre créneau.", 409, "startsAt");
       const b = await tx.mentoringBooking.create({
         data: { mentorId: mentor.id, menteeId, startsAt, minutes: SESSION_MINUTES, topic: input.topic, problem: input.problem, link: input.link || null },
       });
@@ -149,7 +186,7 @@ export async function bookSlot(menteeId: string, input: { mentorId: string; star
   }
 }
 
-const personSelect = { id: true, name: true, city: true, headline: true } as const;
+const personSelect = { id: true, name: true, city: true, headline: true, gender: true } as const;
 const bookingInclude = { mentor: { select: personSelect }, mentee: { select: personSelect } } as const;
 type BookingRow = Prisma.MentoringBookingGetPayload<{ include: typeof bookingInclude }>;
 
@@ -235,6 +272,12 @@ export async function answerBooking(mentorId: string, bookingId: string, input: 
   // Google Meet in V1: the session takes the mentor's own link, KABAD creates no room.
   if (input.accept && !b.mentor.meetingUrl) throw new DomainError("meet_required", "Ajoute ton lien Google Meet dans tes disponibilités avant d’accepter une séance.", 409);
   return prisma.$transaction(async (tx) => {
+    if (input.accept) {
+      // The mentor may have booked another session at that time as a dev, since the request came in.
+      const busy = await assertFree(tx, { menteeId: b.menteeId, mentorId }, b.startsAt, b.id);
+      if (busy.mentorBusy) throw new DomainError("clash_mentor", "Tu as déjà une séance à cette heure. Refuse cette demande ou annule l’autre séance.", 409);
+      if (busy.menteeBusy) throw new DomainError("clash_mentee", "Ce membre a déjà une séance à cette heure. Refuse sa demande.", 409);
+    }
     const meetingUrl = input.accept ? b.mentor.meetingUrl : null;
     const { count } = await tx.mentoringBooking.updateMany({
       where: { id: bookingId, status: "PENDING" },

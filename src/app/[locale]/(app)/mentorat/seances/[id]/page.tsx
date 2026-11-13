@@ -17,6 +17,7 @@ import { ScreenSkeleton } from "@/components/ui/Skeleton";
 
 /** Read once per request on the server: not a render-time clock. */
 const isFuture = (iso: string) => new Date(iso).getTime() > Date.now();
+const isOver = (iso: string, minutes: number) => new Date(iso).getTime() + minutes * 60_000 <= Date.now();
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("mentoring.session");
@@ -34,18 +35,22 @@ async function SessionData({ params }: { params: Promise<{ id: string }> }) {
   const first = other.name.split(" ")[0];
   const future = isFuture(b.startsAt);
   const active = b.status === "PENDING" || b.status === "ACCEPTED";
+  // A confirmed session whose time is past is over: no video link, no "confirmed" any more.
+  const held = b.status === "ACCEPTED" && isOver(b.startsAt, b.minutes);
+  const live = b.status === "ACCEPTED" && !held;
 
+  // Each text speaks to the reader: the dev who asked, or the mentor who answered.
   const title = {
     PENDING: mentor ? t("mentorPendingTitle") : t("pendingTitle"),
-    ACCEPTED: t("acceptedTitle"),
-    DECLINED: t("declinedTitle"),
+    ACCEPTED: held ? t("heldTitle") : t("acceptedTitle"),
+    DECLINED: mentor ? t("mentorDeclinedTitle") : t("declinedTitle"),
     CANCELLED: t("cancelledTitle"),
   }[b.status];
   const text = {
-    PENDING: mentor ? t("mentorPendingText", { name: first }) : t("pendingText", { name: other.name }),
-    ACCEPTED: mentor ? t("mentorAcceptedText", { name: other.name }) : t("acceptedText", { name: other.name }),
-    DECLINED: t("declinedText", { name: other.name }),
-    CANCELLED: t("cancelledText"),
+    PENDING: mentor ? t("mentorPendingText", { name: first }) : t("pendingText", { name: other.name, gender: other.gender ?? "other" }),
+    ACCEPTED: held ? t("heldText", { name: other.name }) : mentor ? t("mentorAcceptedText", { name: other.name }) : t("acceptedText", { name: other.name }),
+    DECLINED: mentor ? t("mentorDeclinedText", { name: other.name }) : t("declinedText", { name: other.name }),
+    CANCELLED: t("cancelledText", { name: other.name }),
   }[b.status];
 
   return (
@@ -60,7 +65,7 @@ async function SessionData({ params }: { params: Promise<{ id: string }> }) {
         </div>
 
         <Card className="gap-3">
-          <Overline>{b.status === "ACCEPTED" ? t("theSession") : t("yours")}</Overline>
+          <Overline>{b.status === "ACCEPTED" ? t("theSession") : mentor ? t("theirRequest") : t("yours")}</Overline>
           <BookingSummary startsAt={b.startsAt} minutes={b.minutes} topic={b.topic} otherName={other.name} timeZone={user.timeZone} status={b.status} />
           {b.status === "ACCEPTED" && <p className="text-sm font-bold text-muted">{t("both", { name: other.name })}</p>}
           <div className="grid gap-1 border-t-2 border-line pt-3">
@@ -68,14 +73,14 @@ async function SessionData({ params }: { params: Promise<{ id: string }> }) {
             <p className="text-sm">{b.problem}</p>
             {b.link && (
               <a href={b.link} target="_blank" rel="noreferrer" className="text-sm font-extrabold break-all">
-                {t("link")} : {b.link.replace(/^https:\/\//, "")}
+                {t("linkValue", { url: b.link.replace(/^https:\/\//, "") })}
               </a>
             )}
           </div>
           {b.declineReason && <p className="text-sm text-muted">{t("reason", { reason: b.declineReason })}</p>}
         </Card>
 
-        {b.status === "ACCEPTED" && b.meetingUrl && (
+        {live && b.meetingUrl && (
           <section className="grid gap-1.5">
             <Overline>{t("visio")}</Overline>
             <div className="flex items-center gap-2 rounded-md border-2 border-line-strong bg-raised py-1.5 pr-1.5 pl-3.5">
@@ -94,7 +99,7 @@ async function SessionData({ params }: { params: Promise<{ id: string }> }) {
               <Stars value={b.rating} />
               <span className="text-ink">{t("ratingValue", { rating: b.rating })}</span>
             </p>
-            {b.ratingComment && <p className="text-sm whitespace-pre-line">« {b.ratingComment} »</p>}
+            {b.ratingComment && <p className="text-sm whitespace-pre-line">{t("ratingComment", { comment: b.ratingComment })}</p>}
           </Card>
         )}
 
@@ -123,7 +128,7 @@ async function SessionData({ params }: { params: Promise<{ id: string }> }) {
           <AnswerRequest id={b.id} name={b.mentee.name} block />
         ) : (
           <>
-            {b.status === "ACCEPTED" && b.meetingUrl && (
+            {live && b.meetingUrl && (
               <ButtonLink href={b.meetingUrl} target="_blank" rel="noreferrer" size="lg" icon="video" block>
                 {t("join")}
               </ButtonLink>
@@ -131,7 +136,7 @@ async function SessionData({ params }: { params: Promise<{ id: string }> }) {
             <SessionActions
               id={b.id}
               cancellable={active && future}
-              calendar={b.status === "ACCEPTED" ? { startsAt: b.startsAt, minutes: b.minutes, title: t("calendarTitle", { name: other.name }), description: `${b.topic}\n\n${b.problem}`, url: b.meetingUrl } : null}
+              calendar={live ? { startsAt: b.startsAt, minutes: b.minutes, title: t("calendarTitle", { name: other.name }), description: `${b.topic}\n\n${b.problem}`, url: b.meetingUrl } : null}
             />
             {!mentor && b.status !== "ACCEPTED" && (
               <ButtonLink href="/mentorat" variant="secondary" block>
