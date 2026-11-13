@@ -114,6 +114,10 @@
     "Seuls les membres du projet programment un événement.": "Only project members can schedule an event.",
     "Seuls les membres du projet ouvrent un salon.": "Only project members can open a room.",
     "Seul un groupe a un nom et une photo.": "Only a group has a name and a photo.",
+    "Le message auquel tu réponds est introuvable.": "The message you are replying to cannot be found.",
+    "On épingle un message dans un groupe.": "Messages are pinned in a group.",
+    "Seul le responsable du groupe épingle un message.": "Only the group’s owner can pin a message.",
+    "Ce testeur a déjà envoyé son rapport : il reste dans le groupe.": "This tester has already sent their report: they stay in the group.",
     "Tu as déjà une séance à cette heure. Choisis un autre créneau.": "You already have a session at that time. Pick another slot.",
     "Seul le responsable du groupe peut le modifier.": "Only the group’s owner can edit it.",
     "La photo du groupe est une image PNG, JPEG ou WebP.": "The group photo is a PNG, JPEG or WebP image.",
@@ -334,6 +338,7 @@
     { "fr": "^Le premier message fait (\\d+) caractères au plus\\.$", "en": "The first message can be $1 characters at most." },
     { "fr": "^Un message fait (\\d+) caractères au plus\\.$", "en": "A message can be $1 characters at most." },
     { "fr": "^Le nom du groupe fait (\\d+) caractères au plus\\.$", "en": "The group name can be $1 characters at most." },
+    { "fr": "^La description fait (\\d+) caractères au plus\\.$", "en": "The description can be $1 characters at most." },
     { "fr": "^(\\d+) caractères au plus\\.$", "en": "$1 characters at most." }
   ]
 }

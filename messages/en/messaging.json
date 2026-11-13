@@ -103,7 +103,18 @@
       "appAuthor": "{name} · author of the app",
       "attachCapture": "Attach a screenshot",
       "placeholderTest": "Write feedback…",
-      "taskError": "The task was not saved. Try again."
+      "taskError": "The task was not saved. Try again.",
+      "reply": "Reply",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "pinFailed": "The pin was not saved. Try again.",
+      "replyingTo": "Replying to {name}",
+      "cancelReply": "Cancel the reply",
+      "mentionList": "Members to mention",
+      "pinnedMessages": "Pinned messages",
+      "pinnedCount": "{count, plural, one {# pinned message} other {# pinned messages}}",
+      "pinnedAll": "See all",
+      "pinnedLess": "Show less"
     },
     "add": {
       "title": "Add participants",
@@ -145,7 +156,9 @@
       "removeTitle": "Remove {name} from the group?",
       "removeText": "{name} will no longer see the group’s messages. You can add them again later.",
       "openTeam": "See my team",
-      "linkedTeam": "This group is your hackathon team’s discussion: join or leave it by joining or leaving the team."
+      "linkedTeam": "This group is your hackathon team’s discussion: join or leave it by joining or leaving the team.",
+      "linkedTestOwner": "This group follows the test listing: testers join it by joining the test. You can rename it, describe it, change its photo and remove a tester.",
+      "removeTesterText": "{name} leaves the group and the test. Their place opens up for another tester."
     },
     "group": {
       "metaTitle": "New group",
@@ -173,13 +186,22 @@
       "addLabel": "Add {name}",
       "submit": "Create the group",
       "submitting": "Creating…",
-      "error": "The group wasn’t created. Try again."
+      "error": "The group wasn’t created. Try again.",
+      "description": "Description",
+      "descriptionHint": "Optional: what the group is about, its rules.",
+      "photoAdd": "Add a group photo",
+      "photoChange": "Change the group photo",
+      "photoTooBig": "This image is still too heavy. Pick another one."
     },
     "bubble": {
       "sending": "Sending…",
       "failed": "Not sent",
       "report": "Report this message",
-      "retry": "Retry"
+      "retry": "Retry",
+      "pinned": "Pinned",
+      "voice": "Voice message",
+      "file": "File",
+      "member": "Member"
     },
     "report": {
       "title": "Report {subject}",

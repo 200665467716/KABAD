@@ -4,27 +4,34 @@ import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
-import { MessageBubble, SystemLine } from "@/components/features/Thread";
+import { MessageBubble, Quote, SystemLine, type BubbleAction } from "@/components/features/Thread";
 import { AttachButton, AttachmentView, VoiceRecorder } from "@/components/features/messaging/Attachments";
 import { ReportSheet } from "@/components/features/ReportSheet";
 import { TopBar } from "@/components/shell/TopBar";
 import { Button, buttonClass, ButtonLink, IconButton } from "@/components/ui/Button";
 import { ConfirmSheet, Sheet } from "@/components/ui/Controls";
 import { Alert, Avatar, DaySeparator } from "@/components/ui/Display";
-import { Select, TextField } from "@/components/ui/Field";
+import { Select, TextArea, TextField } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 import { GROUP_PHOTO_SIZE } from "@/lib/attachments";
 import { initials } from "@/lib/format";
 import { squareImage } from "@/lib/image-resize";
-import type { ChatMessage, Contact, ConversationDetail } from "@/lib/messaging-types";
+import { mentionQuery } from "@/lib/mentions";
+import type { ChatMessage, ChatQuote, Contact, ConversationDetail } from "@/lib/messaging-types";
 import { useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
-import { GROUP_NAME_MAX, GROUP_THEMES, MESSAGE_MAX_LENGTH } from "@/lib/schemas";
+import { GROUP_DESCRIPTION_MAX, GROUP_NAME_MAX, GROUP_THEMES, MESSAGE_MAX_LENGTH } from "@/lib/schemas";
 import { useChatTime } from "../useChatTime";
 
 type Shown = ChatMessage & { status?: "sending" | "failed" };
 
 const ACCENTS = ["brand", "accent"] as const;
+
+/** A message quoted above a reply, as the server quotes it (src/server/messaging.ts). */
+function toQuote(m: ChatMessage): ChatQuote {
+  const kind = m.attachment?.kind ?? "TEXT";
+  return { id: m.id, authorId: m.authorId, authorName: m.authorName, body: (m.body || (kind === "FILE" ? (m.attachment?.name ?? "") : "")).slice(0, 140), kind, hidden: Boolean(m.hidden) };
+}
 
 function merge(current: Shown[], incoming: ChatMessage[]): Shown[] {
   const out = [...current];
@@ -50,6 +57,12 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   const [adding, setAdding] = useState(false);
   const [people, setPeople] = useState(false);
   const [reportMessage, setReportMessage] = useState<string | null>(null);
+  // The message being answered, quoted above the composer.
+  const [replyTo, setReplyTo] = useState<Shown | null>(null);
+  // Where the cursor stands in the draft: an @ just before it opens the list of members to mention.
+  const [cursor, setCursor] = useState(0);
+  const [pinError, setPinError] = useState<string | null>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
   const list = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
@@ -116,9 +129,9 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
     };
   }, [detail.id]);
 
-  async function deliver(body: string, clientId: string) {
+  async function deliver(body: string, clientId: string, replyToId?: string) {
     try {
-      const saved = await api<ChatMessage>(`/api/conversations/${detail.id}/messages`, { body: { body, clientId } });
+      const saved = await api<ChatMessage>(`/api/conversations/${detail.id}/messages`, { body: { body, clientId, ...(replyToId ? { replyToId } : {}) } });
       setMessages((cur) => merge(cur, [saved]));
     } catch (e) {
       setMessages((cur) => cur.map((m) => (m.clientId === clientId ? { ...m, status: "failed" } : m)));
@@ -134,9 +147,11 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
     setError(null);
     const clientId = crypto.randomUUID();
     stickToBottom.current = true;
-    setMessages((cur) => [...cur, { id: `tmp-${clientId}`, clientId, authorId: me.id, authorName: me.name, body, system: false, createdAt: new Date().toISOString(), status: "sending" }]);
+    const quote = replyTo ? toQuote(replyTo) : null;
+    setMessages((cur) => [...cur, { id: `tmp-${clientId}`, clientId, authorId: me.id, authorName: me.name, body, system: false, createdAt: new Date().toISOString(), status: "sending", replyTo: quote }]);
     setDraft("");
-    deliver(body, clientId);
+    setReplyTo(null);
+    deliver(body, clientId, quote?.id);
   }
 
   /** Sends a file or a voice note, shown at once as "sending", like a text message. */
@@ -149,6 +164,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
     form.set("kind", kind);
     form.set("clientId", clientId);
     if (seconds) form.set("seconds", String(seconds));
+    if (replyTo) form.set("replyToId", replyTo.id);
+    setReplyTo(null);
     setMessages((cur) => [...cur, { id: `tmp-${clientId}`, clientId, authorId: me.id, authorName: me.name, body: kind === "VOICE" ? t("voiceSending") : file.name, system: false, createdAt: new Date().toISOString(), status: "sending" }]);
     try {
       const saved = await api<ChatMessage>(`/api/conversations/${detail.id}/attachments`, { body: form });
@@ -161,7 +178,48 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
 
   function retry(m: Shown) {
     setMessages((cur) => cur.map((x) => (x.clientId === m.clientId ? { ...x, status: "sending" } : x)));
-    deliver(m.body, m.clientId!);
+    deliver(m.body, m.clientId!, m.replyTo?.id);
+  }
+
+  /** Answer a message: it is quoted above the composer, and the cursor goes there. */
+  function answer(m: Shown) {
+    setReplyTo(m);
+    input.current?.focus();
+  }
+
+  /** The owner pins or unpins a message; everyone sees the change through the group's line. */
+  async function pin(m: Shown, pinned: boolean) {
+    setPinError(null);
+    try {
+      await api(`/api/conversations/${detail.id}/messages/${m.id}/pin`, { method: "PUT", body: { pinned } });
+      await reload();
+    } catch (e) {
+      setPinError(e instanceof ApiError ? e.message : t("pinFailed"));
+    }
+  }
+
+  /** Brings a quoted message into view, when it is among the loaded ones. */
+  function showMessage(id: string) {
+    const el = document.getElementById(`m-${id}`);
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.classList.add("ring-2", "ring-focus");
+    setTimeout(() => el.classList.remove("ring-2", "ring-focus"), 1600);
+  }
+
+  /** Puts « @Prénom » in place of the word being typed after @. */
+  function mention(name: string) {
+    const q = mentionQuery(draft, cursor);
+    if (!q) return;
+    const handle = `@${name} `;
+    const next = draft.slice(0, q.start) + handle + draft.slice(cursor);
+    setDraft(next);
+    const at = q.start + handle.length;
+    setCursor(at);
+    requestAnimationFrame(() => {
+      input.current?.focus();
+      input.current?.setSelectionRange(at, at);
+    });
   }
 
   async function loadOlder() {
@@ -191,6 +249,20 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   // MS5: each message of a group shows its author's photo (initials for a member who left).
   const photos = new Map(detail.members.map((m) => [m.id, m.photo]));
   const length = Array.from(draft).length;
+  // Mentions: the group's members, highlighted in the messages; a mention of me stands out more.
+  const mentions = group ? { members: detail.members.map((m) => ({ id: m.id, name: m.name })), meId: me.id } : undefined;
+  const typing = group ? mentionQuery(draft, cursor) : null;
+  // Two members with the same first name are mentioned by their full name.
+  const firstNames = others.map((o) => o.name.split(" ")[0]);
+  const handleOf = (name: string) => (firstNames.filter((f) => f === name.split(" ")[0]).length > 1 ? name : name.split(" ")[0]);
+  const plain = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+  const suggestions = typing ? others.filter((o) => plain(o.name).split(" ").some((part) => part.startsWith(plain(typing.query)))).slice(0, 5) : [];
+  const canPin = group && detail.isOwner;
+  const actionsFor = (m: Shown): BubbleAction[] =>
+    m.id.startsWith("tmp-") || m.hidden
+      ? []
+      : [{ label: t("reply"), onClick: () => answer(m) }, ...(canPin ? [{ label: m.pinned ? t("unpin") : t("pin"), onClick: () => pin(m, !m.pinned) }] : [])];
+  const quoteOf = (m: Shown, mine: boolean) => m.replyTo && <Quote quote={m.replyTo} mine={mine} onOpen={() => showMessage(m.replyTo!.id)} />;
 
   return (
     <div className="flex h-dvh flex-col">
@@ -217,6 +289,14 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
       />
 
       {test && <PinnedTasks key={test.id} test={test} />}
+      {group && detail.pinned.length > 0 && <PinnedMessages pinned={detail.pinned} canPin={canPin} onOpen={showMessage} onUnpin={(m) => pin(m, false)} />}
+      {pinError && (
+        <div className="mx-auto mt-2 w-[calc(100%-28px)] max-w-[732px]">
+          <Alert tone="danger" role="alert">
+            {pinError}
+          </Alert>
+        </div>
+      )}
 
       <div
         ref={list}
@@ -244,12 +324,39 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
                 {m.system ? (
                   <SystemLine>{m.body}</SystemLine>
                 ) : group && !mine ? (
-                  <div className="grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2">
+                  <div id={`m-${m.id}`} className="grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2 rounded-[18px] transition-shadow">
                     <Avatar initials={initials(m.authorName ?? "?")} src={photos.get(m.authorId ?? "")} size="sm" />
-                    <MessageBubble text={m.body} hidden={m.hidden} attachment={m.attachment && <AttachmentView attachment={m.attachment} />} time={time.clock(m.createdAt)} author={test && m.authorId === test.ownerId ? t("appAuthor", { name: m.authorName ?? t("member") }) : (m.authorName ?? t("member"))} authorTone={tone(m.authorId)} onReport={() => setReportMessage(m.id)} />
+                    <MessageBubble
+                      text={m.body}
+                      hidden={m.hidden}
+                      attachment={m.attachment && <AttachmentView attachment={m.attachment} />}
+                      quote={quoteOf(m, false)}
+                      time={time.clock(m.createdAt)}
+                      author={test && m.authorId === test.ownerId ? t("appAuthor", { name: m.authorName ?? t("member") }) : (m.authorName ?? t("member"))}
+                      authorTone={tone(m.authorId)}
+                      actions={actionsFor(m)}
+                      mentions={mentions}
+                      pinned={m.pinned}
+                      onReport={() => setReportMessage(m.id)}
+                    />
                   </div>
                 ) : (
-                  <MessageBubble text={m.body} hidden={m.hidden} attachment={m.attachment && <AttachmentView attachment={m.attachment} mine={mine} />} time={time.clock(m.createdAt)} mine={mine} status={m.status} onRetry={() => retry(m)} onReport={mine ? undefined : () => setReportMessage(m.id)} />
+                  <div id={`m-${m.id}`} className={mine ? "grid justify-items-end rounded-[18px] transition-shadow" : "grid justify-items-start rounded-[18px] transition-shadow"}>
+                    <MessageBubble
+                      text={m.body}
+                      hidden={m.hidden}
+                      attachment={m.attachment && <AttachmentView attachment={m.attachment} mine={mine} />}
+                      quote={quoteOf(m, mine)}
+                      time={time.clock(m.createdAt)}
+                      mine={mine}
+                      status={m.status}
+                      onRetry={() => retry(m)}
+                      actions={actionsFor(m)}
+                      mentions={mentions}
+                      pinned={m.pinned}
+                      onReport={mine ? undefined : () => setReportMessage(m.id)}
+                    />
+                  </div>
                 )}
               </Fragment>
             );
@@ -264,12 +371,38 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
               {blocked ? (detail.blocked === "by_them" ? t("blockedByThem") : t("blockedByMe")) : error}
             </Alert>
           )}
+          {replyTo && (
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+              <div className="grid min-w-0 gap-0.5">
+                <span className="text-xs font-extrabold text-brand-text">{t("replyingTo", { name: replyTo.authorId === me.id ? t("you") : (replyTo.authorName ?? t("member")) })}</span>
+                <Quote quote={toQuote(replyTo)} onOpen={() => showMessage(replyTo.id)} />
+              </div>
+              <IconButton icon="close" label={t("cancelReply")} onClick={() => setReplyTo(null)} />
+            </div>
+          )}
+          {suggestions.length > 0 && (
+            <ul role="listbox" aria-label={t("mentionList")} className="m-0 grid list-none gap-0.5 rounded-lg border-2 border-line-strong bg-raised p-1">
+              {suggestions.map((o) => (
+                <li key={o.id} role="option" aria-selected={false}>
+                  <button type="button" onClick={() => mention(handleOf(o.name))} className="flex min-h-11 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm font-bold hover:bg-bg">
+                    <Avatar initials={initials(o.name)} src={o.photo} size="sm" />
+                    {o.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="flex items-end gap-1">
             <AttachButton disabled={blocked && !group} onPick={(f) => upload(f, "FILE")} label={test ? t("attachCapture") : undefined} icon={test ? "image" : undefined} />
             <textarea
+              ref={input}
               rows={Math.min(5, Math.max(1, draft.split("\n").length))}
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                setCursor(e.target.selectionStart ?? e.target.value.length);
+              }}
+              onSelect={(e) => setCursor(e.currentTarget.selectionStart ?? 0)}
               onKeyDown={onKey}
               maxLength={MESSAGE_MAX_LENGTH}
               disabled={blocked && !group}
@@ -296,6 +429,42 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
       {group && <MembersSheet open={people} onClose={() => setPeople(false)} detail={detail} meId={me.id} onChanged={reload} onLeft={() => router.replace("/messages")} />}
       {manageable && <AddMembersSheet open={adding} onClose={() => setAdding(false)} conversationId={detail.id} memberIds={detail.members.map((m) => m.id)} onAdded={reload} />}
     </div>
+  );
+}
+
+/** The messages pinned by the group's owner, the last pinned first. A tap brings one into view. */
+function PinnedMessages({ pinned, canPin, onOpen, onUnpin }: { pinned: ChatMessage[]; canPin: boolean; onOpen: (id: string) => void; onUnpin: (m: ChatMessage) => void }) {
+  const t = useTranslations("messaging.conversation");
+  const tb = useTranslations("messaging.bubble");
+  const [open, setOpen] = useState(false);
+  const shown = open ? pinned : pinned.slice(0, 1);
+  return (
+    <section aria-label={t("pinnedMessages")} className="mx-auto mt-3 grid w-[calc(100%-28px)] max-w-[732px] gap-1.5 rounded-lg border-2 border-line-strong bg-raised px-3.5 py-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-xs font-extrabold tracking-wide text-muted uppercase">
+          <Icon name="flag" size={16} />
+          {t("pinnedCount", { count: pinned.length })}
+        </span>
+        {pinned.length > 1 && (
+          <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="min-h-9 text-xs font-extrabold text-brand-text">
+            {open ? t("pinnedLess") : t("pinnedAll")}
+          </button>
+        )}
+      </div>
+      {shown.map((m) => (
+        <div key={m.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <button type="button" onClick={() => onOpen(m.id)} className="grid min-w-0 text-left">
+            <span className="truncate text-xs font-extrabold">{m.authorName ?? tb("member")}</span>
+            <span className="line-clamp-2 text-sm">{m.body || (m.attachment?.kind === "VOICE" ? tb("voice") : (m.attachment?.name ?? tb("file")))}</span>
+          </button>
+          {canPin && (
+            <button type="button" onClick={() => onUnpin(m)} className="min-h-9 px-1 text-xs font-bold text-muted underline-offset-2 hover:underline">
+              {t("unpin")}
+            </button>
+          )}
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -438,8 +607,10 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Only the owner of a private group changes its name, theme and photo.
-  const editable = detail.isOwner && !detail.linked;
+  // The owner changes the name, theme, description and photo of any group, linked ones included (P19).
+  const editable = detail.isOwner;
+  // Members are removed from a private group, or from a testers' group (they leave the test too).
+  const canRemove = detail.isOwner && (!detail.linked || detail.linked.kind === "test");
 
   async function run(key: string, call: () => Promise<unknown>, after: () => void) {
     setBusy(key);
@@ -494,8 +665,9 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
             </Button>
           )}
         </div>
+        {detail.description && !editing && <p className="text-[15px] leading-[22px] whitespace-pre-line">{detail.description}</p>}
         {editable && editing && <GroupEditor detail={detail} onDone={() => setEditing(false)} onChanged={onChanged} />}
-        {detail.linked && <Alert tone="info">{detail.linked.kind === "test" ? t("linkedTest") : detail.linked.kind === "team" ? t("linkedTeam") : t("linkedProject")}</Alert>}
+        {detail.linked && <Alert tone="info">{detail.linked.kind === "test" ? (detail.isOwner ? t("linkedTestOwner") : t("linkedTest")) : detail.linked.kind === "team" ? t("linkedTeam") : t("linkedProject")}</Alert>}
         <h3 className="text-sm font-extrabold">{t("title", { count: detail.members.length })}</h3>
         {confirmLeave && (
           <Alert tone="info">
@@ -513,7 +685,7 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
                 </Link>
                 {m.owner && <span className="text-xs text-muted">{t("owner")}</span>}
               </span>
-              {detail.isOwner && !detail.linked && m.id !== meId ? (
+              {canRemove && m.id !== meId ? (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -545,19 +717,23 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
             run(m.id, () => api(`/api/groups/${detail.id}/members/${m.id}`, { method: "DELETE" }), onChanged);
           }}
           title={t("removeTitle", { name: (removing?.name ?? "").split(" ")[0] })}
-          text={t("removeText", { name: (removing?.name ?? "").split(" ")[0] })}
+          text={detail.linked?.kind === "test" ? t("removeTesterText", { name: (removing?.name ?? "").split(" ")[0] }) : t("removeText", { name: (removing?.name ?? "").split(" ")[0] })}
           confirm={t("remove")}
         />
     </>
   );
 }
 
-/** The owner renames the group, changes its theme and its photo. The photo is cropped and reduced before it is sent. */
+/**
+ * The owner renames the group, changes its theme, its description and its photo. The photo is cropped and reduced
+ * before it is sent. A linked group keeps the theme of its source (« Test », « Rise-Up »…).
+ */
 function GroupEditor({ detail, onDone, onChanged }: { detail: ConversationDetail; onDone: () => void; onChanged: () => void }) {
   const t = useTranslations("messaging.people");
   const tg = useTranslations("messaging.group");
   const [name, setName] = useState(detail.title);
   const [theme, setTheme] = useState(detail.theme ?? "");
+  const [description, setDescription] = useState(detail.description ?? "");
   const [busy, setBusy] = useState<"save" | "photo" | null>(null);
   const [error, setError] = useState<{ field?: string; text: string } | null>(null);
   const file = useRef<HTMLInputElement>(null);
@@ -578,7 +754,7 @@ function GroupEditor({ detail, onDone, onChanged }: { detail: ConversationDetail
 
   function save(e: FormEvent) {
     e.preventDefault();
-    run("save", () => api(`/api/groups/${detail.id}`, { method: "PATCH", body: { name, theme: theme || null } }), onDone);
+    run("save", () => api(`/api/groups/${detail.id}`, { method: "PATCH", body: { name, description: description.trim() || null, ...(detail.linked ? {} : { theme: theme || null }) } }), onDone);
   }
 
   function pickPhoto(e: ChangeEvent<HTMLInputElement>) {
@@ -607,15 +783,28 @@ function GroupEditor({ detail, onDone, onChanged }: { detail: ConversationDetail
       </div>
       {error?.field === "photo" && <p className="text-sm font-extrabold text-danger">{error.text}</p>}
       <TextField id="group-name" label={tg("name")} value={name} maxLength={GROUP_NAME_MAX} onChange={(e) => setName(e.target.value)} error={error?.field === "name" ? error.text : undefined} />
-      <Select id="group-theme" label={tg("theme")} value={theme} onChange={(e) => setTheme(e.target.value)}>
-        <option value="">{t("noTheme")}</option>
-        {GROUP_THEMES.map((g, i) => (
-          <option key={g} value={g}>
-            {tg(`themes.t${i}` as "themes.t0")}
-          </option>
-        ))}
-      </Select>
-      {error && !["photo", "name"].includes(error.field ?? "") && (
+      <TextArea
+        id="group-description"
+        label={tg("description")}
+        hint={tg("descriptionHint")}
+        rows={3}
+        maxLength={GROUP_DESCRIPTION_MAX}
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        counter={`${description.length} / ${GROUP_DESCRIPTION_MAX}`}
+        error={error?.field === "description" ? error.text : undefined}
+      />
+      {!detail.linked && (
+        <Select id="group-theme" label={tg("theme")} value={theme} onChange={(e) => setTheme(e.target.value)}>
+          <option value="">{t("noTheme")}</option>
+          {GROUP_THEMES.map((g, i) => (
+            <option key={g} value={g}>
+              {tg(`themes.t${i}` as "themes.t0")}
+            </option>
+          ))}
+        </Select>
+      )}
+      {error && !["photo", "name", "description"].includes(error.field ?? "") && (
         <Alert tone="danger" role="alert">
           {error.text}
         </Alert>

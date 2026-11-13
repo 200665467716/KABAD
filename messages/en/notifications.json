@@ -43,7 +43,8 @@
       "teamInvited": " invites you to join team {team} ({title}).",
       "teamInviteAccepted": " joined your team {team} ({title}).",
       "teamInviteDeclined": " won’t be joining your team {team} ({title}).",
-      "sessionRated": " rated your session “{topic}”: {rating} out of 5."
+      "sessionRated": " rated your session “{topic}”: {rating} out of 5.",
+      "mentioned": " mentioned you in “{title}”."
     }
   }
 }

@@ -63,6 +63,12 @@ function LiveUnread() {
   useRealtime("conversation:changed", soon);
   useRealtime("notification:new", soon);
   useRealtimeReconnect(soon);
+  // Back on the tab, the counts are read again: an event missed while away is caught up.
+  useEffect(() => {
+    const onVisible = () => document.visibilityState === "visible" && soon();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [soon]);
   return null;
 }
 

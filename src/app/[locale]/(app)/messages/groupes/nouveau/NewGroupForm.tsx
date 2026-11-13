@@ -2,17 +2,19 @@
 
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { ToggleChip } from "@/components/ui/Controls";
 import { Alert, Avatar, Badge, Overline } from "@/components/ui/Display";
-import { TextField } from "@/components/ui/Field";
+import { TextArea, TextField } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
+import { GROUP_PHOTO_MAX_BYTES, GROUP_PHOTO_SIZE } from "@/lib/attachments";
 import { initials } from "@/lib/format";
+import { squareImage } from "@/lib/image-resize";
 import type { Contact } from "@/lib/messaging-types";
-import { GROUP_NAME_MAX, GROUP_THEMES } from "@/lib/schemas";
+import { GROUP_DESCRIPTION_MAX, GROUP_NAME_MAX, GROUP_THEMES } from "@/lib/schemas";
 
 export function NewGroupForm({ contacts }: { contacts: Contact[] }) {
   const t = useTranslations("messaging.group");
@@ -20,8 +22,28 @@ export function NewGroupForm({ contacts }: { contacts: Contact[] }) {
   const [name, setName] = useState("");
   const [theme, setTheme] = useState<(typeof GROUP_THEMES)[number] | null>(null);
   const [chosen, setChosen] = useState<string[]>([]);
-  const [error, setError] = useState<{ field: "name" | "members" | "form"; text: string } | null>(null);
+  const [description, setDescription] = useState("");
+  // The photo, already cropped and reduced in the browser; sent once the group exists.
+  const [photo, setPhoto] = useState<Blob | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [error, setError] = useState<{ field: "name" | "members" | "photo" | "form"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const file = useRef<HTMLInputElement>(null);
+
+  useEffect(() => () => {
+    if (preview) URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  async function pickPhoto(e: ChangeEvent<HTMLInputElement>) {
+    const chosenFile = e.target.files?.[0];
+    e.target.value = "";
+    if (!chosenFile) return;
+    const small = await squareImage(chosenFile, GROUP_PHOTO_SIZE).catch(() => chosenFile);
+    if (small.size > GROUP_PHOTO_MAX_BYTES) return setError({ field: "photo", text: t("photoTooBig") });
+    setError(null);
+    setPhoto(small);
+    setPreview(URL.createObjectURL(small));
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -30,7 +52,13 @@ export function NewGroupForm({ contacts }: { contacts: Contact[] }) {
     setError(null);
     setBusy(true);
     try {
-      const { id } = await api<{ id: string }>("/api/groups", { body: { name, memberIds: chosen, ...(theme ? { theme } : {}) } });
+      const { id } = await api<{ id: string }>("/api/groups", { body: { name, memberIds: chosen, ...(theme ? { theme } : {}), ...(description.trim() ? { description } : {}) } });
+      // The group exists: its photo follows. A photo that fails does not lose the group.
+      if (photo) {
+        const form = new FormData();
+        form.append("photo", photo, "photo");
+        await api(`/api/groups/${id}/photo`, { method: "PUT", body: form }).catch(() => {});
+      }
       router.replace(`/messages/${id}`);
     } catch (err) {
       setError({ field: "form", text: err instanceof ApiError ? err.message : t("error") });
@@ -52,7 +80,14 @@ export function NewGroupForm({ contacts }: { contacts: Contact[] }) {
         ) : (
           <>
             <div className="flex items-end gap-3">
-              <Avatar initials={<Icon name="users" />} size="lg" square tone="neutral" />
+              <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={pickPhoto} />
+              {/* A tap on the square picks the group's photo. */}
+              <button type="button" onClick={() => file.current?.click()} aria-label={photo ? t("photoChange") : t("photoAdd")} className="relative shrink-0 rounded-lg">
+                <Avatar initials={<Icon name="image" />} src={preview} size="lg" square tone="neutral" />
+                <span aria-hidden="true" className="absolute -right-1 -bottom-1 grid size-6 place-items-center rounded-full border-2 border-raised bg-ink text-raised">
+                  <Icon name="plus" size={16} className="size-3.5" />
+                </span>
+              </button>
               <TextField
                 id="name"
                 name="name"
@@ -65,6 +100,17 @@ export function NewGroupForm({ contacts }: { contacts: Contact[] }) {
                 error={error?.field === "name" ? error.text : undefined}
               />
             </div>
+            {error?.field === "photo" && <p className="text-sm font-extrabold text-danger">{error.text}</p>}
+            <TextArea
+              id="description"
+              label={t("description")}
+              hint={t("descriptionHint")}
+              rows={3}
+              maxLength={GROUP_DESCRIPTION_MAX}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              counter={`${description.length} / ${GROUP_DESCRIPTION_MAX}`}
+            />
             <fieldset className="grid gap-2">
               <legend className="mb-2 text-sm font-extrabold">{t("theme")}</legend>
               <div className="flex flex-wrap gap-2">

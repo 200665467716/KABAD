@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink, IconButton } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Controls";
@@ -62,7 +62,8 @@ export function Inbox({
       const updated: ConversationSummary = {
         ...target,
         lastMessageAt: message.createdAt,
-        unread: message.authorId !== me && !message.system ? target.unread + 1 : target.unread,
+        // My own message means I read the conversation up to it (the server moves my reading mark too).
+        unread: message.authorId === me ? 0 : message.system ? target.unread : target.unread + 1,
         last: { body: message.body, authorId: message.authorId, authorName: message.authorName, system: message.system, attachment: message.attachment?.kind ?? null },
       };
       return [updated, ...list.filter((c) => c.id !== conversationId)];
@@ -73,6 +74,17 @@ export function Inbox({
   useRealtime("invitation:new", () => refresh());
   useRealtime("invitation:answered", () => refresh());
   useRealtimeReconnect(refresh);
+  // The page may come from the browser's cache (back from a conversation, a group just created):
+  // it reads the list again when it opens and when the tab comes back to the front.
+  useEffect(() => {
+    const first = setTimeout(refresh, 0);
+    const onVisible = () => document.visibilityState === "visible" && refresh();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearTimeout(first);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refresh]);
 
   // The search looks at the name of the person or of the group, without accents or capitals.
   const plain = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();

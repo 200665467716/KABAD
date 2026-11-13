@@ -66,6 +66,17 @@ io.on("connection", (socket) => {
 
 const rooms = (ids) => ids.map((id) => `user:${id}`);
 
+/** Same rules as toQuote on the web server: 140 characters, a removed message stays removed. */
+const HIDDEN_MESSAGE = "Message retiré par la modération.";
+const quote = (m) => ({
+  id: m.replyId,
+  authorId: m.replyAuthorId,
+  authorName: m.replyAuthorName,
+  body: m.replyHiddenAt ? HIDDEN_MESSAGE : (m.replyBody || (m.replyKind === "FILE" ? (m.replyFileName ?? "") : "")).slice(0, 140),
+  kind: m.replyKind === "VOICE" ? "VOICE" : m.replyKind === "FILE" ? "FILE" : "TEXT",
+  hidden: Boolean(m.replyHiddenAt),
+});
+
 async function handle(event) {
   const to = rooms(event.recipients ?? []);
   if (to.length === 0) return;
@@ -73,8 +84,11 @@ async function handle(event) {
     case "message": {
       const { rows } = await pool.query(
         `SELECT m.id, m."authorId", u.name AS "authorName", m.body, m.kind, m."createdAt", m."clientId",
-                a.id AS "attachmentId", a.name AS "attachmentName", a.mime, a.size, a.seconds
+                a.id AS "attachmentId", a.name AS "attachmentName", a.mime, a.size, a.seconds,
+                r.id AS "replyId", r."authorId" AS "replyAuthorId", ru.name AS "replyAuthorName", r.body AS "replyBody",
+                r.kind AS "replyKind", r."hiddenAt" AS "replyHiddenAt", ra.name AS "replyFileName"
          FROM "Message" m LEFT JOIN "User" u ON u.id = m."authorId" LEFT JOIN "Attachment" a ON a."messageId" = m.id
+         LEFT JOIN "Message" r ON r.id = m."replyToId" LEFT JOIN "User" ru ON ru.id = r."authorId" LEFT JOIN "Attachment" ra ON ra."messageId" = r.id
          WHERE m.id = $1`,
         [event.messageId],
       );
@@ -92,6 +106,8 @@ async function handle(event) {
           clientId: m.clientId,
           // Files and voice notes: only their description travels, the bytes are read from /api/attachments.
           attachment: m.attachmentId ? { id: m.attachmentId, kind: m.kind === "VOICE" ? "VOICE" : "FILE", name: m.attachmentName, mime: m.mime, size: m.size, seconds: m.seconds } : null,
+          // The answered message, quoted as on the server (src/server/messaging.ts, toQuote).
+          replyTo: m.replyId ? quote(m) : null,
         },
       });
       break;

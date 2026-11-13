@@ -10,6 +10,8 @@ import {
   listConversations,
   listInvitations,
   markRead,
+  pinMessage,
+  removeGroupMember,
   BLOCKED_MESSAGE,
   block,
   REINVITE_AFTER_DAYS,
@@ -21,6 +23,7 @@ import {
   updateGroup,
 } from "@/server/messaging";
 import { createProject } from "@/server/rise";
+import { createTestApp, joinTest } from "@/server/community-tests";
 import { NOTIFY_BATCH } from "@/server/realtime-events";
 import { captureEvents, makeContacts, makeUsers, prisma, resetDb } from "./helpers";
 
@@ -243,10 +246,65 @@ describe("private groups", () => {
     await refused(getGroupPhoto("moussa", id, prisma), "not_found");
   });
 
-  it("the group of a Rise-Up project keeps the name of its project: it is not renamed from the messaging", async () => {
+  it("the owner of a linked group renames and describes it; its members still follow the project", async () => {
     const project = await createProject("kossi", { name: "Forages au Sahel", domain: "WATER", summary: "Une carte des forages.", problem: "x".repeat(40), skills: [] }, prisma);
     const { conversationId } = await prisma.riseProject.findUniqueOrThrow({ where: { id: project.id } });
-    await refused(updateGroup("kossi", conversationId!, { name: "Autre nom" }, prisma), "community_group");
+    await updateGroup("kossi", conversationId!, { name: "Forages : l’équipe", description: "On avance le jeudi." }, prisma);
+    expect(await getConversation("kossi", conversationId!, {}, prisma)).toMatchObject({ title: "Forages : l’équipe", description: "On avance le jeudi.", theme: "Rise-Up" });
+    // Members still come and go through the project, not the messaging.
+    await refused(addGroupMembers("kossi", conversationId!, ["moussa"], prisma), "community_group");
+  });
+
+  it("a group gets a description at its creation and when its owner edits it", async () => {
+    const { id } = await createGroup("kossi", { name: "API Lomé", description: "Revue de code chaque vendredi.", memberIds: ["moussa"] }, prisma);
+    expect((await getConversation("moussa", id, {}, prisma)).description).toBe("Revue de code chaque vendredi.");
+    await updateGroup("kossi", id, { name: "API Lomé", description: "" }, prisma);
+    const g = await getConversation("moussa", id, {}, prisma);
+    expect(g.description).toBeNull();
+    expect(g.messages.at(-1)?.body).toBe("Kossi a changé la description du groupe");
+  });
+
+  it("a reply quotes a message of the same conversation only", async () => {
+    const { id } = await createGroup("kossi", { name: "API Lomé", memberIds: ["moussa", "yao"] }, prisma);
+    const first = await sendMessage("moussa", id, { body: "Qui relit ma PR sur les webhooks ?" }, prisma);
+    const reply = await sendMessage("yao", id, { body: "Moi, ce soir.", replyToId: first.id }, prisma);
+    expect(reply.replyTo).toMatchObject({ id: first.id, authorName: "Moussa", body: "Qui relit ma PR sur les webhooks ?", kind: "TEXT" });
+    expect((await getConversation("kossi", id, {}, prisma)).messages.at(-1)?.replyTo?.id).toBe(first.id);
+    // A message of another conversation cannot be quoted.
+    const { id: other } = await createGroup("kossi", { name: "Autre", memberIds: ["yao"] }, prisma);
+    await refused(sendMessage("yao", other, { body: "Hop", replyToId: first.id }, prisma), "not_found");
+  });
+
+  it("a mention notifies the member mentioned, not the author nor a member who is not mentioned", async () => {
+    const { id } = await createGroup("kossi", { name: "API Lomé", memberIds: ["moussa", "yao"] }, prisma);
+    await sendMessage("kossi", id, { body: "Bienvenue @Moussa ! Et merci @Kossi" }, prisma);
+    const mentioned = await prisma.notification.findMany({ where: { key: "mentioned" } });
+    expect(mentioned.map((n) => n.userId)).toEqual(["moussa"]);
+    expect(mentioned[0]).toMatchObject({ actor: "Kossi", href: `/messages/${id}` });
+  });
+
+  it("only the owner pins a message; pinned messages are listed above the others", async () => {
+    const { id } = await createGroup("kossi", { name: "Testeurs", memberIds: ["moussa"] }, prisma);
+    const rules = await sendMessage("kossi", id, { body: "Consigne : testez sur un vrai téléphone." }, prisma);
+    await refused(pinMessage("moussa", id, rules.id, true, prisma), "forbidden");
+    await pinMessage("kossi", id, rules.id, true, prisma);
+    const g = await getConversation("moussa", id, {}, prisma);
+    expect(g.pinned.map((m) => m.id)).toEqual([rules.id]);
+    expect(g.messages.find((m) => m.id === rules.id)?.pinned).toBe(true);
+    expect(g.messages.at(-1)).toMatchObject({ system: true, body: "Kossi a épinglé un message" });
+    await pinMessage("kossi", id, rules.id, false, prisma);
+    expect((await getConversation("moussa", id, {}, prisma)).pinned).toEqual([]);
+  });
+
+  it("the author of a test edits its testers' group and removes a tester, who leaves the test too", async () => {
+    const app = await createTestApp("kossi", { name: "Marché Vert", platforms: ["ANDROID"], url: "https://x.tg", minutes: 10, slots: 3, pitch: "p", task: "t", steps: ["Créer un compte"], questions: [] }, prisma);
+    await joinTest("moussa", app.id, prisma);
+    const { conversationId } = await prisma.testApp.findUniqueOrThrow({ where: { id: app.id } });
+    await updateGroup("kossi", conversationId!, { name: "Testeurs du jeudi" }, prisma);
+    await refused(removeGroupMember("moussa", conversationId!, "kossi", prisma), "forbidden");
+    await removeGroupMember("kossi", conversationId!, "moussa", prisma);
+    expect(await prisma.testParticipant.count({ where: { testAppId: app.id } })).toBe(0);
+    expect((await getConversation("kossi", conversationId!, {}, prisma)).messages.at(-1)?.body).toBe("Kossi a retiré Moussa du test");
   });
 
   it("only the creator adds participants, and only among their contacts", async () => {

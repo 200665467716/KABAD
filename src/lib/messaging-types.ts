@@ -12,7 +12,13 @@ export type ChatMessage = {
   hidden?: boolean;
   /** A file or a voice note; the body is then an optional caption. */
   attachment?: ChatAttachment | null;
+  /** The message this one answers, quoted above it (an excerpt). */
+  replyTo?: ChatQuote | null;
+  /** Pinned by the group's owner. */
+  pinned?: boolean;
 };
+
+export type ChatQuote = { id: string; authorId: string | null; authorName: string | null; body: string; kind: "TEXT" | "FILE" | "VOICE"; hidden: boolean };
 
 export type ChatAttachment = { id: string; kind: "FILE" | "VOICE"; name: string; mime: string; size: number; seconds: number | null };
 
@@ -39,6 +45,8 @@ export type ConversationDetail = {
   kind: "DIRECT" | "GROUP";
   title: string;
   theme: string | null;
+  /** What the group is about, written by its owner. */
+  description: string | null;
   photo: string | null;
   other: { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string; photo: string | null } | null;
   isOwner: boolean;
@@ -50,6 +58,8 @@ export type ConversationDetail = {
   lastReadAt: string;
   hasMore: boolean;
   messages: ChatMessage[];
+  /** The pinned messages of a group, the last pinned first. */
+  pinned: ChatMessage[];
 };
 
 export type InvitationFrom = { id: string; name: string; city: string; country: string; stack: string[]; years: number; role: "JUNIOR" | "SENIOR" };

@@ -53,13 +53,21 @@ export const answerInvitationSchema = z.object({ accept: z.boolean() });
 export const sendMessageSchema = z.object({
   body: trimmed(1, MESSAGE_MAX_LENGTH, "Le message est vide.", `Un message fait ${MESSAGE_MAX_LENGTH} caractères au plus.`),
   clientId: z.string().min(8).max(64).optional(),
+  /** The message this one answers. */
+  replyToId: id.optional(),
 });
+
+export const pinMessageSchema = z.object({ pinned: z.boolean() });
+
+export const GROUP_DESCRIPTION_MAX = 300;
+const groupDescription = z.string().trim().max(GROUP_DESCRIPTION_MAX, `La description fait ${GROUP_DESCRIPTION_MAX} caractères au plus.`);
 
 export const GROUP_THEMES = ["Fintech", "Hackathon", "Entraide", "Mobile", "Data et IA"] as const;
 
 export const createGroupSchema = z.object({
   name: trimmed(1, GROUP_NAME_MAX, "Donne un nom au groupe.", `Le nom du groupe fait ${GROUP_NAME_MAX} caractères au plus.`),
   theme: z.enum(GROUP_THEMES).optional(),
+  description: groupDescription.optional(),
   memberIds: z.array(id).min(1, "Choisis au moins un participant.").max(GROUP_MAX_MEMBERS - 1, `Un groupe compte ${GROUP_MAX_MEMBERS} membres au plus.`),
 });
 
@@ -67,6 +75,7 @@ export const createGroupSchema = z.object({
 export const updateGroupSchema = z.object({
   name: trimmed(1, GROUP_NAME_MAX, "Donne un nom au groupe.", `Le nom du groupe fait ${GROUP_NAME_MAX} caractères au plus.`),
   theme: z.enum(GROUP_THEMES).nullable().optional(),
+  description: groupDescription.nullable().optional(),
 });
 
 export const addMembersSchema = z.object({

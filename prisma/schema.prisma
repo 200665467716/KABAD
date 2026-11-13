@@ -173,6 +173,8 @@ model Conversation {
   lastMessageAt DateTime         @default(now())
   /// Set each time the group's photo changes: the address of the picture carries it, so browsers refresh it.
   photoAt       DateTime?
+  /// What the group is about, shown in its info sheet.
+  description   String?          @db.VarChar(300)
 
   members  ConversationMember[]
   messages Message[]
@@ -180,6 +182,8 @@ model Conversation {
   project  RiseProject?
   team     Team?
   photo    GroupPhoto?
+  /// The group of a hackathon's paid instructors, run by its organizer.
+  instructorsOf Hackathon?       @relation("HackathonInstructors")
 }
 
 /// The picture of a group. Kept in its own table so that listing conversations never loads its bytes.
@@ -243,9 +247,16 @@ model Message {
   /// Hidden by the moderation team: the members see that a message was removed, not its content.
   hiddenAt       DateTime?
   attachment     Attachment?
+  /// The message this one answers, quoted above it.
+  replyToId      String?
+  replyTo        Message?     @relation("Replies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        Message[]    @relation("Replies")
+  /// Pinned by the group's owner: shown above the messages.
+  pinnedAt       DateTime?
 
   @@unique([authorId, clientId])
   @@index([conversationId, createdAt])
+  @@index([conversationId, pinnedAt])
 }
 
 /// A file sent in a conversation (PDF, image, voice note). Small files only (2 MB), kept in PostgreSQL
@@ -468,6 +479,9 @@ model Hackathon {
   teams         Team[]
   submissions   Submission[]
   missions      InstructorMission[]
+  /// The group where the organizer and the instructors who accepted a mission talk (opened at the first acceptance).
+  instructorsConversationId String?       @unique
+  instructorsConversation   Conversation? @relation("HackathonInstructors", fields: [instructorsConversationId], references: [id], onDelete: SetNull)
 
   @@index([status, startsAt])
 }
