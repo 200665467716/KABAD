@@ -25,7 +25,7 @@ async function Projects({ searchParams }: { searchParams: Promise<Record<string,
   const { defi } = await searchParams;
   const domain = isDomain(defi) ? defi : undefined;
   const [projects, t, format] = await Promise.all([listProjects(user.id, { domain }), getTranslations("rise"), getFormatter()]);
-  const chips: Array<{ value?: RiseDomain; label: string }> = [{ label: t("all") }, ...RISE_DOMAINS.filter((d) => d !== "OTHER").map((d) => ({ value: d, label: t(`domain.${d}`) }))];
+  const chips: Array<{ value?: RiseDomain; label: string }> = [{ label: t("all") }, ...RISE_DOMAINS.map((d) => ({ value: d, label: t(`domain.${d}`) }))];
   const firstLive = projects.findIndex((p) => p.event?.live === true);
   return (
     <>
@@ -48,7 +48,7 @@ async function Projects({ searchParams }: { searchParams: Promise<Record<string,
       {/* R1: the project in direct is the featured card of the screen, with the offset shadow. Only one per screen. */}
       <div className="kb-stagger grid gap-3.5 md:grid-cols-2">
         {projects.map((p, i) => (
-          <ProjectCard key={p.id} p={p} featured={i === firstLive} eventLabel={p.event && !p.event.live ? t("eventOn", { date: format.dateTime(new Date(p.event.startsAt), { weekday: "short", hour: "numeric", minute: "2-digit" }) }) : null} t={t} />
+          <ProjectCard key={p.id} p={p} featured={i === firstLive} eventLabel={p.event && !p.event.live ? t("eventOn", { date: format.dateTime(new Date(p.event.startsAt), { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: user.timeZone }) }) : null} t={t} />
         ))}
       </div>
       {projects.length === 0 && <p className="py-8 text-center text-muted">{t("empty")}</p>}

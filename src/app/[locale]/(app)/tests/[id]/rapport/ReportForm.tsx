@@ -81,8 +81,11 @@ export function ReportForm({ app: t }: { app: TestAppDetail }) {
                   <span key={s.url} className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element -- local previews from the member's own files */}
                     <img src={s.url} alt={tr("shotAlt", { n: i + 1 })} className="h-26 w-16 rounded-md border border-line object-cover" />
-                    <button type="button" onClick={() => setShots((x) => x.filter((y) => y !== s))} aria-label={tr("removeShot", { n: i + 1 })} className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-ink text-bg">
-                      <Icon name="close" size={16} />
+                    <button type="button" onClick={() => setShots((x) => x.filter((y) => y !== s))} aria-label={tr("removeShot", { n: i + 1 })} className="absolute -top-[18px] -right-[18px] grid size-11 place-items-center">
+                      {/* 44 px to tap, a 24 px circle to see. */}
+                      <span className="grid size-6 place-items-center rounded-full bg-ink text-bg">
+                        <Icon name="close" size={16} />
+                      </span>
                     </button>
                   </span>
                 ))}

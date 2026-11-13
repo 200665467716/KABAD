@@ -100,11 +100,26 @@
       "joinProject": "Join the project",
       "by": "Scheduled by {name}",
       "external": "The call opens in a new tab.",
-      "close": "Close the room",
-      "closeTitle": "Close the room?",
-      "closeText": "The room will no longer show as live in the project. The Google Meet call ends on its own side.",
-      "closeConfirm": "Close",
-      "closeError": "The room was not closed. Try again."
+      "cancelled": "Cancelled",
+      "room": {
+        "action": "Close the room",
+        "title": "Close the room?",
+        "text": "The room will no longer show as live in the project. The Google Meet call ends on its own side.",
+        "error": "The room was not closed. Try again."
+      },
+      "end": {
+        "action": "End the event",
+        "title": "End the event?",
+        "text": "The event will no longer show as live in the project. The Google Meet call ends on its own side.",
+        "error": "The event was not ended. Try again."
+      },
+      "cancel": {
+        "action": "Cancel the event",
+        "title": "Cancel the event?",
+        "text": "It leaves the project and its reminder is not sent. The members who were told get a notification.",
+        "keep": "Keep the event",
+        "error": "The event was not cancelled. Try again."
+      }
     },
     "newEvent": {
       "metaTitle": "Schedule an event",
@@ -113,6 +128,7 @@
       "eventTitle": "Title",
       "date": "Date",
       "time": "Time",
+      "timeHint": "{city} time, your profile’s time zone.",
       "duration": "Length",
       "minutes": "{count} min",
       "agenda": "Agenda",

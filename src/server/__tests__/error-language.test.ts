@@ -6,6 +6,7 @@ describe("messages d’erreur en anglais", () => {
     expect(translateError("Requête invalide.", "en")).not.toBe("Requête invalide.");
     expect(translateError("Un groupe compte 50 membres au plus.", "en")).toMatch(/50/);
     expect(translateError("Trop d’essais de connexion. Réessaie dans 5 min.", "en")).not.toMatch(/Trop|Réessaie/);
+    expect(translateError("Tu as publié beaucoup d’applications aujourd’hui. Réessaie dans 24 h.", "en")).toBe("You’ve published a lot of apps today. Try again in 24 h.");
   });
 
   it("laisse le français en français, et un message inconnu tel quel", () => {
