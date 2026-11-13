@@ -158,7 +158,9 @@
       "openTeam": "Voir mon équipe",
       "linkedTeam": "Ce groupe est la discussion de ton équipe de hackathon : on y entre en rejoignant l’équipe et on en sort en la quittant.",
       "linkedTestOwner": "Ce groupe suit l’annonce de test : on y entre en rejoignant le test. Tu peux le renommer, le décrire, changer sa photo et retirer un testeur.",
-      "removeTesterText": "{name} quitte le groupe et le test. Sa place se libère pour un autre testeur."
+      "removeTesterText": "{name} quitte le groupe et le test. Sa place se libère pour un autre testeur.",
+      "openHackathon": "Voir le hackathon",
+      "linkedInstructors": "Ce groupe réunit l’organisateur et les instructeurs du hackathon : on y entre en acceptant une mission."
     },
     "group": {
       "metaTitle": "Nouveau groupe",

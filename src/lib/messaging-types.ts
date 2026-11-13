@@ -51,7 +51,7 @@ export type ConversationDetail = {
   other: { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string; photo: string | null } | null;
   isOwner: boolean;
   /** A community group follows an app to test, a Rise-Up project or a hackathon team (id: the hackathon): one joins or leaves it from there. */
-  linked: { kind: "test" | "rise" | "team"; id: string } | null;
+  linked: { kind: "test" | "rise" | "team" | "instructors"; id: string } | null;
   /** The testers' group of an app (T4): its tasks, the install link, and what this member ticked (null for the author). */
   test: { id: string; url: string; steps: string[]; platforms: Array<"WEB" | "ANDROID" | "IOS">; ownerId: string; doneSteps: number[] | null } | null;
   members: Array<{ id: string; name: string; owner: boolean; photo: string | null }>;

@@ -158,7 +158,9 @@
       "openTeam": "See my team",
       "linkedTeam": "This group is your hackathon team’s discussion: join or leave it by joining or leaving the team.",
       "linkedTestOwner": "This group follows the test listing: testers join it by joining the test. You can rename it, describe it, change its photo and remove a tester.",
-      "removeTesterText": "{name} leaves the group and the test. Their place opens up for another tester."
+      "removeTesterText": "{name} leaves the group and the test. Their place opens up for another tester.",
+      "openHackathon": "See the hackathon",
+      "linkedInstructors": "This group brings together the organizer and the instructors of the hackathon: you join it by accepting a mission."
     },
     "group": {
       "metaTitle": "New group",

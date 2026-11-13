@@ -27,6 +27,14 @@ type Shown = ChatMessage & { status?: "sending" | "failed" };
 
 const ACCENTS = ["brand", "accent"] as const;
 
+/** Where a linked group leads: the test listing, the team, the hackathon or the Rise-Up project it follows. */
+function linkedHref(linked: NonNullable<ConversationDetail["linked"]>) {
+  if (linked.kind === "test") return `/tests/${linked.id}`;
+  if (linked.kind === "team") return `/hackathons/${linked.id}/equipe`;
+  if (linked.kind === "instructors") return `/hackathons/${linked.id}`;
+  return `/rise-up/${linked.id}`;
+}
+
 /** A message quoted above a reply, as the server quotes it (src/server/messaging.ts). */
 function toQuote(m: ChatMessage): ChatQuote {
   const kind = m.attachment?.kind ?? "TEXT";
@@ -633,8 +641,8 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
         title={t("infoTitle")}
         footer={
           detail.linked ? (
-            <ButtonLink href={detail.linked.kind === "test" ? `/tests/${detail.linked.id}` : detail.linked.kind === "team" ? `/hackathons/${detail.linked.id}/equipe` : `/rise-up/${detail.linked.id}`} variant="secondary" size="lg" block>
-              {detail.linked.kind === "test" ? t("openTest") : detail.linked.kind === "team" ? t("openTeam") : t("openProject")}
+            <ButtonLink href={linkedHref(detail.linked)} variant="secondary" size="lg" block>
+              {detail.linked.kind === "test" ? t("openTest") : detail.linked.kind === "team" ? t("openTeam") : detail.linked.kind === "instructors" ? t("openHackathon") : t("openProject")}
             </ButtonLink>
           ) : confirmLeave ? (
             <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
@@ -667,7 +675,11 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
         </div>
         {detail.description && !editing && <p className="text-[15px] leading-[22px] whitespace-pre-line">{detail.description}</p>}
         {editable && editing && <GroupEditor detail={detail} onDone={() => setEditing(false)} onChanged={onChanged} />}
-        {detail.linked && <Alert tone="info">{detail.linked.kind === "test" ? (detail.isOwner ? t("linkedTestOwner") : t("linkedTest")) : detail.linked.kind === "team" ? t("linkedTeam") : t("linkedProject")}</Alert>}
+        {detail.linked && (
+          <Alert tone="info">
+            {detail.linked.kind === "test" ? (detail.isOwner ? t("linkedTestOwner") : t("linkedTest")) : detail.linked.kind === "team" ? t("linkedTeam") : detail.linked.kind === "instructors" ? t("linkedInstructors") : t("linkedProject")}
+          </Alert>
+        )}
         <h3 className="text-sm font-extrabold">{t("title", { count: detail.members.length })}</h3>
         {confirmLeave && (
           <Alert tone="info">

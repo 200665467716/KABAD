@@ -179,6 +179,10 @@ export type HackathonDetail = HackathonSummary & {
   jury: Array<{ id: string; name: string }>;
   instructorsList: Array<{ id: string; name: string }>;
   amJuror: boolean;
+  /** The viewer accepted a mission of instructor for this hackathon. */
+  amInstructor: boolean;
+  /** The group of the organizer and the instructors, for them only. */
+  instructorsGroupId: string | null;
   myTeam: TeamView | null;
   openTeams: OpenTeam[];
   /** Teams whose captain invited the viewer, who has not answered yet. */
@@ -193,6 +197,10 @@ export type MissionView = {
   status: "PROPOSED" | "ACCEPTED" | "DECLINED";
   createdAt: string;
   hackathon: { id: string; title: string; organizerName: string; format: HackathonFormat; city: string | null; startsAt: string; endsAt: string; missionText: string | null };
+  /** The member who created the hackathon, to reach their profile. */
+  organizerId: string | null;
+  /** The instructors' group, once the mission is accepted. */
+  groupId: string | null;
 };
 
 export type RankingRow = { teamId: string; team: string; captainId: string; captain: string; mark: number };

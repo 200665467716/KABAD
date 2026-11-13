@@ -7,7 +7,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { requireAdmin } from "./hackathons";
 import { db, type Db } from "./db";
 import { DomainError, notFound } from "./errors";
-import { HIDDEN_MESSAGE } from "./messaging";
+import { HIDDEN_MESSAGE, leaveCommunityGroup } from "./messaging";
 import { pushNotifications } from "./notifications";
 import { endRoom } from "./rooms";
 import { notify } from "./realtime-events";
@@ -243,8 +243,11 @@ export async function revokeBadge(adminId: string, userId: string, reason: strin
     // The sessions to come are cancelled, and each dev is told: they would otherwise wait for a mentor who no longer is one.
     const sessions = await tx.mentoringBooking.findMany({ where: { mentorId: userId, status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gt: now } }, select: { id: true, menteeId: true, startsAt: true, mentee: { select: { timeZone: true } } } });
     await tx.mentoringBooking.updateMany({ where: { id: { in: sessions.map((b) => b.id) } }, data: { status: "CANCELLED", answeredAt: now } });
-    // An instructor is a badged mentor: the missions of hackathons not finished yet stop with the badge.
-    await tx.instructorMission.updateMany({ where: { mentorId: userId, status: { in: ["PROPOSED", "ACCEPTED"] }, hackathon: { endsAt: { gt: now } } }, data: { status: "DECLINED", answeredAt: now } });
+    // An instructor is a badged mentor: the missions of hackathons not finished yet stop with the badge,
+    // and the mentor leaves the instructors' groups of those hackathons.
+    const missions = await tx.instructorMission.findMany({ where: { mentorId: userId, status: { in: ["PROPOSED", "ACCEPTED"] }, hackathon: { endsAt: { gt: now } } }, select: { id: true, hackathon: { select: { instructorsConversationId: true } } } });
+    await tx.instructorMission.updateMany({ where: { id: { in: missions.map((x) => x.id) } }, data: { status: "DECLINED", answeredAt: now } });
+    for (const x of missions) if (x.hackathon.instructorsConversationId) await leaveCommunityGroup(tx, x.hackathon.instructorsConversationId, userId);
     await pushNotifications(tx, [
       { userId, actor: "KABAD", key: "badgeRevoked", params: { reason }, href: "/mentorat/badge", icon: "info", tone: "neutral" },
       ...sessions.map((b) => ({ userId: b.menteeId, actor: mentor.name, key: "bookingCancelled" as const, params: { at: b.startsAt.toISOString(), tz: b.mentee.timeZone }, href: `/mentorat/seances/${b.id}`, icon: "clock" as const, tone: "neutral" as const })),

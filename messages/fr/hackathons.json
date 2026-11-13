@@ -69,7 +69,9 @@
       "seeResults": "Voir les résultats",
       "join": "Participer",
       "youJudge": "Tu fais partie du jury",
-      "closed": "Inscriptions closes"
+      "closed": "Inscriptions closes",
+      "youInstruct": "Tu es instructeur de ce hackathon",
+      "instructorsGroup": "Groupe des instructeurs"
     },
     "register": {
       "title": "Participer",
@@ -285,7 +287,10 @@
       "declined": "Mission refusée",
       "see": "Voir le hackathon",
       "declineTitle": "Refuser la mission ?",
-      "declineText": "{name} sera prévenu. Tu pourras recevoir d’autres propositions."
+      "declineText": "{name} sera prévenu. Tu pourras recevoir d’autres propositions.",
+      "openGroup": "Ouvrir le groupe des instructeurs",
+      "acceptedText": "Tu es instructeur. Le groupe des instructeurs te réunit avec l’organisateur pour préparer le hackathon.",
+      "acceptedNoGroup": "Tu es instructeur. L’organisateur te contactera pour préparer le hackathon."
     },
     "jury": {
       "title": "Évaluation du jury",

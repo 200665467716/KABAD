@@ -147,6 +147,11 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
                 {t("recruit")}
               </ButtonLink>
             ) : null}
+            {h.canEdit && h.instructorsGroupId && (
+              <ButtonLink href={`/messages/${h.instructorsGroupId}`} variant="secondary" size="sm" icon="message" className="justify-self-start">
+                {t("instructorsGroup")}
+              </ButtonLink>
+            )}
             {user.isAdmin && <AdminActions id={h.id} status={h.status} published={h.published} mentors={mentors} jury={h.jury.map((j) => j.id)} />}
           </section>
         )}
@@ -156,6 +161,18 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
           <ButtonLink href={`/hackathons/${h.id}/equipe`} size="lg" block>
             {h.myTeam.solo ? t("myEntry") : t("myTeam")}
           </ButtonLink>
+        ) : h.amInstructor ? (
+          // P16: an instructor sees their role and their group, not the registration of a participant.
+          <div className="grid gap-2">
+            <Badge tone="success" icon="check" className="justify-self-center">
+              {t("youInstruct")}
+            </Badge>
+            {h.instructorsGroupId && (
+              <ButtonLink href={`/messages/${h.instructorsGroupId}`} size="lg" icon="message" block>
+                {t("instructorsGroup")}
+              </ButtonLink>
+            )}
+          </div>
         ) : h.amJuror && h.status === "JURY" ? (
           <ButtonLink href={`/hackathons/${h.id}/jury`} size="lg" block>
             {t("judge")}

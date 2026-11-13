@@ -195,6 +195,7 @@ export async function getConversation(userId: string, conversationId: string, op
       testApp: { select: { id: true, url: true, steps: true, platforms: true, ownerId: true, participants: { where: { userId }, select: { doneSteps: true } } } },
       project: { select: { id: true } },
       team: { select: { hackathonId: true } },
+      instructorsOf: { select: { id: true } },
     },
   });
   const rows = await prisma.message.findMany({
@@ -219,7 +220,15 @@ export async function getConversation(userId: string, conversationId: string, op
     photo: photoUrl(c),
     other: other ? { id: other.id, name: other.name, role: other.role, city: other.city, photo: avatarUrl(other) } : null,
     isOwner: c.createdById === userId,
-    linked: c.testApp ? { kind: "test", id: c.testApp.id } : c.project ? { kind: "rise", id: c.project.id } : c.team ? { kind: "team", id: c.team.hackathonId } : null,
+    linked: c.testApp
+      ? { kind: "test", id: c.testApp.id }
+      : c.project
+        ? { kind: "rise", id: c.project.id }
+        : c.team
+          ? { kind: "team", id: c.team.hackathonId }
+          : c.instructorsOf
+            ? { kind: "instructors", id: c.instructorsOf.id }
+            : null,
     test: c.testApp
       ? { id: c.testApp.id, url: c.testApp.url, steps: c.testApp.steps, platforms: c.testApp.platforms, ownerId: c.testApp.ownerId, doneSteps: c.testApp.participants[0]?.doneSteps ?? null }
       : null,
@@ -482,7 +491,8 @@ export async function answerInvitation(userId: string, invitationId: string, acc
 
 /** The group of an app to test, of a Rise-Up project or of a hackathon team follows it: its members change only from there. */
 async function assertPrivateGroup(prisma: Db | Prisma.TransactionClient, conversationId: string) {
-  const c = await prisma.conversation.findUnique({ where: { id: conversationId }, select: { testApp: { select: { id: true } }, project: { select: { id: true } }, team: { select: { id: true } } } });
+  const c = await prisma.conversation.findUnique({ where: { id: conversationId }, select: { testApp: { select: { id: true } }, project: { select: { id: true } }, team: { select: { id: true } }, instructorsOf: { select: { id: true } } } });
+  if (c?.instructorsOf) throw new DomainError("community_group", "Ce groupe réunit les instructeurs du hackathon : on y entre en acceptant une mission.", 409);
   if (c?.team) throw new DomainError("community_group", "Ce groupe est la discussion d’une équipe de hackathon : on le rejoint ou on le quitte depuis l’équipe.", 409);
   if (c?.testApp) throw new DomainError("community_group", "Ce groupe suit l’application à tester : on le rejoint ou on le quitte depuis l’annonce.", 409);
   if (c?.project) throw new DomainError("community_group", "Ce groupe suit le projet Rise-Up : on le rejoint ou on le quitte depuis le projet.", 409);

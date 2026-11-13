@@ -152,6 +152,7 @@ export async function getHackathon(viewerId: string | null, id: string, prisma: 
       instructorFee: true,
       publishedAt: true,
       createdById: true,
+      instructorsConversationId: true,
       jurors: { select: { user: { select: { id: true, name: true } } } },
       missions: { where: { status: "ACCEPTED" }, select: { mentor: { select: { id: true, name: true } } } },
     },
@@ -184,6 +185,9 @@ export async function getHackathon(viewerId: string | null, id: string, prisma: 
     jury: h.jurors.map((j) => j.user),
     instructorsList: h.missions.map((m) => m.mentor),
     amJuror: viewerId !== null && h.jurors.some((j) => j.user.id === viewerId),
+    amInstructor: viewerId !== null && h.missions.some((m) => m.mentor.id === viewerId),
+    // The instructors' group: for the organizer and the instructors only.
+    instructorsGroupId: viewerId !== null && (h.createdById === viewerId || h.missions.some((m) => m.mentor.id === viewerId)) ? h.instructorsConversationId : null,
     myTeam: myTeam && viewerId ? toTeam(myTeam, viewerId) : null,
     openTeams: open
       .filter((t) => t._count.members < h.teamMax && t.id !== myTeam?.id)
@@ -298,6 +302,8 @@ async function openForEntries(prisma: Tx, hackathonId: string, userId: string) {
   if (!h || !h.publishedAt) throw notFound("Hackathon introuvable.");
   if (h.status !== "OPEN" || h.closesAt.getTime() <= Date.now()) throw new DomainError("closed", "Les inscriptions à ce hackathon sont closes.", 409);
   if (h.jurors.some((j) => j.userId === userId)) throw forbidden("Tu fais partie du jury de ce hackathon : tu ne peux pas y participer.");
+  // An instructor prepares the teams: taking part too would be a conflict of interest.
+  if (await prisma.instructorMission.count({ where: { hackathonId, mentorId: userId, status: "ACCEPTED" } })) throw forbidden("Tu es instructeur de ce hackathon : tu ne peux pas y participer.");
   return h;
 }
 
@@ -740,25 +746,53 @@ async function offerMissions(tx: Prisma.TransactionClient, h: { id: string; orga
   return count;
 }
 
+/**
+ * The group of a hackathon's instructors, run by its organizer (P39): opened at the first mission accepted,
+ * it gathers the instructors to talk about the organization of the hackathon. The hackathon row is locked,
+ * so two instructors accepting at the same moment open one group.
+ */
+async function instructorsGroup(tx: Prisma.TransactionClient, hackathonId: string) {
+  const [h] = await tx.$queryRaw<Array<{ title: string; createdById: string | null; instructorsConversationId: string | null }>>`
+    SELECT "title", "createdById", "instructorsConversationId" FROM "Hackathon" WHERE "id" = ${hackathonId} FOR UPDATE`;
+  if (!h?.createdById) return null;
+  if (h.instructorsConversationId) return h.instructorsConversationId;
+  const conversationId = await openCommunityGroup(tx, {
+    name: `Instructeurs · ${h.title}`,
+    theme: "Hackathon",
+    ownerId: h.createdById,
+    intro: `Groupe des instructeurs de « ${h.title} » : organisation, modalités et questions des équipes.`,
+  });
+  await tx.hackathon.update({ where: { id: hackathonId }, data: { instructorsConversationId: conversationId } });
+  return conversationId;
+}
+
 export async function answerMission(mentorId: string, missionId: string, accept: boolean, prisma: Db = db) {
-  const m = await prisma.instructorMission.findUnique({ where: { id: missionId }, include: { hackathon: { select: { id: true, title: true, createdById: true } }, mentor: { select: { name: true } } } });
+  const m = await prisma.instructorMission.findUnique({ where: { id: missionId }, include: { hackathon: { select: { id: true, title: true, createdById: true, endsAt: true } }, mentor: { select: { name: true } } } });
   if (!m || m.mentorId !== mentorId) throw notFound("Mission introuvable.");
+  // A mission for a hackathon that is over can no longer be taken.
+  if (accept && m.hackathon.endsAt.getTime() <= Date.now()) throw new DomainError("over", "Ce hackathon est terminé : la mission ne peut plus être acceptée.", 409);
+  if (accept && (await prisma.teamMember.count({ where: { hackathonId: m.hackathon.id, userId: mentorId } }))) throw forbidden("Tu participes à ce hackathon : tu ne peux pas en être instructeur.");
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.instructorMission.updateMany({ where: { id: missionId, status: "PROPOSED" }, data: { status: accept ? "ACCEPTED" : "DECLINED", answeredAt: new Date() } });
     if (!count) throw new DomainError("answered", "Tu as déjà répondu à cette mission.", 409);
+    const group = accept ? await instructorsGroup(tx, m.hackathon.id) : null;
+    if (group) await joinCommunityGroup(tx, group, mentorId);
     if (m.hackathon.createdById) {
-      await pushNotifications(tx, [{ userId: m.hackathon.createdById, actor: m.mentor.name, key: accept ? "missionAccepted" : "missionDeclined", params: { title: m.hackathon.title }, href: `/hackathons/${m.hackathon.id}`, icon: "users", tone: accept ? "success" : "neutral" }]);
+      await pushNotifications(tx, [{ userId: m.hackathon.createdById, actor: m.mentor.name, key: accept ? "missionAccepted" : "missionDeclined", params: { title: m.hackathon.title }, href: group ? `/messages/${group}` : `/hackathons/${m.hackathon.id}`, icon: "users", tone: accept ? "success" : "neutral" }]);
     }
-    return { ok: true };
+    return { ok: true, conversationId: group };
   });
 }
 
-const missionSelect = { id: true, fee: true, status: true, createdAt: true, hackathon: { select: { id: true, title: true, organizerName: true, format: true, city: true, startsAt: true, endsAt: true, missionText: true } } } as const;
+const missionSelect = { id: true, fee: true, status: true, createdAt: true, hackathon: { select: { id: true, title: true, organizerName: true, createdById: true, instructorsConversationId: true, format: true, city: true, startsAt: true, endsAt: true, missionText: true } } } as const;
 type MissionRow = Prisma.InstructorMissionGetPayload<{ select: typeof missionSelect }>;
-const toMission = (m: MissionRow): MissionView => ({
+const toMission = ({ hackathon: { createdById, instructorsConversationId, ...h }, ...m }: MissionRow): MissionView => ({
   ...m,
   createdAt: m.createdAt.toISOString(),
-  hackathon: { ...m.hackathon, startsAt: m.hackathon.startsAt.toISOString(), endsAt: m.hackathon.endsAt.toISOString() },
+  hackathon: { ...h, startsAt: h.startsAt.toISOString(), endsAt: h.endsAt.toISOString() },
+  // The organizer's profile, and the instructors' group once the mission is accepted.
+  organizerId: createdById,
+  groupId: m.status === "ACCEPTED" ? instructorsConversationId : null,
 });
 
 export async function getMission(mentorId: string, missionId: string, prisma: Db = db): Promise<MissionView> {

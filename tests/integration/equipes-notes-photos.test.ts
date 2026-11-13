@@ -1,10 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { DomainError } from "@/server/errors";
 import { createTestApp, joinTest, setStep } from "@/server/community-tests";
-import { answerJoinRequest, cancelTeamInvite, createHackathon, getHackathon, inviteToTeam, leaveTeam, register, submitSolution, teamDiscussion } from "@/server/hackathons";
+import { answerJoinRequest, answerMission, cancelTeamInvite, createHackathon, getHackathon, getMission, inviteToTeam, leaveTeam, register, submitSolution, teamDiscussion } from "@/server/hackathons";
 import { getProfile, getProfilePhoto, setProfilePhoto } from "@/server/members";
 import { getMentor, rateSession } from "@/server/mentoring";
-import { getConversation, leaveGroup, listConversations } from "@/server/messaging";
+import { addGroupMembers, getConversation, leaveGroup, listConversations } from "@/server/messaging";
 import { makeContacts, makeUsers, prisma, resetDb } from "./helpers";
 
 async function refused(p: Promise<unknown>, code: string) {
@@ -191,6 +191,38 @@ describe("organiser un hackathon : instructeurs dès la proposition (H8)", () =>
     const missions = await prisma.instructorMission.findMany({ where: { hackathonId: id }, orderBy: { mentorId: "asc" } });
     expect(missions.map((m) => [m.mentorId, m.fee, m.status])).toEqual([["awa", 75_000, "PROPOSED"], ["nadia", 75_000, "PROPOSED"]]);
     expect(await prisma.notification.count({ where: { key: "missionProposed" } })).toBe(2);
+  });
+
+  it("la première mission acceptée ouvre le groupe des instructeurs, mené par l’organisateur ; un instructeur ne participe pas", async () => {
+    const { id } = await createHackathon("kossi", { ...input, instructorFee: 75_000, instructorCount: 2, mentorIds: ["awa", "nadia"] }, prisma);
+    await prisma.hackathon.update({ where: { id }, data: { publishedAt: new Date() } });
+    const [awa, nadia] = await prisma.instructorMission.findMany({ where: { hackathonId: id }, orderBy: { mentorId: "asc" } });
+
+    // Two acceptances at the same moment: one group.
+    await Promise.all([answerMission("awa", awa.id, true, prisma), answerMission("nadia", nadia.id, true, prisma)]);
+    const { instructorsConversationId } = await prisma.hackathon.findUniqueOrThrow({ where: { id } });
+    expect(await prisma.conversation.count({ where: { instructorsOf: { isNot: null } } })).toBe(1);
+    const group = await getConversation("kossi", instructorsConversationId!, {}, prisma);
+    expect(group).toMatchObject({ title: "Instructeurs · Fintech pour l’inclusion", isOwner: true, linked: { kind: "instructors", id } });
+    expect(group.members.map((m) => m.id).sort()).toEqual(["awa", "kossi", "nadia"]);
+    // Its members follow the missions, not the messaging.
+    await refused(addGroupMembers("kossi", instructorsConversationId!, ["yao"], prisma), "community_group");
+
+    // The instructor sees their role and the group; a participant does not see the group.
+    expect(await getHackathon("awa", id, prisma)).toMatchObject({ amInstructor: true, instructorsGroupId: instructorsConversationId });
+    expect(await getHackathon("yao", id, prisma)).toMatchObject({ amInstructor: false, instructorsGroupId: null });
+    expect((await getMission("awa", awa.id, prisma)).groupId).toBe(instructorsConversationId);
+    await refused(register("awa", id, { mode: "solo" }, prisma), "forbidden");
+  });
+
+  it("une mission ne s’accepte plus une fois le hackathon terminé, ni par un participant", async () => {
+    const { id } = await createHackathon("kossi", { ...input, instructorFee: 75_000, instructorCount: 2, mentorIds: ["awa", "nadia"] }, prisma);
+    await prisma.hackathon.update({ where: { id }, data: { publishedAt: new Date() } });
+    const [awa, nadia] = await prisma.instructorMission.findMany({ where: { hackathonId: id }, orderBy: { mentorId: "asc" } });
+    await register("nadia", id, { mode: "create", teamName: "Baobab" }, prisma);
+    await refused(answerMission("nadia", nadia.id, true, prisma), "forbidden");
+    await prisma.hackathon.update({ where: { id }, data: { endsAt: new Date(Date.now() - 1000), startsAt: new Date(Date.now() - DAY) } });
+    await refused(answerMission("awa", awa.id, true, prisma), "over");
   });
 });
 
