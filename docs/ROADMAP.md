@@ -206,6 +206,21 @@ Les manques relevés dans `docs/etat-et-plan-de-test.md` pour l'inscription, les
 - Migrations : `photo_de_profil`, `discussion_et_invitations_d_equipe`, `evaluation_des_seances`.
 - Tests : 48 unitaires, 77 d'intégration, 112 e2e.
 
+## Mise à jour du 13 novembre (branche `dev/modifications`)
+
+Remarques du document d'Emmerson du 13 novembre (pages 8 à 39), appliquées après la reprise de `dev/main`.
+
+- [x] Profil : présentation (titre et bio) dès l'inscription ; zone de bio plus grande, avec compteur. Une invitation montre la présentation de la personne qui invite, et la notification mène à l'invitation.
+- [x] Niveau et badge séparés : le niveau déclaré (Aspirant, Débutant, Intermédiaire, Senior) s'affiche toujours, le badge « Mentor » et le sceau sur la photo à part. La barre de navigation montre la photo et le vrai niveau.
+- [x] Mentorat : fiche du mentor repensée (en-tête, chiffres, sujets numérotés, liens), bandeau du badge sur `/mentorat`, « Ajouter à Google Agenda » (ou Outlook, ou fichier .ics) au lieu du seul .ics, blocage d'une période (« Du … au … », 60 jours au plus).
+- [x] Groupes : description (300 caractères), photo et description à la création, nouveau groupe visible sans recharger, mentions @ (suggestions, mise en avant, notification), réponse à un message (citation), messages épinglés par le responsable (5 au plus en tête de la discussion). Le créateur d'un test modifie le groupe de testeurs (nom, photo, membres : retirer un testeur le retire du test).
+- [x] Hackathons : un groupe « Instructeurs · {hackathon} » s'ouvre à la première mission acceptée, animé par le créateur du hackathon ; un instructeur ne peut pas participer et la page du hackathon lui montre son rôle et le groupe. La notification « mission acceptée » mène au groupe.
+- [x] Tableau de bord de l'équipe : carte « À traiter », inscriptions et messages jour par jour sur 14 jours avec l'évolution sur une semaine, chiffres par module, derniers inscrits.
+- [x] Grand écran : plus d'espace vide entre le contenu et les boutons des pages étroites (événement Rise-Up, formulaires).
+- Sans changement de code, expliqué à l'équipe : erreur 500 de `/admin/signalements` et « os error 112 » (disque plein pendant que Turbopack écrit `.next`) ; erreurs d'hydratation `bis_skin_checked` (extension du navigateur Avast) ; carte Rise-Up bleue dans Avast Secure Browser (couleurs modifiées par ce navigateur, maïs dans Edge).
+- Migration : `groupes_reponses_epingles_instructeurs`.
+- Tests : 60 unitaires, 87 d'intégration, 112 e2e.
+
 ## P1 — Les « Must » manquants et Africa Rise-Up (objectif : 11 novembre)
 
 > **À réaligner sur `docs/point-projet.md`** avant de les prendre : R11 à R17 décrivent encore les défis (devenus hackathons, D8), R12 à R14 le binôme de mentorat (devenu des créneaux, D9), R24 à R26 l'ancien Africa'Raise-up. Une partie est déjà couverte par la refonte. Relire chaque tâche avec l'équipe, puis la réécrire ou la retirer.
