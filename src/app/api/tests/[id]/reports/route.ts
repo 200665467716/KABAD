@@ -3,7 +3,7 @@ import { SCREENSHOT_MAX_BYTES, submitReport } from "@/server/community-tests";
 import { DomainError } from "@/server/errors";
 import { readLimitedBody, route } from "@/server/http";
 import { rateLimit } from "@/server/rate-limit";
-import { testReportSchema } from "@/lib/schemas";
+import { testReportSchema, zodFallbackError } from "@/lib/schemas";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -23,7 +23,7 @@ export const POST = route(async (request: Request, { params }: Ctx) => {
   } catch {
     throw new DomainError("bad_json", "Requête invalide.", 400);
   }
-  const input = testReportSchema.parse(report);
+  const input = testReportSchema.parse(report, { error: zodFallbackError });
   const files = form.getAll("shot").filter((f): f is File => f instanceof File);
   const shots = await Promise.all(files.map(async (f) => ({ mime: f.type, data: new Uint8Array(await f.arrayBuffer()) })));
   return Response.json(await submitReport(user.id, id, input, shots), { status: 201 });

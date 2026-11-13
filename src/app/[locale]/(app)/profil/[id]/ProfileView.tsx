@@ -69,7 +69,7 @@ export function ProfileView({ profile: m, isMe, badge }: { profile: Profile; isM
           <div className="flex flex-wrap gap-1.5">
             {m.verified ? (
               <Badge tone="success" icon="check">
-                {t("mentor")}
+                {t("mentor", { gender: badge?.gender ?? "other" })}
               </Badge>
             ) : (
               <Badge tone="brand">{tl(m.level)}</Badge>

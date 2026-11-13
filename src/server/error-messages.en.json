@@ -6,6 +6,12 @@
     "Requête refusée : origine inconnue.": "Request refused: unknown origin.",
     "Requête invalide.": "Invalid request.",
     "Données invalides.": "Invalid data.",
+    "Ce nombre est trop grand.": "This number is too large.",
+    "Ce nombre est trop petit.": "This number is too small.",
+    "Il y a trop d’éléments.": "There are too many items.",
+    "Il manque des éléments.": "Some items are missing.",
+    "Ce texte est trop long.": "This text is too long.",
+    "Ce texte est trop court.": "This text is too short.",
     "Une erreur est survenue. Réessaie dans un instant.": "Something went wrong. Please try again in a moment.",
     "L’envoi est trop lourd.": "The upload is too large.",
 

@@ -7,15 +7,18 @@ import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Display";
 import { RadioCard, Select, TextField } from "@/components/ui/Field";
 import { useRouter } from "@/i18n/navigation";
+import { choiceLabel } from "@/lib/choice-labels";
 import { api, ApiError } from "@/lib/api";
 import type { Level } from "@/lib/domain-types";
 import { COUNTRIES, LEVELS } from "@/lib/schemas";
 
-export function ProfileStep({ initial }: { initial: { country: string; city: string; level: Level } }) {
+export function ProfileStep({ initial }: { initial: { country: string; city: string; level: Level | null } }) {
   const t = useTranslations("auth.profile");
   const tl = useTranslations("auth.levels");
+  const tc = useTranslations("common.choices");
   const router = useRouter();
-  const [level, setLevel] = useState<Level>(initial.level);
+  // Aucun niveau coché d’avance : c’est la question de cette étape.
+  const [level, setLevel] = useState<Level | null>(initial.level);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -24,7 +27,7 @@ export function ProfileStep({ initial }: { initial: { country: string; city: str
     const data = new FormData(e.currentTarget);
     const country = String(data.get("country") ?? "");
     const city = String(data.get("city") ?? "").trim();
-    if (!country || city.length < 2) return setError(t("required"));
+    if (!country || city.length < 2 || !level) return setError(t("required"));
     setBusy(true);
     setError(null);
     try {
@@ -57,7 +60,7 @@ export function ProfileStep({ initial }: { initial: { country: string; city: str
             </option>
             {COUNTRIES.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {choiceLabel(c, tc)}
               </option>
             ))}
           </Select>

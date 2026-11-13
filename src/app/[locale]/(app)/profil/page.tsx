@@ -55,7 +55,7 @@ async function MyProfile() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          {mentor ? <Badge tone="success" icon="check">{t("mentor")}</Badge> : <Badge tone="brand">{tl(user.level)}</Badge>}
+          {mentor ? <Badge tone="success" icon="check">{t("mentor", { gender: user.gender ?? "other" })}</Badge> : <Badge tone="brand">{tl(user.level)}</Badge>}
           {user.stack.map((s) => (
             <Tag key={s}>{s}</Tag>
           ))}

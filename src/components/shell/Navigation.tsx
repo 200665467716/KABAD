@@ -57,7 +57,7 @@ export function BottomNav() {
   const unread = me?.unreadMessages ?? 0;
   if (focused.some((re) => re.test(path))) return null;
   return (
-    <nav aria-label={t("label")} className="sticky bottom-0 z-20 grid grid-cols-5 gap-1 border-t-2 border-line-strong bg-raised px-2.5 pt-2 safe-bottom lg:hidden">
+    <nav data-bottom-nav aria-label={t("label")} className="sticky bottom-0 z-20 grid grid-cols-5 gap-1 border-t-2 border-line-strong bg-raised px-2.5 pt-2 safe-bottom lg:hidden">
       {items.map((it) => {
         const active = isActive(path, it);
         return (
