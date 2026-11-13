@@ -85,8 +85,8 @@ test("un groupe privé avec un thème : tout le monde reçoit en direct, et son 
 test("accepter une invitation ouvre la conversation avec le premier message", async ({ browser }) => {
   const kossi = await signIn(browser, "kossi");
   await kossi.goto("/messages/invitations");
+  // Accepting from the list opens the conversation straight away, like the detail page.
   await kossi.getByRole("button", { name: "Accepter" }).first().click();
-  await kossi.getByRole("link", { name: "Écrire" }).first().click();
   await expect(kossi).toHaveURL(/\/messages\/(?!invitations)[^/]+$/);
   await expect(thread(kossi).getByText(/a accepté l’invitation/)).toBeVisible();
   await kossi.context().close();

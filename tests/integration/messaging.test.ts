@@ -224,7 +224,11 @@ describe("private groups", () => {
     await updateGroup("kossi", id, { name: "API Lomé et Cotonou", theme: "Fintech" }, prisma);
     const renamed = await getConversation("moussa", id, {}, prisma);
     expect(renamed).toMatchObject({ title: "API Lomé et Cotonou", theme: "Fintech", photo: null });
-    expect(renamed.messages.at(-1)).toMatchObject({ system: true, body: "Kossi a renommé le groupe « API Lomé et Cotonou »" });
+    // Renamed and given a theme at once: one line for each change.
+    expect(renamed.messages.slice(-2)).toMatchObject([
+      { system: true, body: "Kossi a renommé le groupe « API Lomé et Cotonou »" },
+      { system: true, body: "Kossi a changé le thème du groupe" },
+    ]);
     // The same name and theme again: nothing is written.
     await updateGroup("kossi", id, { name: "API Lomé et Cotonou", theme: "Fintech" }, prisma);
     expect((await getConversation("moussa", id, {}, prisma)).messages).toHaveLength(renamed.messages.length);

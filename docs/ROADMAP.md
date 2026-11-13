@@ -215,6 +215,15 @@ Les manques relevés dans `docs/etat-et-plan-de-test.md` pour l'inscription, les
 - [x] Le logo ramène à l'accueil sur la landing, les écrans de connexion, `/bienvenue` et la page 404.
 - [x] Accueil de l'app : sections en cascade, lignes « À faire » et carte d'équipe qui réagissent au survol et à l'appui.
 
+## Campagne de tests du 13 novembre
+
+- [x] Tests des interfaces par cinq agents (inscription, mentorat, hackathons, tests d'apps et Rise-Up, messagerie et administration), sur téléphone et ordinateur, en français et sous `/en` : 81 problèmes, aucun bloquant, 9 majeurs. Rapport : `docs/rapport-de-tests-2026-11-13.md`.
+- [x] Les 9 majeurs corrigés, ainsi que la quasi-totalité des mineurs et des détails (cinq branches de correction fusionnées dans `dev/main`).
+- [x] Huit comptes de test en base (`test.*@kabad-test.dev`, mot de passe `kabad-test-2026`), à recréer après un seed ou des e2e.
+- [ ] Reporté : modifier un projet Rise-Up ; dire qui a annulé une séance (migration).
+- [ ] À trancher : l'organisateur peut-il s'inscrire à son propre hackathon ?
+- Tests : 62 unitaires, 107 d'intégration, 112 e2e.
+
 ## P1 — Les « Must » manquants et Africa Rise-Up (objectif : 11 novembre)
 
 > **À réaligner sur `docs/point-projet.md`** avant de les prendre : R11 à R17 décrivent encore les défis (devenus hackathons, D8), R12 à R14 le binôme de mentorat (devenu des créneaux, D9), R24 à R26 l'ancien Africa'Raise-up. Une partie est déjà couverte par la refonte. Relire chaque tâche avec l'équipe, puis la réécrire ou la retirer.
