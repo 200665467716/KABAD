@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
-import { formatSize, VOICE_MAX_SECONDS } from "@/lib/attachments";
+import { ACCEPTED_TYPES, formatSize, VOICE_MAX_SECONDS } from "@/lib/attachments";
 import type { ChatAttachment } from "@/lib/messaging-types";
 import { Icon, type IconName } from "../../ui/Icon";
 
@@ -90,7 +90,7 @@ export function AttachButton({ onPick, disabled, label, icon = "paperclip" }: { 
         ref={input}
         type="file"
         hidden
-        accept="application/pdf,image/png,image/jpeg,image/webp"
+        accept={ACCEPTED_TYPES.join(",")}
         onChange={(e) => {
           const file = e.target.files?.[0];
           e.target.value = "";

@@ -120,7 +120,9 @@
       "pinnedCount": "{count, plural, one {# pinned message} other {# pinned messages}}",
       "pinnedAll": "See all",
       "pinnedLess": "Show less",
-      "fileTooBig": "Files are 2 MB at most."
+      "fileTooBig": "This file is over 2 MB. The messaging takes PDFs, images and voice notes of 2 MB at most.",
+      "videoRefused": "Videos do not go through the messaging: too heavy for 4G. Put it on YouTube or Google Drive and share the link here.",
+      "fileType": "The messaging takes PDFs, images (PNG, JPEG, WebP) and voice notes."
     },
     "add": {
       "title": "Add participants",

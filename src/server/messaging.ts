@@ -45,8 +45,6 @@ async function membership(prisma: Db | Prisma.TransactionClient, userId: string,
 
 /* Conversations */
 
-
-
 export async function unreadCounts(userId: string, prisma: Db = db): Promise<Map<string, number>> {
   const rows = await prisma.$queryRaw<Array<{ conversationId: string; unread: bigint }>>`
     SELECT cm."conversationId", COUNT(m.id) AS unread

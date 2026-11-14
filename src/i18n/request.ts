@@ -1,5 +1,6 @@
 import { locale as rootLocale } from "next/root-params";
 import { getRequestConfig } from "next-intl/server";
+import { DEFAULT_TIME_ZONE } from "@/lib/time-zone";
 import { isLocale, routing } from "./routing";
 
 /** One dictionary per module (messages/fr/mentoring.json…), merged with the shell's (messages/fr.json). */
@@ -17,5 +18,5 @@ async function load(locale: string) {
 export default getRequestConfig(async ({ locale: override }) => {
   const segment = override ?? (await rootLocale());
   const locale = isLocale(segment) ? segment : routing.defaultLocale;
-  return { locale, messages: await load(locale), timeZone: "Africa/Lome" };
+  return { locale, messages: await load(locale), timeZone: DEFAULT_TIME_ZONE };
 });

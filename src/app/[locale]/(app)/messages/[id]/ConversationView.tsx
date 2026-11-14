@@ -15,12 +15,13 @@ import { Select, TextArea, TextField } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 import { api, ApiError } from "@/lib/api";
-import { ATTACHMENT_MAX_BYTES, GROUP_PHOTO_SIZE } from "@/lib/attachments";
+import { ACCEPTED_TYPES, ATTACHMENT_MAX_BYTES, GROUP_PHOTO_SIZE } from "@/lib/attachments";
 import { initials } from "@/lib/format";
 import { squareImage } from "@/lib/image-resize";
 import { mentionQuery } from "@/lib/mentions";
 import type { ChatMessage, ChatQuote, Contact, ConversationDetail } from "@/lib/messaging-types";
-import { useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
+import { useOfflineRefresh, useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
+import { useMe } from "@/lib/use-me";
 import { GROUP_DESCRIPTION_MAX, GROUP_NAME_MAX, GROUP_THEMES, MESSAGE_MAX_LENGTH } from "@/lib/schemas";
 import { localizeGroupName } from "@/lib/system-text";
 import { useChatTime } from "../useChatTime";
@@ -90,9 +91,15 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   // The group of an app to test or of a Rise-Up project changes only from there.
   const manageable = group && detail.isOwner && !detail.linked;
 
+  // Once read, the badge of « Messages » in the navigation is read again at once, without waiting for the
+  // realtime event (P4).
+  const { refresh: refreshCounts } = useMe();
   const markRead = useCallback(() => {
-    if (document.visibilityState === "visible") api(`/api/conversations/${detail.id}/read`, { method: "POST" }).catch(() => {});
-  }, [detail.id]);
+    if (document.visibilityState === "visible")
+      api(`/api/conversations/${detail.id}/read`, { method: "POST" })
+        .then(refreshCounts)
+        .catch(() => {});
+  }, [detail.id, refreshCounts]);
 
   useEffect(() => {
     markRead();
@@ -123,18 +130,24 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
     try {
       const fresh = await api<ConversationDetail>(`/api/conversations/${detail.id}`);
       setDetail(fresh);
-      setMessages((cur) => merge(cur, fresh.messages));
+      setMessages((cur) => {
+        // A message from someone else, arrived without the realtime event, is read since it is on screen.
+        if (fresh.messages.some((m) => m.authorId !== me.id && !m.system && !cur.some((c) => c.id === m.id))) setTimeout(markRead, 0);
+        return merge(cur, fresh.messages);
+      });
     } catch (e) {
       // Removed from the group, or the group was deleted: back to the inbox.
       if (e instanceof ApiError && e.status === 404) router.replace("/messages");
       // Otherwise a later event or reconnection retries.
     }
-  }, [detail.id, router]);
+  }, [detail.id, router, me.id, markRead]);
 
   useRealtime("conversation:changed", ({ conversationId }) => {
     if (conversationId === detail.id) reload();
   });
   useRealtimeReconnect(reload);
+  // Without the realtime server (not started, WebSockets blocked), new messages come every 3 seconds.
+  useOfflineRefresh(reload, 3_000);
   // Catch up on messages sent between the server render and the subscription above.
   useEffect(() => {
     let alive = true;
@@ -176,7 +189,10 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
 
   /** Sends a file or a voice note, shown at once as "sending", like a text message. */
   function upload(file: File, kind: "FILE" | "VOICE", seconds?: number) {
-    // Un fichier trop lourd est refusé avant l'envoi : inutile de le faire monter en 4G pour rien.
+    // Un fichier refusé l'est avant l'envoi, avec la raison : inutile de le faire monter en 4G pour rien.
+    // Une vidéo n'est jamais acceptée (trop lourde pour la 4G et pour la base) : on propose de partager un lien.
+    if (kind === "FILE" && file.type.startsWith("video/")) return setError(t("videoRefused"));
+    if (kind === "FILE" && file.type && !ACCEPTED_TYPES.includes(file.type)) return setError(t("fileType"));
     if (file.size > ATTACHMENT_MAX_BYTES) return setError(t("fileTooBig"));
     setError(null);
     const clientId = crypto.randomUUID();

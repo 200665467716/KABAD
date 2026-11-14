@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/Display";
 import { RadioCard, Select, TextArea, TextField } from "@/components/ui/Field";
 import { useRouter } from "@/i18n/navigation";
 import { choiceLabel } from "@/lib/choice-labels";
+import { deviceTimeZone } from "@/lib/device-time-zone";
 import { api, ApiError } from "@/lib/api";
 import type { Level } from "@/lib/domain-types";
 import { BIO_MAX, COUNTRIES, LEVELS } from "@/lib/schemas";
@@ -34,7 +35,8 @@ export function ProfileStep({ initial }: { initial: { country: string; city: str
     setBusy(true);
     setError(null);
     try {
-      await api("/api/me", { method: "PATCH", body: { country, city, level, headline, bio: bio.trim(), diaspora: !["Bénin", "Burkina Faso", "Cameroun", "Côte d’Ivoire", "Ghana", "Mali", "Niger", "Nigeria", "RD Congo", "Sénégal", "Togo"].includes(country) } });
+      // The device's time zone: the times of sessions and events follow it (a Cotonou member is not on Lomé time).
+      await api("/api/me", { method: "PATCH", body: { country, city, level, headline, bio: bio.trim(), timeZone: deviceTimeZone(), diaspora: !["Bénin", "Burkina Faso", "Cameroun", "Côte d’Ivoire", "Ghana", "Mali", "Niger", "Nigeria", "RD Congo", "Sénégal", "Togo"].includes(country) } });
       router.push("/inscription/interets");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("failed"));

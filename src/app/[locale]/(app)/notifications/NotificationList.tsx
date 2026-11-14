@@ -10,7 +10,9 @@ import { Icon } from "@/components/ui/Icon";
 import { Link } from "@/i18n/navigation";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { useRealtime } from "@/lib/realtime-client";
+import { useDeviceTimeZone } from "@/lib/device-time-zone";
+import { daysApart } from "@/lib/time-zone";
+import { useOfflineRefresh, useRealtime } from "@/lib/realtime-client";
 import { useMe } from "@/lib/use-me";
 import type { NotificationView } from "@/server/notifications";
 
@@ -29,7 +31,6 @@ const featureTone = (n: NotificationView) => {
   return "bg-bg text-ink shadow-[inset_0_0_0_2px_var(--border-strong)]";
 };
 
-const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
 export function NotificationList({ initial }: { initial: NotificationView[] }) {
   const t = useTranslations("profile.notifications");
@@ -38,6 +39,8 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
   // In the reader's language when the notification has a key; older ones keep their French text.
   const textOf = (n: NotificationView) => (n.key && kinds.has(n.key) ? kinds(n.key, messageValues(n.params, locale)) : n.text);
   const format = useFormatter();
+  // At the device's time, like the messages: 4:37 in Cotonou, not 3:37 (Lomé time).
+  const timeZone = useDeviceTimeZone();
   const now = useNow();
   const { refresh: refreshMe } = useMe();
   const [items, setItems] = useState(initial);
@@ -50,6 +53,8 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
       .catch(() => {});
   }, []);
   useRealtime("notification:new", reload);
+  // Without the realtime server, the list is read again every 10 seconds.
+  useOfflineRefresh(reload, 10_000);
 
   function markRead(id?: string) {
     setItems((list) => list.map((n) => (!id || n.id === id ? { ...n, unread: false } : n)));
@@ -58,16 +63,16 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
       .catch(() => {});
   }
 
-  const today = dayStart(now);
-  const age = (n: NotificationView) => today - dayStart(new Date(n.createdAt));
+  // Days counted in the device's zone, the same on the server and on the phone while the page hydrates.
+  const age = (n: NotificationView) => daysApart(new Date(n.createdAt), now, timeZone);
   const groups = [
     { id: "today", label: t("today"), items: visible.filter((n) => age(n) <= 0) },
-    { id: "week", label: t("week"), items: visible.filter((n) => age(n) > 0 && age(n) < 7 * 86_400_000) },
-    { id: "earlier", label: t("earlier"), items: visible.filter((n) => age(n) >= 7 * 86_400_000) },
+    { id: "week", label: t("week"), items: visible.filter((n) => age(n) > 0 && age(n) < 7) },
+    { id: "earlier", label: t("earlier"), items: visible.filter((n) => age(n) >= 7) },
   ].filter((g) => g.items.length > 0);
   const when = (n: NotificationView) => {
     const d = new Date(n.createdAt);
-    return age(n) <= 0 ? format.dateTime(d, { hour: "numeric", minute: "2-digit" }) : format.dateTime(d, age(n) < 7 * 86_400_000 ? { weekday: "short" } : { day: "numeric", month: "short" });
+    return age(n) <= 0 ? format.dateTime(d, { hour: "numeric", minute: "2-digit", timeZone }) : format.dateTime(d, age(n) < 7 ? { weekday: "short", timeZone } : { day: "numeric", month: "short", timeZone });
   };
 
   return (

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { api, ApiError } from "./api";
-import { useRealtime, useRealtimeReconnect } from "./realtime-client";
+import { useOfflineRefresh, useRealtime, useRealtimeReconnect } from "./realtime-client";
 
 export type Me = {
   id: string;
@@ -65,6 +65,8 @@ function LiveUnread() {
   useRealtime("conversation:changed", soon);
   useRealtime("notification:new", soon);
   useRealtimeReconnect(soon);
+  // Without the realtime server, the counts are read again every 10 seconds.
+  useOfflineRefresh(load, 10_000);
   // Back on the tab, the counts are read again: an event missed while away is caught up.
   useEffect(() => {
     const onVisible = () => document.visibilityState === "visible" && soon();

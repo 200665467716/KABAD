@@ -120,7 +120,9 @@
       "pinnedCount": "{count, plural, one {# message épinglé} other {# messages épinglés}}",
       "pinnedAll": "Tout voir",
       "pinnedLess": "Réduire",
-      "fileTooBig": "Le fichier fait 2 Mo au plus."
+      "fileTooBig": "Ce fichier fait plus de 2 Mo. La messagerie accepte les PDF, les images et les notes vocales de 2 Mo au plus.",
+      "videoRefused": "Les vidéos ne passent pas par la messagerie : trop lourdes pour la 4G. Mets-la sur YouTube ou Google Drive et partage le lien ici.",
+      "fileType": "La messagerie accepte les PDF, les images (PNG, JPEG, WebP) et les notes vocales."
     },
     "add": {
       "title": "Ajouter des participants",

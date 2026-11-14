@@ -11,7 +11,7 @@ import { Link } from "@/i18n/navigation";
 import { api } from "@/lib/api";
 import { initials } from "@/lib/format";
 import type { ConversationSummary, ReceivedInvitation, SentInvitation } from "@/lib/messaging-types";
-import { useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
+import { useOfflineRefresh, useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
 import { localizeGroupName, localizeSystemText } from "@/lib/system-text";
 import { useChatTime } from "./useChatTime";
 
@@ -76,6 +76,8 @@ export function Inbox({
   useRealtime("invitation:new", () => refresh());
   useRealtime("invitation:answered", () => refresh());
   useRealtimeReconnect(refresh);
+  // Without the realtime server, the list is read again every 5 seconds.
+  useOfflineRefresh(refresh, 5_000);
   // The page may come from the browser's cache (back from a conversation, a group just created):
   // it reads the list again when it opens and when the tab comes back to the front.
   useEffect(() => {
