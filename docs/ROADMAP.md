@@ -238,6 +238,21 @@ Remarques du document d'Emmerson du 13 novembre (pages 8 à 39), appliquées apr
 - Migration : `groupes_reponses_epingles_instructeurs`.
 - Tests : 60 unitaires, 87 d'intégration, 112 e2e.
 
+## Mise à jour du 14 novembre (branche `dev/modifications`)
+
+Document d'Emmerson du 14 novembre (KABAD 5), appliqué après la reprise de `dev/main` (campagne de tests du 13 novembre). Chaque correction a été vérifiée dans le navigateur.
+
+- [x] Messagerie : les messages arrivent sans recharger même quand le serveur temps réel ne répond pas (conversation relue toutes les 3 s, liste toutes les 5 s, compteurs et notifications toutes les 10 s, seulement pendant la coupure) ; le badge « Messages » se met à jour dès qu'une conversation est lue ; les heures des messages, de la liste et des notifications suivent l'horloge de l'appareil (le serveur affichait tout à l'heure de Lomé) et l'inscription enregistre le fuseau de l'appareil ; une vidéo est refusée avant l'envoi avec la solution (partager un lien).
+- [x] Tests d'apps : nombre de testeurs écrit librement, de 1 à 50, avec des suggestions ; captures d'un rapport ouvertes en grand, une après l'autre, et téléchargeables.
+- [x] Africa Rise-Up : l'initiateur (« Responsable ») nomme des co-responsables ; eux seuls programment les événements ; un membre propose un salon, caché jusqu'à la validation d'un responsable ; chaque message du projet se signale ; signalé par un responsable avec un justificatif, il est masqué tout de suite et seule l'équipe KABAD le rétablit. Dans un groupe, le responsable retire le message d'un membre.
+- [x] Disponibilités : changer de mois sur une période bloquée ne fait plus planter l'écran.
+- [x] Hackathons : l'équipe refuse une proposition avec une raison lue par l'organisateur.
+- [x] Page `/bienvenue` supprimée (la landing mène directement à l'inscription et à la connexion) ; « spams » au lieu de « courriers indésirables » ; `favicon.ico` ajouté (il remplissait les journaux d'erreurs) ; requêtes d'une transaction passées l'une après l'autre (avertissement de `pg`).
+- [x] Données de départ : les 7 comptes de l'équipe (3 mentors, 4 membres, 7 pays) et `kabadteam@gmail.com` pour l'équipe KABAD ; mots de passe dans `.env` (`SEED_PASSWORD_…`), jamais dans le dépôt ; 5 projets Rise-Up sur des problèmes concrets ; notifications de la démo marquées comme envoyées.
+- Expliqué sans code : e-mails classés en spam (expéditeur Gmail personnel et liens vers `localhost` ; en production, une adresse sur le domaine de KABAD avec SPF et DKIM) ; erreur `JSON.parse` des journaux (cache `.next` abîmé, à supprimer).
+- Migrations : `rise_coresponsables_salons_moderation`, `refus_d_un_hackathon`.
+- Tests : 76 unitaires, 124 d'intégration, 110 e2e (la page `/bienvenue` en moins).
+
 ## P1 — Les « Must » manquants et Africa Rise-Up (objectif : 11 novembre)
 
 > **À réaligner sur `docs/point-projet.md`** avant de les prendre : R11 à R17 décrivent encore les défis (devenus hackathons, D8), R12 à R14 le binôme de mentorat (devenu des créneaux, D9), R24 à R26 l'ancien Africa'Raise-up. Une partie est déjà couverte par la refonte. Relire chaque tâche avec l'équipe, puis la réécrire ou la retirer.
