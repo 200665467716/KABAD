@@ -16,7 +16,7 @@ export function MemberList({ members }: { members: DirectoryEntry[] }) {
 
   return (
     <>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="kb-stagger grid gap-3 md:grid-cols-2">
         {members.map((m) => {
           const relation = invited.includes(m.id) ? "invited" : m.relation;
           return (
@@ -36,7 +36,7 @@ export function MemberList({ members }: { members: DirectoryEntry[] }) {
                     {t("write")}
                   </ButtonLink>
                 ) : relation === "invited_you" ? (
-                  <ButtonLink href={`/messages/invitations/${m.invitationId}`} size="sm">
+                  <ButtonLink href={`/messages/invitations/${m.invitationId}`} size="sm" variant="ink">
                     {t("seeInvitation")}
                   </ButtonLink>
                 ) : relation === "invited" ? (

@@ -107,7 +107,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
           </ul>
         </section>
 
-        <TeamPanel team={team} meId={user.id} hackathonId={id} canChange={canChange} full={team.members.length >= h.teamMax} placesLeft={Math.max(0, h.teamMax - team.members.length - team.invites.length)} />
+        <TeamPanel team={team} meId={user.id} hackathonId={id} canChange={canChange} full={team.members.length + team.invites.length >= h.teamMax} placesLeft={Math.max(0, h.teamMax - team.members.length - team.invites.length)} />
       </Page>
       {(canSubmit || team.submission) && (
         <ActionBar>

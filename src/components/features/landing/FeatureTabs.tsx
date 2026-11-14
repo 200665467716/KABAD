@@ -1,9 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { Band } from "@/components/ui/Band";
-import { CodeBars } from "./CodeBars";
 import { landingSample } from "./content";
 import { LpIcon } from "./LpIcon";
 
@@ -15,97 +14,81 @@ const TABS = [
   { id: "rise", key: "rise", icon: "sprout", tone: "rise" },
 ] as const;
 
-/** Six seconds per feature. A click restarts the six seconds on the chosen feature, then the rotation goes on. */
-const ROTATE_MS = 6000;
-
 /**
- * Section « Fonctionnalités » : cinq onglets (tablist ARIA, flèches, Début, Fin) et un téléphone
- * qui montre un écran simplifié de chaque espace. Les onglets tournent seuls tant que la section
- * est visible. Un clic choisit une fonctionnalité, puis la rotation repart de là. Au clavier
- * (flèches, Début, Fin), la rotation s'arrête : le visiteur garde la main (WCAG 2.2.2).
- * Jamais de rotation avec « réduire les animations ».
+ * Section « Fonctionnalités » : un accordéon où une seule fonctionnalité est ouverte à la fois.
+ * La fonctionnalité ouverte montre sa description, et l'écran qui la représente : dans le téléphone
+ * de droite sur ordinateur, sous la description sur téléphone. Chaque titre est un bouton
+ * (aria-expanded) ; les flèches, Début et Fin passent d'un titre à l'autre.
  */
 export function FeatureTabs() {
   const t = useTranslations("landing.features");
   const [index, setIndex] = useState(0);
-  /** Counts the turns: it restarts the timer and the progress bar, even when the same tab is chosen again. */
-  const [turn, setTurn] = useState(0);
-  const [auto, setAuto] = useState(true);
-  const [visible, setVisible] = useState(false);
-  const section = useRef<HTMLDivElement>(null);
-  const tabs = useRef<Array<HTMLButtonElement | null>>([]);
+  const heads = useRef<Array<HTMLButtonElement | null>>([]);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.3 });
-    observer.observe(section.current!);
-    return () => observer.disconnect();
-  }, []);
-
-  const rotating = auto && visible;
-  useEffect(() => {
-    if (!rotating || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = setTimeout(() => {
-      setIndex((i) => (i + 1) % TABS.length);
-      setTurn((n) => n + 1);
-    }, ROTATE_MS);
-    return () => clearTimeout(timer);
-  }, [rotating, turn]);
-
-  /** A click (or a tap): show this feature, and let the rotation go on from it. */
-  function choose(i: number) {
+  /** Opens one feature and closes the other. On a phone, its title is brought back into view once the panel above has closed. */
+  function open(i: number) {
     setIndex(i);
-    setTurn((n) => n + 1);
-    setAuto(true);
+    if (!window.matchMedia("(max-width: 900px)").matches) return;
+    const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setTimeout(() => heads.current[i]?.scrollIntoView({ block: "nearest", behavior: smooth ? "smooth" : "auto" }), 380);
   }
 
-  /** Keyboard: the visitor moves through the tabs at their own pace, the rotation stops. */
   function onKey(e: KeyboardEvent, i: number) {
-    const next = { ArrowDown: i + 1, ArrowRight: i + 1, ArrowUp: i - 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
+    const next = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
     if (next === undefined) return;
     e.preventDefault();
-    const target = (next + TABS.length) % TABS.length;
-    setAuto(false);
-    setIndex(target);
-    tabs.current[target]?.focus();
+    heads.current[(next + TABS.length) % TABS.length]?.focus();
   }
 
   const current = TABS[index];
   return (
-    <div className="feat-grid" ref={section}>
-      {/* The class never changes here: LandingEffects adds « in » by hand, and React would erase it (the list vanished on click). */}
-      <div className="tabs rv" data-rotating={rotating} role="tablist" aria-label={t("label")} aria-orientation="vertical">
-        {TABS.map((tab, i) => (
-          <button
-            key={tab.id}
-            ref={(el) => {
-              tabs.current[i] = el;
-            }}
-            className="tab"
-            role="tab"
-            id={`tab-${tab.id}`}
-            type="button"
-            aria-selected={i === index}
-            aria-controls={`scr-${tab.id}`}
-            tabIndex={i === index ? 0 : -1}
-            onClick={() => choose(i)}
-            onKeyDown={(e) => onKey(e, i)}
-          >
-            <span className={`ti ${tab.tone}`}>
-              <LpIcon name={tab.icon} />
-            </span>
-            <span>
-              <span className="tt">{t(tab.key)}</span>
-              <span className="td">{t(`${tab.key}Text`)}</span>
-            </span>
-            <LpIcon name="chevron" className="chev" />
-            {/* Restarted at each turn: the bar fills up in 6 s. */}
-            <span key={turn} className="bar" />
-          </button>
-        ))}
+    <div className="feat-grid">
+      {/* The class never changes here: LandingEffects adds « in » by hand, and React would erase it. */}
+      <div className="acc rv">
+        {TABS.map((tab, i) => {
+          const isOpen = i === index;
+          return (
+            <div key={tab.id} className="acc-item" data-open={isOpen}>
+              <h3 className="acc-h">
+                <button
+                  ref={(el) => {
+                    heads.current[i] = el;
+                  }}
+                  className="tab"
+                  id={`tab-${tab.id}`}
+                  type="button"
+                  aria-expanded={isOpen}
+                  aria-controls={`pan-${tab.id}`}
+                  onClick={() => open(i)}
+                  onKeyDown={(e) => onKey(e, i)}
+                >
+                  <span className={`ti ${tab.tone}`}>
+                    <LpIcon name={tab.icon} />
+                  </span>
+                  <span className="tt">{t(tab.key)}</span>
+                  <LpIcon name="chevron" className="chev" />
+                </button>
+              </h3>
+              <div className="acc-p" id={`pan-${tab.id}`} role="region" aria-labelledby={`tab-${tab.id}`} inert={!isOpen}>
+                <div className="acc-in">
+                  <p className="td">{t(`${tab.key}Text`)}</p>
+                  {/* Phones only: the screen of the feature, under its description. */}
+                  <div className="acc-phone" aria-hidden="true">
+                    <div className="phone">
+                      <div className="scr on">
+                        <PhoneScreen id={tab.id} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="stage rv">
-        <CodeBars />
+      {/* Computers: the screen of the open feature. An illustration of the panel on the left, which says the same thing. */}
+      <div className="stage rv" aria-hidden="true">
         <span className="ftag t1">
           <i />
           {t("installable")}
@@ -117,7 +100,7 @@ export function FeatureTabs() {
         <span className="scr-name">{t("screen", { name: t(current.key) })}</span>
         <div className="phone">
           {TABS.map((tab, i) => (
-            <div key={tab.id} className={i === index ? "scr on" : "scr"} id={`scr-${tab.id}`} role="tabpanel" aria-labelledby={`tab-${tab.id}`} hidden={i !== index}>
+            <div key={tab.id} className={i === index ? "scr on" : "scr"} id={`scr-${tab.id}`}>
               <PhoneScreen id={tab.id} />
             </div>
           ))}

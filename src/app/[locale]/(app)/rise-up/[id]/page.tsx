@@ -28,7 +28,7 @@ async function ProjectData({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       <TopBar back="/rise-up" title={t("header")} actions={project.isMember ? <IconButton icon="plus" label={t("schedule")} href={`/rise-up/${id}/evenements/nouveau`} /> : undefined} />
-      <ProjectView project={project} viewerId={user.id} now={serverNow()} />
+      <ProjectView project={project} viewerId={user.id} timeZone={user.timeZone} now={serverNow()} />
     </>
   );
 }

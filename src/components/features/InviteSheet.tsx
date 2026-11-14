@@ -13,7 +13,7 @@ import { initials } from "@/lib/format";
 import { charactersLeft, checkInvitationMessage, INVITATION_MAX_LENGTH } from "@/lib/invitation";
 
 /** Invite a member, with an optional first message (300 characters at most). The conversation opens once they accept. */
-export type InviteTarget = Pick<MemberCard, "id" | "name" | "role" | "city"> & Partial<Pick<MemberCard, "diaspora" | "headline" | "years">>;
+export type InviteTarget = Pick<MemberCard, "id" | "name" | "role" | "city"> & Partial<Pick<MemberCard, "diaspora" | "headline" | "years" | "photo">>;
 
 export function InviteSheet({ target, open, onClose, onSent }: { target: InviteTarget | null; open: boolean; onClose: () => void; onSent: (id: string) => void }) {
   const t = useTranslations("messaging.invite");
@@ -54,7 +54,7 @@ export function InviteSheet({ target, open, onClose, onSent }: { target: InviteT
       }
     >
       <PersonRow
-        avatar={<Avatar initials={initials(target.name)} size="lg" verified={target.role === "SENIOR"} />}
+        avatar={<Avatar initials={initials(target.name)} src={target.photo} size="lg" verified={target.role === "SENIOR"} />}
         name={target.name}
         badge={target.role === "SENIOR" ? <MentorBadge>{t("mentor")}</MentorBadge> : undefined}
         meta={[target.city, target.diaspora ? t("diaspora") : "", target.headline, target.years ? t("years", { count: target.years }) : ""].filter(Boolean).join(" · ")}

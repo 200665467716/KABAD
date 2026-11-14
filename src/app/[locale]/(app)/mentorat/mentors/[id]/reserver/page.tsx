@@ -20,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
 async function BookData({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ creneau?: string }> }) {
   const [{ id }, { creneau }] = await Promise.all([params, searchParams]);
   const user = await pageUser(`/mentorat/mentors/${id}`);
-  const mentor = await orNotFound(getMentor(id));
+  const mentor = await orNotFound(getMentor(id, undefined, user.id));
   if (!mentor || mentor.id === user.id) notFound();
   const t = await getTranslations("mentoring.book");
   // The slot comes from the address: it must still be one of the mentor's free slots.

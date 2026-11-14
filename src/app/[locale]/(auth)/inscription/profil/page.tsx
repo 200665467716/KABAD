@@ -11,7 +11,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 async function ProfileStepData() {
   const u = await pageUser("/inscription/profil");
-  return <ProfileStep initial={{ country: u.country, city: u.city, level: u.level, headline: u.headline, bio: u.bio }} />;
+  // La base donne un niveau à tout compte (DEBUTANT) : il ne compte qu’une fois cette étape envoyée, avec le pays.
+  return <ProfileStep initial={{ country: u.country, city: u.city, level: u.country ? u.level : null, headline: u.headline, bio: u.bio }} />;
 }
 
 /** Screen A4, step 3 of 5: country, city and level. */

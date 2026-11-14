@@ -35,8 +35,10 @@ export default async function Welcome() {
       </svg>
 
       <header className="relative mx-auto flex w-full max-w-[1100px] items-center gap-2.5 px-5 pt-[max(18px,env(safe-area-inset-top,0px))] lg:px-10">
-        <LogoMark size={34} inverse />
-        <span className="flex-1 font-display text-lg font-extrabold tracking-[0.02em]">KABAD</span>
+        <Link href="/" className="flex flex-1 items-center gap-2.5 text-current no-underline">
+          <LogoMark size={34} inverse decorative />
+          <span className="font-display text-lg font-extrabold tracking-[0.02em]">KABAD</span>
+        </Link>
         <LanguageSwitcher compact />
         <Link href="/connexion" className="inline-flex min-h-11 items-center px-2 text-sm font-extrabold text-on-header no-underline">
           {t("signIn")}

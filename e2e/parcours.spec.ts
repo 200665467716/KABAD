@@ -181,6 +181,11 @@ test("tests d’apps : rejoindre le groupe de testeurs puis cocher une étape", 
 test("organiser un hackathon en 3 étapes : infos, défi sans prix, instructeurs", async ({ browser }) => {
   const page = await signIn(browser, "kossi.mensah@exemple.tg", "/hackathons/organiser");
   const local = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 11) + "09:00";
+  // Each step is checked before the next one: every error at once, the focus on the first field in error.
+  await page.getByRole("button", { name: "Continuer" }).click();
+  await expect(page.getByLabel("Nom du hackathon")).toBeFocused();
+  await expect(page.getByText("Indique les technologies attendues.")).toBeVisible();
+  await expect(page.getByText("Indique la clôture des inscriptions.")).toBeVisible();
   await page.getByLabel("Nom du hackathon").fill("Santé connectée");
   await page.getByLabel("Lieu").fill("Lomé");
   await page.getByLabel("Début").fill(local(10));

@@ -18,6 +18,22 @@
       "google": "Add to Google Calendar",
       "other": "Other calendar:",
       "ics": ".ics file"
+    },
+    "logoHome": "KABAD, home",
+    "choices": {
+      "BJ": "Benin",
+      "BF": "Burkina Faso",
+      "CM": "Cameroon",
+      "CI": "Côte d’Ivoire",
+      "GH": "Ghana",
+      "ML": "Mali",
+      "NE": "Niger",
+      "NG": "Nigeria",
+      "CD": "DR Congo",
+      "SN": "Senegal",
+      "TG": "Togo",
+      "otherCountry": "Other country",
+      "dataAi": "Data and AI"
     }
   },
   "nav": {

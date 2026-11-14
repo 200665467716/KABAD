@@ -25,7 +25,7 @@ async function Projects({ searchParams }: { searchParams: Promise<Record<string,
   const { defi } = await searchParams;
   const domain = isDomain(defi) ? defi : undefined;
   const [projects, t, format] = await Promise.all([listProjects(user.id, { domain }), getTranslations("rise"), getFormatter()]);
-  const chips: Array<{ value?: RiseDomain; label: string }> = [{ label: t("all") }, ...RISE_DOMAINS.filter((d) => d !== "OTHER").map((d) => ({ value: d, label: t(`domain.${d}`) }))];
+  const chips: Array<{ value?: RiseDomain; label: string }> = [{ label: t("all") }, ...RISE_DOMAINS.map((d) => ({ value: d, label: t(`domain.${d}`) }))];
   const firstLive = projects.findIndex((p) => p.event?.live === true);
   return (
     <>
@@ -46,9 +46,9 @@ async function Projects({ searchParams }: { searchParams: Promise<Record<string,
         })}
       </nav>
       {/* R1: the project in direct is the featured card of the screen, with the offset shadow. Only one per screen. */}
-      <div className="grid gap-3.5 md:grid-cols-2">
+      <div className="kb-stagger grid gap-3.5 md:grid-cols-2">
         {projects.map((p, i) => (
-          <ProjectCard key={p.id} p={p} featured={i === firstLive} eventLabel={p.event && !p.event.live ? t("eventOn", { date: format.dateTime(new Date(p.event.startsAt), { weekday: "short", hour: "numeric", minute: "2-digit" }) }) : null} t={t} />
+          <ProjectCard key={p.id} p={p} featured={i === firstLive} eventLabel={p.event && !p.event.live ? t("eventOn", { date: format.dateTime(new Date(p.event.startsAt), { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: user.timeZone }) }) : null} t={t} />
         ))}
       </div>
       {projects.length === 0 && <p className="py-8 text-center text-muted">{t("empty")}</p>}
@@ -60,7 +60,7 @@ function ProjectCard({ p, eventLabel, featured, t }: { p: RiseProjectSummary; ev
   const live = p.event?.live === true;
   const meta = [live ? t(`domain.${p.domain}`) : null, t("devs", { count: p.members }), t("countries", { count: p.countries }), !live && p.skills.length ? t("seeking", { skills: p.skills.slice(0, 3).join(", ") }) : null].filter(Boolean).join(" · ");
   return (
-    <Link href={`/rise-up/${p.id}`} className={cn("grid content-start gap-2 rounded-lg border-2 border-line-strong p-4 text-ink no-underline transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-pop", live ? "bg-accent text-on-accent" : "bg-raised", featured && "shadow-pop")}>
+    <Link href={`/rise-up/${p.id}`} className={cn("grid content-start gap-2 rounded-lg border-2 border-line-strong p-4 text-ink no-underline transition-[box-shadow,translate] duration-200 ease-kb hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none", live ? "bg-accent text-on-accent" : "bg-raised", featured && "shadow-pop")}>
       <div className="flex min-h-10 items-center justify-between gap-2">
         {live ? <Badge tone="live">{t("live")}</Badge> : <span className="flex flex-wrap items-center gap-2"><Tag>{t(`domain.${p.domain}`)}</Tag>{eventLabel && <span className="text-[13px] text-muted">{eventLabel}</span>}</span>}
         {live && <RiseSymbol size={40} className="text-ink" />}

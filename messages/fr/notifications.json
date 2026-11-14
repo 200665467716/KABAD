@@ -44,7 +44,11 @@
       "teamInviteAccepted": " a rejoint ton équipe {team} ({title}).",
       "teamInviteDeclined": " ne rejoint pas ton équipe {team} ({title}).",
       "sessionRated": " a noté votre séance « {topic} » : {rating} sur 5.",
-      "mentioned": " t’a mentionné·e dans « {title} »."
+      "mentioned": " t’a mentionné·e dans « {title} ».",
+      "riseEventCancelled": " : « {title} », prévu le {at}, est annulé.",
+      "teamMemberLeft": " a quitté ton équipe {team} ({title}).",
+      "teamCaptainHandedOver": " a quitté l’équipe {team} ({title}) : tu en es maintenant le chef d’équipe.",
+      "juryToScore": " est terminé : des solutions attendent ta note."
     }
   }
 }

@@ -29,9 +29,11 @@ const dayOf = (date: Date, timeZone: string) => new Intl.DateTimeFormat("en-CA",
 async function MentorData({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await pageUser(`/mentorat/mentors/${id}`);
-  const mentor = await orNotFound(getMentor(id));
+  const mentor = await orNotFound(getMentor(id, undefined, user.id));
   if (!mentor) notFound();
   const [t, tb, format, locale] = await Promise.all([getTranslations("mentoring.profile"), getTranslations("mentoring.badge"), getFormatter(), getLocale()]);
+  // Areas are stored in French ("Produit et UX"): shown in the reader's language.
+  const domain = (d: string) => (tb.has(`domainList.${d}` as "domainList.Backend") ? tb(`domainList.${d}` as "domainList.Backend") : d);
   const self = mentor.id === user.id;
   const gender = mentor.gender ?? "other";
   // One subject per line when the mentor wrote several.
@@ -76,7 +78,7 @@ async function MentorData({ params }: { params: Promise<{ id: string }> }) {
           {(mentor.bio || mentor.domains.length + mentor.technologies.length > 0) && (
             <div className="grid gap-3 p-4">
               {mentor.bio && <p className="text-[15px] leading-[22px]">{mentor.bio}</p>}
-              <TagList items={[...mentor.domains, ...mentor.technologies]} />
+              <TagList items={[...mentor.domains.map(domain), ...mentor.technologies]} />
             </div>
           )}
         </section>

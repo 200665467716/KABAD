@@ -41,10 +41,10 @@ export default async function Landing() {
       </a>
       <header className="nav">
         <div className="wrap">
-          <a className="logo" href="#top" aria-label={t("nav.home")}>
+          <Link className="logo" href="/" aria-label={t("nav.home")}>
             <LpLogo />
             KABAD
-          </a>
+          </Link>
           <nav className="nav-links" aria-label={t("nav.label")}>
             <a href="#pourquoi">{t("nav.why")}</a>
             <a href="#fonctionnalites">{t("nav.features")}</a>
@@ -396,10 +396,10 @@ export default async function Landing() {
 
       <footer>
         <div className="wrap">
-          <a className="logo" href="#top">
+          <Link className="logo" href="/">
             <LpLogo />
             KABAD
-          </a>
+          </Link>
           <span>{t("footer.tagline")}</span>
           <nav aria-label={t("footer.label")}>
             <a href="#pourquoi">{t("nav.why")}</a>

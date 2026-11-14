@@ -206,6 +206,23 @@ Les manques relevés dans `docs/etat-et-plan-de-test.md` pour l'inscription, les
 - Migrations : `photo_de_profil`, `discussion_et_invitations_d_equipe`, `evaluation_des_seances`.
 - Tests : 48 unitaires, 77 d'intégration, 112 e2e.
 
+## Mouvement de l'application (12 novembre)
+
+- [x] Animations de l'app connectée, en CSS, sans nouvelle dépendance : fondu montant au changement de page (`<ViewTransition>` de React, déclenché par les liens, jamais par un rafraîchissement), feuilles qui montent du bas sur téléphone et apparaissent au centre sur ordinateur, boutons et onglets qui s'enfoncent à l'appui, pastille d'onglet qui glisse, listes en cascade (hackathons, mentors, Rise-Up, apps à tester, notifications, annuaire), nouveaux messages qui arrivent du côté de leur auteur, jauges qui se remplissent, pastilles de non-lus et alertes qui apparaissent.
+- Seulement `transform`, `opacity` et `clip-path` ; tout est coupé si le téléphone demande moins d'animations.
+- [x] Landing : héros raccourci (titre en deux lignes, présentation en une phrase), cartes qui se soulèvent au survol, boutons qui s'enfoncent, FAQ qui se déplie ; la cascade passe par une animation pour laisser le survol réagir sans délai.
+- [x] Landing, « Fonctionnalités » : accordéon où une seule fonctionnalité est ouverte, avec sa description et son écran (dans le téléphone de droite sur ordinateur, sous la description sur téléphone). Plus de rotation automatique.
+- [x] Le logo ramène à l'accueil sur la landing, les écrans de connexion, `/bienvenue` et la page 404.
+- [x] Accueil de l'app : sections en cascade, lignes « À faire » et carte d'équipe qui réagissent au survol et à l'appui.
+
+## Campagne de tests du 13 novembre
+
+- [x] Tests des interfaces par cinq agents (inscription, mentorat, hackathons, tests d'apps et Rise-Up, messagerie et administration), sur téléphone et ordinateur, en français et sous `/en` : 81 problèmes, aucun bloquant, 9 majeurs. Rapport : `docs/rapport-de-tests-2026-11-13.md`.
+- [x] Les 9 majeurs corrigés, ainsi que la quasi-totalité des mineurs et des détails (cinq branches de correction fusionnées dans `dev/main`).
+- [x] Huit comptes de test en base (`test.*@kabad-test.dev`, mot de passe `kabad-test-2026`), à recréer après un seed ou des e2e.
+- [ ] Reporté : modifier un projet Rise-Up ; dire qui a annulé une séance (migration).
+- [ ] À trancher : l'organisateur peut-il s'inscrire à son propre hackathon ?
+- Tests : 62 unitaires, 107 d'intégration, 112 e2e.
 ## Mise à jour du 13 novembre (branche `dev/modifications`)
 
 Remarques du document d'Emmerson du 13 novembre (pages 8 à 39), appliquées après la reprise de `dev/main`.

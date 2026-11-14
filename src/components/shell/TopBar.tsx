@@ -70,8 +70,9 @@ export function Page({ children, className, narrow }: { children: ReactNode; cla
 /** Main action of a focused screen: pinned above the phone's home bar, inline on desktop. */
 export function ActionBar({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className="sticky bottom-0 z-10 border-t-2 border-line-strong bg-raised lg:static lg:border-0 lg:bg-transparent">
-      <div className={cn("mx-auto grid max-w-[640px] gap-2 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom,0px))] lg:max-w-[680px] lg:px-10 lg:pb-16", className)}>{children}</div>
+    // Au-dessus de la barre d'onglets du téléphone quand l'écran en a une (--bottom-nav-h, globals.css).
+    <div className="sticky bottom-(--bottom-nav-h) z-10 border-t-2 border-line-strong bg-raised lg:static lg:border-0 lg:bg-transparent">
+      <div className={cn("mx-auto grid max-w-[640px] gap-2 px-4 pt-3 pb-[max(16px,var(--action-bar-safe))] lg:max-w-[680px] lg:px-10 lg:pb-16", className)}>{children}</div>
     </div>
   );
 }

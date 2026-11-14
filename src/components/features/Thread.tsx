@@ -1,10 +1,11 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { splitMentions, type MentionMember } from "@/lib/mentions";
 import type { ChatQuote } from "@/lib/messaging-types";
+import { localizeSystemText } from "@/lib/system-text";
 
 /** Splits a message on ``` fences: odd parts are code. */
 function parts(text: string) {
@@ -102,6 +103,7 @@ export function MessageBubble({
   pinned?: boolean;
 }) {
   const t = useTranslations("messaging.bubble");
+  const locale = useLocale();
   const links = [...(actions ?? []), ...(onReport ? [{ label: t("report"), onClick: onReport }] : [])];
   return (
     <div
@@ -115,7 +117,7 @@ export function MessageBubble({
       {author && <span className={cn("text-xs font-extrabold", authorTone === "accent" ? "text-accent-text" : "text-brand-text")}>{author}</span>}
       {!hidden && quote}
       {!hidden && attachment}
-      {hidden ? <p className="text-sm italic opacity-80">{text}</p> : text ? <MessageBody text={text} mentions={mentions} /> : null}
+      {hidden ? <p className="text-sm italic opacity-80">{localizeSystemText(text, locale)}</p> : text ? <MessageBody text={text} mentions={mentions} /> : null}
       <span className="flex items-center justify-end gap-1.5 text-[11px] font-bold opacity-75 tabular">
         {pinned && <span>{t("pinned")} ·</span>}
         {status === "sending" ? t("sending") : status === "failed" ? t("failed") : time}
@@ -123,14 +125,15 @@ export function MessageBubble({
       {!hidden && !status && links.length > 0 && (
         <span className="flex flex-wrap gap-x-3 justify-self-start">
           {links.map((a) => (
-            <button key={a.label} type="button" onClick={a.onClick} className={cn("min-h-7 text-xs underline-offset-2 hover:underline", mine ? "text-on-brand/80" : "text-muted")}>
+            // Zone tactile de 44 px sans grossir la bulle : la marge négative rend la hauteur ajoutée.
+            <button key={a.label} type="button" onClick={a.onClick} className={cn("-my-3.5 min-h-11 text-xs underline-offset-2 hover:underline", mine ? "text-on-brand/80" : "text-muted")}>
               {a.label}
             </button>
           ))}
         </span>
       )}
       {status === "failed" && onRetry && (
-        <button type="button" onClick={onRetry} className="justify-self-end text-xs font-bold underline">
+        <button type="button" onClick={onRetry} className="-my-3.5 min-h-11 justify-self-end text-xs font-bold underline">
           {t("retry")}
         </button>
       )}
@@ -138,6 +141,8 @@ export function MessageBubble({
   );
 }
 
+/** Une ligne écrite par l'application (« Yao a rejoint le groupe »), enregistrée en français et traduite à l'affichage. */
 export function SystemLine({ children }: { children: string }) {
-  return <p className="max-w-[86%] justify-self-center text-center text-xs text-muted">{children}</p>;
+  const locale = useLocale();
+  return <p className="max-w-[86%] justify-self-center text-center text-xs text-muted">{localizeSystemText(children, locale)}</p>;
 }

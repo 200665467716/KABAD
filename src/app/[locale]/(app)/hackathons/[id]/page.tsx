@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 import { AdminActions } from "@/components/features/hackathons/AdminActions";
 import { useCountdown, useWhere } from "@/components/features/hackathons/HackathonTicket";
 import { initials } from "@/lib/format";
+import { levelIndex } from "@/lib/hackathon-form";
 import type { HackathonDetail } from "@/lib/domain-types";
 import { badgedMentors } from "@/server/admin";
 import { getHackathon } from "@/server/hackathons";
@@ -54,7 +55,9 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
   const user = await pageUser(`/hackathons/${id}`);
   const h = await orNotFound(getHackathon(user.id, id));
   if (!h) notFound();
-  const [t, tt, format] = await Promise.all([getTranslations("hackathons.detail"), getTranslations("hackathons.team"), getFormatter()]);
+  const [t, tt, to, format] = await Promise.all([getTranslations("hackathons.detail"), getTranslations("hackathons.team"), getTranslations("hackathons.organize"), getFormatter()]);
+  // The level is stored with its French label: it is shown in the reader's language.
+  const level = levelIndex(h.level);
   const mentors = user.isAdmin ? await badgedMentors(user.id) : [];
   const now = readClock();
   const hours = Math.round((new Date(h.endsAt).getTime() - new Date(h.startsAt).getTime()) / 3_600_000);
@@ -70,7 +73,12 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       <Page narrow>
-        {!h.published && <Alert tone="info" title={t("pendingTitle")}>{t("pendingText")}</Alert>}
+        {!h.published && (
+          <Alert tone="info" title={t("pendingTitle")}>
+            {/* Besides its author and the KABAD team, only a mentor offered a mission sees it. */}
+            {h.canEdit || user.isAdmin ? t("pendingText") : t("pendingMentorText")}
+          </Alert>
+        )}
         <Header h={h} now={now} />
 
         <dl className="m-0 grid grid-cols-2 gap-2.5">
@@ -88,7 +96,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
           </Overline>
           <p className="text-[15px] leading-[22px] whitespace-pre-line">{h.description}</p>
           <p className="text-sm text-muted">
-            {h.level} · {h.stack}
+            {level === null ? h.level : to(`levels.${level}`)} · {h.stack}
           </p>
           {h.rulesUrl && (
             <a href={h.rulesUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-extrabold">
@@ -124,7 +132,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
               ))}
             </AvatarGroup>
             <p id="instructors" className="text-sm">
-              <b>{t("instructorsCount", { count: h.instructorsList.length })}</b> {t("instructorsText")}
+              <b>{t("instructorsCount", { count: h.instructorsList.length })}</b> {t("instructorsText", { count: h.instructorsList.length })}
             </p>
           </section>
         )}
@@ -186,7 +194,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
             {t("join")}
           </ButtonLink>
         ) : (
-          <Badge className="justify-self-center">{h.amJuror ? t("youJudge") : t("closed")}</Badge>
+          <Badge className="justify-self-center">{h.amJuror ? t("youJudge") : !h.published ? t("notPublished") : t("closed")}</Badge>
         )}
       </ActionBar>
     </>

@@ -46,7 +46,7 @@ export function Recommendations({ people }: { people: Recommendation[] }) {
             {t("finish")}
           </ButtonLink>
           {!empty && (
-            <Link href="/accueil" className="py-2 text-center text-sm font-extrabold text-brand-text no-underline">
+            <Link href="/accueil" className="py-3 text-center text-sm font-extrabold text-brand-text no-underline">
               {t("skip")}
             </Link>
           )}
@@ -80,7 +80,7 @@ export function Recommendations({ people }: { people: Recommendation[] }) {
                   name={m.name}
                   badge={m.verified ? <MentorBadge>{t("mentor")}</MentorBadge> : undefined}
                   meta={[m.headline, m.city].filter(Boolean).join(" · ")}
-                  extra={<span className="text-xs font-extrabold text-brand-text">{m.why}</span>}
+                  extra={<span className="text-xs font-extrabold text-brand-text">{t(`why.${m.why.key}`, { tech: m.why.tech ?? "" })}</span>}
                   action={
                     done ? (
                       <Button size="sm" variant="secondary" icon="check" disabled>

@@ -9,11 +9,13 @@ import { TextArea, TextField } from "@/components/ui/Field";
 import { useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
 import { bookingSchema } from "@/lib/schemas";
+import { useErrorText } from "@/lib/use-error-text";
 
 /** Topic, precise problem and an optional link: what the mentor reads before accepting (screen M3). */
 export function BookingForm({ mentorId, mentorName, startsAt }: { mentorId: string; mentorName: string; startsAt: string }) {
   const t = useTranslations("mentoring");
   const router = useRouter();
+  const say = useErrorText();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
@@ -22,7 +24,7 @@ export function BookingForm({ mentorId, mentorName, startsAt }: { mentorId: stri
     const data = new FormData(e.currentTarget);
     const parsed = bookingSchema.safeParse({ mentorId, startsAt, topic: data.get("topic"), problem: data.get("problem"), link: data.get("link") ?? "" });
     if (!parsed.success) {
-      setErrors(Object.fromEntries(parsed.error.issues.map((i) => [String(i.path[0]), i.message])));
+      setErrors(Object.fromEntries(parsed.error.issues.map((i) => [String(i.path[0]), say(i.message)])));
       return;
     }
     setBusy(true);

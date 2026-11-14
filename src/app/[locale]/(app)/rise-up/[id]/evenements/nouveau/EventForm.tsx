@@ -9,10 +9,20 @@ import { ToggleChip } from "@/components/ui/Controls";
 import { Alert } from "@/components/ui/Display";
 import { useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
+import { zonedToUtc } from "@/lib/slots";
+import { zoneCity } from "@/lib/time-zones";
 
 const DURATIONS = [30, 60, 90, 120];
 
-export function EventForm({ projectId, projectName, others }: { projectId: string; projectName: string; others: number }) {
+/** "2026-11-13" and "18:25", read in the member's profile time zone (not the browser's), as the event page shows them. */
+function startsAtIn(date: string, time: string, timeZone: string): Date | null {
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  const h = /^(\d{2}):(\d{2})/.exec(time);
+  if (!d || !h) return null;
+  return zonedToUtc({ y: Number(d[1]), m: Number(d[2]), d: Number(d[3]) }, Number(h[1]) * 60 + Number(h[2]), timeZone);
+}
+
+export function EventForm({ projectId, projectName, others, timeZone }: { projectId: string; projectName: string; others: number; timeZone: string }) {
   const t = useTranslations("rise.newEvent");
   const router = useRouter();
   const [minutes, setMinutes] = useState(60);
@@ -25,8 +35,7 @@ export function EventForm({ projectId, projectName, others }: { projectId: strin
     const data = new FormData(e.currentTarget);
     const date = String(data.get("date") ?? "");
     const time = String(data.get("time") ?? "");
-    // The date and time are typed in the member's own time zone.
-    const startsAt = date && time ? new Date(`${date}T${time}`) : null;
+    const startsAt = startsAtIn(date, time, timeZone);
     setBusy(true);
     setError(null);
     try {
@@ -56,7 +65,7 @@ export function EventForm({ projectId, projectName, others }: { projectId: strin
         <TextField id="title" name="title" label={t("eventTitle")} maxLength={100} error={fieldError("title")} />
         <div className="grid grid-cols-2 gap-3">
           <TextField id="date" name="date" type="date" label={t("date")} error={fieldError("startsAt")} />
-          <TextField id="time" name="time" type="time" step={900} label={t("time")} />
+          <TextField id="time" name="time" type="time" step={900} label={t("time")} hint={t("timeHint", { city: zoneCity(timeZone) })} />
         </div>
         <fieldset className="grid gap-2">
           <legend className="mb-2 text-sm font-extrabold">{t("duration")}</legend>

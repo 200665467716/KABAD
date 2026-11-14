@@ -5,7 +5,7 @@ test.use({ storageState: { cookies: [], origins: [] } });
 
 test("« Créer mon compte » mène à l’inscription et « Se connecter » à la connexion", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("nouvelle génération de développeurs");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("nouvelle génération de devs");
   await page.locator("#cta-main").click();
   await expect(page).toHaveURL(/\/inscription$/);
   await page.goto("/");
@@ -13,19 +13,29 @@ test("« Créer mon compte » mène à l’inscription et « Se connecter » à 
   await expect(page).toHaveURL(/\/connexion$/);
 });
 
-test("les onglets des fonctionnalités changent l’écran du téléphone, au clic et au clavier", async ({ page }) => {
+test("les fonctionnalités s’ouvrent une à la fois, avec leur écran, au clic et au clavier", async ({ page }) => {
   await page.goto("/");
-  const tabs = page.getByRole("tablist", { name: "Fonctionnalités" });
-  await expect(tabs.getByRole("tab", { name: /Mentorat/ })).toHaveAttribute("aria-selected", "true");
-  await tabs.getByRole("tab", { name: /Hackathons/ }).click();
-  await expect(tabs.getByRole("tab", { name: /Hackathons/ })).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator("#scr-hack")).toBeVisible();
+  const mentoring = page.getByRole("button", { name: "Mentorat", exact: true });
+  const hack = page.getByRole("button", { name: "Hackathons", exact: true });
+  await expect(mentoring).toHaveAttribute("aria-expanded", "true");
+  await hack.click();
+  await expect(hack).toHaveAttribute("aria-expanded", "true");
+  await expect(mentoring).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("#pan-mentor")).toHaveAttribute("inert", "");
+  await expect(page.getByRole("region", { name: "Hackathons" })).toBeVisible();
+  // The screen of the open feature: in the phone on the right on a computer, under the description on a phone.
+  if (test.info().project.name === "telephone") await expect(page.locator("#pan-hack .acc-phone .phone")).toBeVisible();
+  else await expect(page.locator("#scr-hack")).toHaveClass(/\bon\b/);
   // The list stays on screen after a click (it used to vanish: React erased the class added by the reveal effect).
-  await expect(tabs).toHaveClass(/\bin\b/);
-  await expect(tabs).toHaveCSS("opacity", "1");
+  const list = page.locator(".acc");
+  await expect(list).toHaveClass(/\bin\b/);
+  await expect(list).toHaveCSS("opacity", "1");
   await page.keyboard.press("ArrowDown");
-  await expect(tabs.getByRole("tab", { name: /Tests d’apps/ })).toBeFocused();
-  await expect(page.locator("#scr-test")).toBeVisible();
+  const tests = page.getByRole("button", { name: "Tests d’apps", exact: true });
+  await expect(tests).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(tests).toHaveAttribute("aria-expanded", "true");
+  await expect(hack).toHaveAttribute("aria-expanded", "false");
 });
 
 test("la bande défilante se met en pause avec son bouton", async ({ page }) => {

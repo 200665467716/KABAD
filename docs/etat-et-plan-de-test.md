@@ -2,7 +2,7 @@
 
 Bilan du 9 novembre 2026, mis à jour le 11 novembre (au soir : manques des maquettes traités), branche `dev/main`. Pour chaque fonctionnalité : une note sur 10, ce qui manque pour atteindre 10, le fonctionnement normal, puis les tests à faire à la main, avec ce qu'on doit voir quand tout va bien.
 
-Vérifications automatiques au 13 novembre : lint et types propres, 60 tests unitaires, 87 tests d'intégration sur PostgreSQL, 112 tests e2e (téléphone et ordinateur), aucune licence GPL, AGPL ou LGPL.
+Vérifications automatiques au 11 novembre : lint et types propres, 62 tests unitaires, 107 tests d'intégration sur PostgreSQL, 112 tests e2e (13 novembre, après la campagne de tests : `docs/rapport-de-tests-2026-11-13.md`) (téléphone et ordinateur), aucune licence GPL, AGPL ou LGPL.
 
 ## Tableau de bord
 

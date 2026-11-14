@@ -21,7 +21,7 @@ async function Gate({ params }: { params: Promise<{ id: string }> }) {
   const project = await orNotFound(getProject(user.id, id));
   if (!project) notFound();
   if (!project.isMember) redirect({ href: `/rise-up/${id}`, locale: await getLocale() });
-  return <EventForm projectId={id} projectName={project.name} others={project.members - 1} />;
+  return <EventForm projectId={id} projectName={project.name} others={project.members - 1} timeZone={user.timeZone} />;
 }
 
 export default function NewEventPage({ params }: PageProps<"/[locale]/rise-up/[id]/evenements/nouveau">) {

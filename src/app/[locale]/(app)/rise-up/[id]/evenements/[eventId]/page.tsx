@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getFormatter, getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { RiseSymbol } from "@/components/features/rise/RiseSymbol";
@@ -11,6 +11,7 @@ import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 import { getEvent } from "@/server/rise";
 import { AddToCalendar } from "@/components/features/AddToCalendar";
+import { localizeRoomTitle } from "@/lib/system-text";
 import { CloseRoomButton } from "./CloseRoomButton";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -27,7 +28,9 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
   const user = await pageUser(`/rise-up/${id}/evenements/${eventId}`);
   const e = await orNotFound(getEvent(user.id, id, eventId));
   if (!e) notFound();
-  const [t, format] = await Promise.all([getTranslations("rise.event"), getFormatter()]);
+  const [t, format, locale] = await Promise.all([getTranslations("rise.event"), getFormatter(), getLocale()]);
+  // Le titre par défaut d'un salon est enregistré en français : il est traduit ici.
+  const title = localizeRoomTitle(e.title, locale);
   const start = new Date(e.startsAt);
   const ended = e.ended;
   return (
@@ -36,10 +39,10 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
       <Page narrow className="flex-1">
         <section className="grid gap-3 rounded-xl bg-ink p-5 text-raised">
           <div className="flex items-center justify-between gap-3">
-            {e.live ? <Badge tone="live" className="bg-raised/10">{t("live")}</Badge> : <Badge tone="neutral">{ended ? t("ended") : t("upcoming")}</Badge>}
+            {e.live ? <Badge tone="live" className="bg-raised/10">{t("live")}</Badge> : <Badge tone="neutral">{e.cancelled ? t("cancelled") : ended ? t("ended") : t("upcoming")}</Badge>}
             <RiseSymbol size={36} leaf="#f2b705" className="text-accent" />
           </div>
-          <h2 className="font-display text-2xl font-extrabold uppercase">{e.title}</h2>
+          <h2 className="font-display text-2xl font-extrabold uppercase">{title}</h2>
           <p className="text-sm font-semibold text-[var(--grey-light)]">
             {t("when", { date: format.dateTime(start, { weekday: "long", day: "numeric", month: "long", timeZone: user.timeZone }), time: format.dateTime(start, { hour: "numeric", minute: "2-digit", timeZone: user.timeZone }) })} · {t("duration", { minutes: e.minutes })}
           </p>
@@ -66,7 +69,9 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
               <ButtonLink href={e.meetingUrl} target="_blank" rel="noreferrer" size="lg" block icon="video" variant={e.live ? "primary" : "secondary"}>
                 {t("join")}
               </ButtonLink>
-              {e.live ? e.canClose && <CloseRoomButton projectId={id} eventId={eventId} /> : <AddToCalendar event={{ id: e.id, title: e.title, description: e.agenda, startsAt: e.startsAt, minutes: e.minutes, url: e.meetingUrl }} />}
+              {!e.live && <AddToCalendar event={{ id: e.id, title, description: e.agenda, startsAt: e.startsAt, minutes: e.minutes, url: e.meetingUrl }} />}
+              {/* A room opened on the spot has no agenda; an event not started yet is cancelled rather than closed. */}
+              {e.canClose && <CloseRoomButton projectId={id} eventId={eventId} mode={!e.live ? "cancel" : e.agenda ? "end" : "room"} />}
             </>
           ) : (
             <ButtonLink href={`/rise-up/${id}`} size="lg" block>

@@ -48,7 +48,7 @@
       "error": "Your answer wasn’t sent. Try again.",
       "noMessage": "No message",
       "declineTitle": "Decline the invitation?",
-      "declineText": "{name} won’t be told. You can still invite them later.",
+      "declineText": "No notification is sent to {name}. You can still invite them later.",
       "declined": "Invitation declined."
     },
     "invitation": {
@@ -60,14 +60,14 @@
       "years": "{count, plural, one {# year} other {# years}}",
       "mentor": "Mentor",
       "alreadyAnswered": "You already answered this invitation.",
-      "note": "{name} can’t send you anything else until you accept. If you decline, nobody is told.",
+      "note": "{name} can’t send you anything else until you accept. If you decline, no notification is sent.",
       "accept": "Accept",
       "accepting": "Opening…",
       "decline": "Decline",
       "declining": "Declining…",
       "error": "Your answer wasn’t sent. Try again.",
       "declineTitle": "Decline the invitation?",
-      "declineText": "{name} won’t be told. You can still invite them later.",
+      "declineText": "No notification is sent to {name}. You can still invite them later.",
       "mentorVerified": "Mentor verified by KABAD",
       "presentation": "Their presentation",
       "acceptedAlready": "You accepted {name}’s invitation: your conversation is open.",
@@ -119,7 +119,8 @@
       "pinnedMessages": "Pinned messages",
       "pinnedCount": "{count, plural, one {# pinned message} other {# pinned messages}}",
       "pinnedAll": "See all",
-      "pinnedLess": "Show less"
+      "pinnedLess": "Show less",
+      "fileTooBig": "Files are 2 MB at most."
     },
     "add": {
       "title": "Add participants",

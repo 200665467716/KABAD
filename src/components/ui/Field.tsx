@@ -81,7 +81,9 @@ export function Select({ id, label, hint, error, className, children, ...rest }:
 
 export function Checkbox({ children, className, ...rest }: { children: ReactNode; className?: string } & ComponentProps<"input">) {
   return (
-    <label className={cn("flex cursor-pointer items-start gap-3 text-sm", className)}>
+    // La case fait 22 px : 11 px de marge cliquable en haut et en bas donnent les 44 px de la charte,
+    // compensés par une marge négative pour ne pas décaler la mise en page.
+    <label className={cn("-my-[11px] flex cursor-pointer items-start gap-3 py-[11px] text-sm", className)}>
       <input type="checkbox" className="size-5.5 shrink-0 accent-[var(--brand)]" {...rest} />
       <span>{children}</span>
     </label>

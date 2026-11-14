@@ -33,8 +33,9 @@ async function ResultsData({ params }: { params: Promise<{ id: string }> }) {
       <TopBar back="/hackathons" title={h.title} subtitle={t("subtitle", { date: long(h.endsAt), count: h.teams })} />
       <Page narrow>
         {mine && (mine.prize || place === 1) && (
-          <section className="grid gap-1.5 rounded-xl border-2 border-line-strong bg-accent p-4 text-on-accent shadow-pop">
-            <p className="text-xs font-extrabold tracking-[0.1em] uppercase">{mine.prize ? t("youWonPrize", { place }) : t("youWon")}</p>
+          // En encre, le maïs en petite touche : le fond maïs est réservé à Africa Rise-Up.
+          <section className="grid gap-1.5 rounded-xl border-2 border-line-strong bg-ink p-4 text-raised shadow-pop">
+            <p className="text-xs font-extrabold tracking-[0.1em] text-accent uppercase">{mine.prize ? t("youWonPrize", { place }) : t("youWon")}</p>
             <p className="font-celebrate text-[30px] leading-9 font-extrabold">{mine.prize ?? t("firstPlace")}</p>
             <p className="text-sm">{t("winnerMark", { mark: mark(mine.mark), team: mine.team })}</p>
           </section>
@@ -63,7 +64,8 @@ async function ResultsData({ params }: { params: Promise<{ id: string }> }) {
           <Overline as="h2" id="rank">
             {t("ranking")}
           </Overline>
-          <ol className="m-0 list-none divide-y-2 divide-line overflow-hidden rounded-lg border-2 border-line-strong bg-raised p-0">
+          {h.ranking.length === 0 && <p className="text-sm text-muted">{t("empty")}</p>}
+          <ol className="m-0 list-none divide-y-2 divide-line overflow-hidden rounded-lg border-2 border-line-strong bg-raised p-0 empty:hidden">
             {h.ranking.slice(0, 10).map((r, i) => {
               const mine = r.teamId === team?.id;
               return (

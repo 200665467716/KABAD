@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import { RiseSymbol } from "@/components/features/rise/RiseSymbol";
 import { Page } from "@/components/shell/TopBar";
@@ -13,12 +13,15 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
 import type { RiseEventView, RiseProjectDetail } from "@/lib/domain-types";
 import { initials } from "@/lib/format";
+import { localizeRoomTitle } from "@/lib/system-text";
 
 type Tab = "talk" | "events" | "members" | "info";
 
-export function ProjectView({ project: p, viewerId, now }: { project: RiseProjectDetail; viewerId: string; now: number }) {
+/** Event times follow the member's profile time zone, as on the event page and in the notifications. */
+export function ProjectView({ project: p, viewerId, timeZone, now }: { project: RiseProjectDetail; viewerId: string; timeZone: string; now: number }) {
   const t = useTranslations("rise");
   const format = useFormatter();
+  const locale = useLocale();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("talk");
   const [busy, setBusy] = useState(false);
@@ -65,7 +68,7 @@ export function ProjectView({ project: p, viewerId, now }: { project: RiseProjec
         </div>
       </section>
 
-      {p.event && <EventStrip event={p.event} isMember={p.isMember} t={t} format={format} />}
+      {p.event && <EventStrip event={p.event} isMember={p.isMember} t={t} format={format} timeZone={timeZone} />}
 
       {!p.isMember && (
         <Button size="lg" block disabled={busy} onClick={() => membership(true)}>
@@ -153,13 +156,13 @@ export function ProjectView({ project: p, viewerId, now }: { project: RiseProjec
           {p.events.map((e) => (
             <Link key={e.id} href={`/rise-up/${p.id}/evenements/${e.id}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border-2 border-line-strong bg-raised p-3 text-ink no-underline">
               <span className="grid size-14 content-center justify-items-center rounded-action bg-ink text-raised">
-                <b className="font-display text-lg leading-5 font-extrabold">{format.dateTime(new Date(e.startsAt), { day: "numeric" })}</b>
-                <span className="text-[11px] font-extrabold text-accent uppercase">{format.dateTime(new Date(e.startsAt), { month: "short" })}</span>
+                <b className="font-display text-lg leading-5 font-extrabold">{format.dateTime(new Date(e.startsAt), { day: "numeric", timeZone })}</b>
+                <span className="text-[11px] font-extrabold text-accent uppercase">{format.dateTime(new Date(e.startsAt), { month: "short", timeZone })}</span>
               </span>
               <span className="grid min-w-0">
-                <b className="truncate text-[15px]">{e.title}</b>
+                <b className="truncate text-[15px]">{localizeRoomTitle(e.title, locale)}</b>
                 <span className="text-[13px] text-muted">
-                  {format.dateTime(new Date(e.startsAt), { hour: "numeric", minute: "2-digit" })} · {t("event.duration", { minutes: e.minutes })}
+                  {format.dateTime(new Date(e.startsAt), { hour: "numeric", minute: "2-digit", timeZone })} · {t("event.duration", { minutes: e.minutes })}
                 </span>
               </span>
               {e.live ? <Badge tone="live">{t("live")}</Badge> : <Icon name="chevron" size={18} className="text-subtle" />}
@@ -217,17 +220,18 @@ export function ProjectView({ project: p, viewerId, now }: { project: RiseProjec
 }
 
 /** R2: the band of the live room (ink, maize button), or the next event. */
-function EventStrip({ event, isMember, t, format }: { event: RiseEventView; isMember: boolean; t: ReturnType<typeof useTranslations<"rise">>; format: ReturnType<typeof useFormatter> }) {
+function EventStrip({ event, isMember, t, format, timeZone }: { event: RiseEventView; isMember: boolean; timeZone: string; t: ReturnType<typeof useTranslations<"rise">>; format: ReturnType<typeof useFormatter> }) {
   const page = `/rise-up/${event.projectId}/evenements/${event.id}`;
   const direct = event.live && isMember && event.meetingUrl;
+  const locale = useLocale();
   return (
     <div className="grid items-center gap-2.5 rounded-lg bg-ink px-4 py-3 text-raised sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3">
       <Link href={page} className="grid min-w-0 gap-0.5 text-raised no-underline">
         <span className="flex items-center gap-1.5 text-[11px] font-extrabold tracking-[0.12em] uppercase">
           {event.live ? <span aria-hidden="true" className="size-1.5 rounded-full bg-live" /> : null}
-          <span className={event.live ? "text-live" : "text-[var(--grey-light)]"}>{event.live ? t("project.liveRoom") : `${t("project.nextEvent")} · ${format.dateTime(new Date(event.startsAt), { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}`}</span>
+          <span className={event.live ? "text-live" : "text-[var(--grey-light)]"}>{event.live ? t("project.liveRoom") : `${t("project.nextEvent")} · ${format.dateTime(new Date(event.startsAt), { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone })}`}</span>
         </span>
-        <b className="truncate text-sm">{event.title}</b>
+        <b className="truncate text-sm">{localizeRoomTitle(event.title, locale)}</b>
       </Link>
       {direct ? (
         <a href={event.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-accent px-4 text-sm font-extrabold text-on-accent no-underline">

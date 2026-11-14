@@ -13,6 +13,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("metaTitle") };
 }
 
+/** Read once per request on the server, so the relative times match between server and browser. */
+const serverNow = () => Date.now();
+
 async function ReportsData({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await pageUser(`/tests/${id}/rapports`);
@@ -21,7 +24,7 @@ async function ReportsData({ params }: { params: Promise<{ id: string }> }) {
     throw e;
   });
   if (!data) notFound();
-  return <ReportReview app={data.app} reports={data.reports} />;
+  return <ReportReview app={data.app} reports={data.reports} now={serverNow()} />;
 }
 
 export default async function ReportsPage({ params }: PageProps<"/[locale]/tests/[id]/rapports">) {

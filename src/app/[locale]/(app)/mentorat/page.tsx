@@ -125,7 +125,7 @@ async function MentoringData({ searchParams }: { searchParams: Promise<Search> }
         {shown.length === 0 ? (
           <p className="py-6 text-center text-muted">{t("list.empty")}</p>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="kb-stagger grid gap-3 md:grid-cols-2">
             {shown.map((m) => (
               <MentorCard key={m.id} mentor={m} timeZone={tz} />
             ))}

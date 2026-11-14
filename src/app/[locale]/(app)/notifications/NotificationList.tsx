@@ -67,7 +67,7 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
   ].filter((g) => g.items.length > 0);
   const when = (n: NotificationView) => {
     const d = new Date(n.createdAt);
-    return age(n) <= 0 ? format.dateTime(d, { hour: "2-digit", minute: "2-digit" }) : format.dateTime(d, age(n) < 7 * 86_400_000 ? { weekday: "short" } : { day: "numeric", month: "short" });
+    return age(n) <= 0 ? format.dateTime(d, { hour: "numeric", minute: "2-digit" }) : format.dateTime(d, age(n) < 7 * 86_400_000 ? { weekday: "short" } : { day: "numeric", month: "short" });
   };
 
   return (
@@ -83,7 +83,7 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
           <Overline as="h2" id={`g-${g.id}`}>
             {g.label}
           </Overline>
-          <ul className="m-0 list-none divide-y-2 divide-line overflow-hidden rounded-lg border-2 border-line-strong bg-raised p-0">
+          <ul className="kb-stagger m-0 list-none divide-y-2 divide-line overflow-hidden rounded-lg border-2 border-line-strong bg-raised p-0">
             {g.items.map((n) => (
               <li key={n.id}>
                 <Link
@@ -97,7 +97,7 @@ export function NotificationList({ initial }: { initial: NotificationView[] }) {
                     <Icon name={n.icon} size={18} />
                   </span>
                   <span className="text-sm leading-5">
-                    {n.unread && <span className="sr-only">{t("unreadDot")} : </span>}
+                    {n.unread && <span className="sr-only">{t("unreadLabel")} </span>}
                     <b>{n.actor}</b>
                     {/^[\s:]/.test(textOf(n)) ? "" : " "}
                     {textOf(n)}

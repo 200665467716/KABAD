@@ -8,6 +8,7 @@ import { ToggleChip } from "@/components/ui/Controls";
 import { Alert } from "@/components/ui/Display";
 import { RadioCard, Select, TextArea, TextField } from "@/components/ui/Field";
 import { useRouter } from "@/i18n/navigation";
+import { choiceLabel } from "@/lib/choice-labels";
 import { api, ApiError } from "@/lib/api";
 import type { Level } from "@/lib/domain-types";
 import { BIO_MAX, COUNTRIES, GOALS, LEVELS, TECH_CHOICES } from "@/lib/schemas";
@@ -22,6 +23,7 @@ export function ProfileEditor({ initial, name, photo }: { initial: Initial; name
   const t = useTranslations("profile.edit");
   const tl = useTranslations("profile.levels");
   const tg = useTranslations("auth.goals");
+  const tc = useTranslations("common.choices");
   const router = useRouter();
   const [level, setLevel] = useState<Level>(initial.level);
   const [stack, setStack] = useState(initial.stack);
@@ -67,7 +69,7 @@ export function ProfileEditor({ initial, name, photo }: { initial: Initial; name
             <option value="">{t("countryPlaceholder")}</option>
             {COUNTRIES.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {choiceLabel(c, tc)}
               </option>
             ))}
           </Select>
@@ -99,7 +101,7 @@ export function ProfileEditor({ initial, name, photo }: { initial: Initial; name
           <div className="flex flex-wrap gap-2">
             {choices.map((c) => (
               <ToggleChip key={c} pressed={stack.includes(c)} onClick={() => setStack((s) => toggle(s, c))}>
-                {c}
+                {choiceLabel(c, tc)}
               </ToggleChip>
             ))}
           </div>

@@ -95,13 +95,13 @@
     "session": {
       "metaTitle": "Mentoring session",
       "pendingTitle": "Request sent",
-      "pendingText": "{name} will read your request. You’ll get a notification as soon as they answer.",
+      "pendingText": "{name} will read your request. You’ll get a notification as soon as {gender, select, FEMALE {she answers} MALE {he answers} other {they answer}}.",
       "acceptedTitle": "Session confirmed",
       "acceptedText": "{name} accepted your request. You both received the confirmation and the Google Meet link.",
       "declinedTitle": "Session declined",
       "declinedText": "{name} can’t hold this session.",
       "cancelledTitle": "Session cancelled",
-      "cancelledText": "This session won’t take place.",
+      "cancelledText": "This session with {name} won’t take place.",
       "mentorPendingTitle": "Request to answer",
       "mentorPendingText": "{name} would like this session. Read their problem before answering.",
       "mentorAcceptedText": "You accepted this session with {name}.",
@@ -135,7 +135,14 @@
       "copied": "Link copied",
       "ratingFrom": "{name}’s rating",
       "ratingMine": "Your rating",
-      "ratingValue": "{rating} out of 5"
+      "ratingValue": "{rating} out of 5",
+      "mentorDeclinedTitle": "Request declined",
+      "mentorDeclinedText": "You declined this session with {name}.",
+      "heldTitle": "Session over",
+      "heldText": "Your session with {name} took place.",
+      "theirRequest": "Their request",
+      "linkValue": "Useful link: {url}",
+      "ratingComment": "“{comment}”"
     },
     "requests": {
       "title": "Requests received",
@@ -203,7 +210,8 @@
       "blockedEnd": "Until",
       "blockedEndHint": "Optional: to block several days at once.",
       "blockedRange": "From {from} to {to} ({count} days)",
-      "addBlockedRange": "Block these {count} days"
+      "addBlockedRange": "Block these {count} days",
+      "overlapOn": "Two ranges on {day} overlap. Change the hours of one of them."
     },
     "badge": {
       "metaTitle": "Mentor badge",
@@ -271,6 +279,8 @@
       "refusedTitle": "Request not approved",
       "refusedText": "The KABAD team did not approve your request. You can send a new one taking the reason into account.",
       "refusedReason": "Reason: {reason}",
+      "revokedTitle": "Mentor badge removed",
+      "revokedText": "The KABAD team removed your mentor badge. You can send a new request taking the reason into account.",
       "retry": "Send a new request",
       "technologiesCount": "{count} / {max}",
       "technologiesOther": "Another technology",

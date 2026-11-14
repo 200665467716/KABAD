@@ -2,7 +2,7 @@
 
 import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { MessageBubble, Quote, SystemLine, type BubbleAction } from "@/components/features/Thread";
 import { AttachButton, AttachmentView, VoiceRecorder } from "@/components/features/messaging/Attachments";
@@ -13,17 +13,20 @@ import { ConfirmSheet, Sheet } from "@/components/ui/Controls";
 import { Alert, Avatar, DaySeparator } from "@/components/ui/Display";
 import { Select, TextArea, TextField } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
+import { cn } from "@/lib/cn";
 import { api, ApiError } from "@/lib/api";
-import { GROUP_PHOTO_SIZE } from "@/lib/attachments";
+import { ATTACHMENT_MAX_BYTES, GROUP_PHOTO_SIZE } from "@/lib/attachments";
 import { initials } from "@/lib/format";
 import { squareImage } from "@/lib/image-resize";
 import { mentionQuery } from "@/lib/mentions";
 import type { ChatMessage, ChatQuote, Contact, ConversationDetail } from "@/lib/messaging-types";
 import { useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
 import { GROUP_DESCRIPTION_MAX, GROUP_NAME_MAX, GROUP_THEMES, MESSAGE_MAX_LENGTH } from "@/lib/schemas";
+import { localizeGroupName } from "@/lib/system-text";
 import { useChatTime } from "../useChatTime";
 
-type Shown = ChatMessage & { status?: "sending" | "failed" };
+/** `refused` : le serveur a refusé le message (403, blocage) ; le réessayer échouerait toujours. */
+type Shown = ChatMessage & { status?: "sending" | "failed"; refused?: boolean };
 
 const ACCENTS = ["brand", "accent"] as const;
 
@@ -54,9 +57,13 @@ function merge(current: Shown[], incoming: ChatMessage[]): Shown[] {
 export function ConversationView({ me, initial }: { me: { id: string; name: string }; initial: ConversationDetail }) {
   const t = useTranslations("messaging.conversation");
   const tp = useTranslations("tests.platform");
+  const locale = useLocale();
   const time = useChatTime();
   const [detail, setDetail] = useState(initial);
   const [messages, setMessages] = useState<Shown[]>(initial.messages);
+  // Messages already on screen when the page opened, or loaded from the history: they do not animate.
+  // Only a message that arrives while the member reads (sent or received) slides in.
+  const [settled] = useState(() => new Set(initial.messages.map((m) => m.clientId ?? m.id)));
   const [hasMore, setHasMore] = useState(initial.hasMore);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +82,8 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   const list = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
   const keepOffset = useRef<number | null>(null);
+  // Les fichiers partent l'un après l'autre : deux envois rapprochés gardent leur ordre.
+  const uploads = useRef<Promise<void>>(Promise.resolve());
   const group = detail.kind === "GROUP";
   // T4: in a testers' group, the tasks stay pinned above the messages.
   const test = detail.test;
@@ -142,8 +151,11 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
       const saved = await api<ChatMessage>(`/api/conversations/${detail.id}/messages`, { body: { body, clientId, ...(replyToId ? { replyToId } : {}) } });
       setMessages((cur) => merge(cur, [saved]));
     } catch (e) {
-      setMessages((cur) => cur.map((m) => (m.clientId === clientId ? { ...m, status: "failed" } : m)));
+      // Un 403 vient d'un blocage : pas de « Réessayer », et la conversation se recharge pour fermer le champ.
+      const refused = e instanceof ApiError && e.status === 403;
+      setMessages((cur) => cur.map((m) => (m.clientId === clientId ? { ...m, status: "failed", refused } : m)));
       if (e instanceof ApiError && e.status !== 0) setError(e.message);
+      if (refused) reload();
     }
   }
 
@@ -163,7 +175,9 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   }
 
   /** Sends a file or a voice note, shown at once as "sending", like a text message. */
-  async function upload(file: File, kind: "FILE" | "VOICE", seconds?: number) {
+  function upload(file: File, kind: "FILE" | "VOICE", seconds?: number) {
+    // Un fichier trop lourd est refusé avant l'envoi : inutile de le faire monter en 4G pour rien.
+    if (file.size > ATTACHMENT_MAX_BYTES) return setError(t("fileTooBig"));
     setError(null);
     const clientId = crypto.randomUUID();
     stickToBottom.current = true;
@@ -175,13 +189,17 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
     if (replyTo) form.set("replyToId", replyTo.id);
     setReplyTo(null);
     setMessages((cur) => [...cur, { id: `tmp-${clientId}`, clientId, authorId: me.id, authorName: me.name, body: kind === "VOICE" ? t("voiceSending") : file.name, system: false, createdAt: new Date().toISOString(), status: "sending" }]);
-    try {
-      const saved = await api<ChatMessage>(`/api/conversations/${detail.id}/attachments`, { body: form });
-      setMessages((cur) => merge(cur, [saved]));
-    } catch (e) {
-      setMessages((cur) => cur.filter((m) => m.clientId !== clientId));
-      setError(e instanceof ApiError ? e.message : t("uploadFailed"));
-    }
+    uploads.current = uploads.current.then(async () => {
+      try {
+        const saved = await api<ChatMessage>(`/api/conversations/${detail.id}/attachments`, { body: form });
+        setMessages((cur) => merge(cur, [saved]));
+        // Un envoi réussi efface l'erreur d'un envoi précédent.
+        setError(null);
+      } catch (e) {
+        setMessages((cur) => cur.filter((m) => m.clientId !== clientId));
+        setError(e instanceof ApiError ? e.message : t("uploadFailed"));
+      }
+    });
   }
 
   function retry(m: Shown) {
@@ -236,6 +254,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
     try {
       const page = await api<ConversationDetail>(`/api/conversations/${detail.id}?avant=${encodeURIComponent(first.createdAt)}`);
       if (list.current) keepOffset.current = list.current.scrollHeight - list.current.scrollTop;
+      for (const m of page.messages) settled.add(m.clientId ?? m.id);
       setMessages((cur) => merge(cur, page.messages));
       setHasMore(page.hasMore);
     } catch (e) {
@@ -285,7 +304,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
             </Link>
           ) : null
         }
-        title={detail.title}
+        title={group ? localizeGroupName(detail.title, locale) : detail.title}
         subtitle={group ? `${t("memberCount", { count: detail.members.length })} · ${test ? test.platforms.map((p) => tp(p)).join(", ") : (detail.theme ?? memberNames)}` : detail.other ? `${detail.other.role === "SENIOR" ? `${t("mentor")} · ` : ""}${detail.other.city}` : undefined}
         actions={
           <>
@@ -326,13 +345,14 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
             const prev = messages[i - 1];
             const newDay = !prev || time.day(prev.createdAt) !== time.day(m.createdAt);
             const mine = m.authorId === me.id;
+            const fresh = !settled.has(m.clientId ?? m.id);
             return (
               <Fragment key={m.clientId ?? m.id}>
                 {newDay && <DaySeparator>{time.day(m.createdAt)}</DaySeparator>}
                 {m.system ? (
                   <SystemLine>{m.body}</SystemLine>
                 ) : group && !mine ? (
-                  <div id={`m-${m.id}`} className="grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2 rounded-[18px] transition-shadow">
+                  <div id={`m-${m.id}`} className={cn("grid grid-cols-[32px_minmax(0,1fr)] items-end gap-2 rounded-[18px] transition-shadow", fresh && "kb-msg-in")}>
                     <Avatar initials={initials(m.authorName ?? "?")} src={photos.get(m.authorId ?? "")} size="sm" />
                     <MessageBubble
                       text={m.body}
@@ -349,7 +369,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
                     />
                   </div>
                 ) : (
-                  <div id={`m-${m.id}`} className={mine ? "grid justify-items-end rounded-[18px] transition-shadow" : "grid justify-items-start rounded-[18px] transition-shadow"}>
+                  <div id={`m-${m.id}`} className={cn("grid rounded-[18px] transition-shadow", mine ? "justify-items-end" : "justify-items-start", fresh && "kb-msg-in")} data-mine={mine || undefined}>
                     <MessageBubble
                       text={m.body}
                       hidden={m.hidden}
@@ -358,7 +378,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
                       time={time.clock(m.createdAt)}
                       mine={mine}
                       status={m.status}
-                      onRetry={() => retry(m)}
+                      onRetry={m.refused ? undefined : () => retry(m)}
                       actions={actionsFor(m)}
                       mentions={mentions}
                       pinned={m.pinned}
@@ -483,37 +503,43 @@ function PinnedTasks({ test }: { test: NonNullable<ConversationDetail["test"]> }
   const [open, setOpen] = useState(true);
   const [error, setError] = useState(false);
   const tester = test.doneSteps !== null;
+  // Ticks sent in a row: the list from the server is applied only once the last one has answered,
+  // otherwise an older answer would erase the ticks made since.
+  const pending = useRef(0);
 
   async function toggle(index: number, next: boolean) {
-    const before = done;
+    const apply = (d: number[], on: boolean) => (on ? [...new Set([...d, index])] : d.filter((i) => i !== index));
     setError(false);
-    setDone(next ? [...done, index] : done.filter((i) => i !== index));
+    setDone((d) => apply(d, next));
+    pending.current += 1;
     try {
       const r = await api<{ doneSteps: number[] }>(`/api/tests/${test.id}/steps`, { method: "PUT", body: { index, done: next } });
-      setDone(r.doneSteps);
+      if (pending.current === 1) setDone(r.doneSteps);
     } catch {
-      setDone(before);
+      setDone((d) => apply(d, !next));
       setError(true);
+    } finally {
+      pending.current -= 1;
     }
   }
 
   return (
     <section aria-label={t("pinnedLabel")} className="mx-auto mt-3 grid w-[calc(100%-28px)] max-w-[732px] gap-2 rounded-lg border-2 border-line-strong bg-raised px-3.5 py-3">
       <div className="flex items-center justify-between gap-2.5">
-        <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex min-h-9 items-center gap-1.5 text-xs font-extrabold tracking-wide text-muted uppercase">
+        <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex min-h-11 items-center gap-1.5 text-xs font-extrabold tracking-wide text-muted uppercase">
           {t("pinned")}
           {tester && <span className="tabular">· {done.length}/{test.steps.length}</span>}
           <Icon name="chevron" size={16} className={open ? "-rotate-90" : "rotate-90"} />
         </button>
         {/* A plain <a>: the app lives outside KABAD. */}
-        <a href={test.url} target="_blank" rel="noreferrer" className={buttonClass({ variant: "ink", size: "sm", className: "h-9 px-3 text-[13px] no-underline" })}>
+        <a href={test.url} target="_blank" rel="noreferrer" className={buttonClass({ variant: "ink", size: "sm", className: "h-11 px-3 text-[13px] no-underline" })}>
           {t("installApp")}
         </a>
       </div>
       {open &&
         test.steps.map((step, i) =>
           tester ? (
-            <label key={i} className="flex min-h-8 cursor-pointer items-center gap-2.5 text-sm font-bold">
+            <label key={i} className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-bold">
               <input type="checkbox" checked={done.includes(i)} onChange={(e) => toggle(i, e.target.checked)} className="size-5 shrink-0 accent-[var(--brand)]" />
               <span className={done.includes(i) ? "text-muted line-through" : undefined}>{step}</span>
             </label>
@@ -609,6 +635,7 @@ function AddMembersSheet({ open, onClose, conversationId, memberIds, onAdded }: 
 function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open: boolean; onClose: () => void; detail: ConversationDetail; meId: string; onChanged: () => void; onLeft: () => void }) {
   const t = useTranslations("messaging.people");
   const tc = useTranslations("messaging.conversation");
+  const locale = useLocale();
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [editing, setEditing] = useState(false);
   // Removing a member asks for a confirmation first: they lose the group at once.
@@ -664,7 +691,7 @@ function MembersSheet({ open, onClose, detail, meId, onChanged, onLeft }: { open
         <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <Avatar initials={initials(detail.title)} src={detail.photo} size="lg" square tone="neutral" />
           <span className="grid min-w-0">
-            <b className="font-display text-lg leading-6 break-words">{detail.title}</b>
+            <b className="font-display text-lg leading-6 break-words">{localizeGroupName(detail.title, locale)}</b>
             <span className="text-sm text-muted">{[tc("memberCount", { count: detail.members.length }), detail.theme].filter(Boolean).join(" · ")}</span>
           </span>
           {editable && !editing && (

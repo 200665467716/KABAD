@@ -26,13 +26,13 @@ const DAY = 86_400_000;
 
 function TodoRow({ href, icon, title, text }: { href: string; icon: IconName; title: string; text: string }) {
   return (
-    <Link href={href} className="flex min-h-14 items-center gap-3 px-3.5 py-3 text-ink no-underline">
+    <Link href={href} className="group flex min-h-14 items-center gap-3 px-3.5 py-3 text-ink no-underline transition-colors duration-150 hover:bg-bg active:bg-sunken">
       <Avatar initials={<Icon name={icon} size={18} />} size="md" tone="brand" />
       <span className="grid min-w-0 flex-1">
         <span className="font-extrabold">{title}</span>
         <span className="truncate text-[13px] text-muted">{text}</span>
       </span>
-      <Icon name="chevron" size={18} className="text-subtle" />
+      <Icon name="chevron" size={18} className="text-subtle transition-transform duration-200 ease-kb group-hover:translate-x-1" />
     </Link>
   );
 }
@@ -47,7 +47,7 @@ async function hackathonLine(h: HackathonSummary) {
 
 async function HomeData() {
   const user = await pageUser("/accueil");
-  const [t, format] = await Promise.all([getTranslations("home"), getFormatter()]);
+  const [t, tWhy, format] = await Promise.all([getTranslations("home"), getTranslations("auth.suggestions.why"), getFormatter()]);
   const [bookings, hackathons, entries, projects, tests, people, invitations, bell, missions] = await Promise.all([
     myBookings(user.id),
     listHackathons(user.id),
@@ -97,7 +97,7 @@ async function HomeData() {
           </>
         }
       />
-      <Page className="lg:grid-cols-2 lg:gap-6">
+      <Page className="kb-stagger lg:grid-cols-2 lg:gap-6">
         {todos.length > 0 && <div className="divide-y-2 divide-line overflow-hidden rounded-lg border-2 border-line-strong bg-raised lg:col-span-2">{todos}</div>}
 
         {next && other ? (
@@ -114,6 +114,8 @@ async function HomeData() {
                 <Link href={`/mentorat/seances/${next.id}`} className="text-md font-extrabold text-ink no-underline">
                   {next.topic}
                 </Link>
+                {/* The day, next to the hour of the time block: "in 3 days" alone does not say which one. */}
+                <span className="text-sm font-bold first-letter:uppercase">{format.dateTime(new Date(next.startsAt), { weekday: "long", day: "numeric", month: "long", timeZone: user.timeZone })}</span>
                 <span className="flex items-center gap-2 text-sm text-muted">
                   <Avatar initials={initials(other.name)} size="sm" tone="neutral" />
                   <span>
@@ -191,7 +193,7 @@ async function HomeData() {
         <section aria-labelledby="home-hack" className="grid content-start gap-3">
           <SectionLink id="home-hack" title={t("hackathons.title")} href="/hackathons" label={t("hackathons.seeAll")} />
           {entry && (
-            <Link href={`/hackathons/${entry.hackathonId}/equipe`} className="flex items-center gap-3 rounded-lg bg-header px-3.5 py-3 text-on-header no-underline">
+            <Link href={`/hackathons/${entry.hackathonId}/equipe`} className="flex items-center gap-3 rounded-lg bg-header px-3.5 py-3 text-on-header no-underline transition-[translate,box-shadow] duration-200 ease-kb hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none">
               <Avatar initials={initials(entry.team)} size="md" tone="accent" square />
               <span className="grid min-w-0 flex-1">
                 <span className="font-extrabold">{entry.solo ? t("hackathons.myTeamSolo") : t("hackathons.myTeam", { team: entry.team })}</span>
@@ -249,7 +251,7 @@ async function HomeData() {
                     <span className="text-[13px] text-muted">{[p.headline, p.city].filter(Boolean).join(" · ")}</span>
                   </span>
                   {p.verified && <Badge tone="brand">{t("devs.mentor")}</Badge>}
-                  <span className="text-xs font-extrabold text-brand-text">{p.why}</span>
+                  <span className="text-xs font-extrabold text-brand-text">{tWhy(p.why.key, { tech: p.why.tech ?? "" })}</span>
                 </Link>
               ))}
             </div>

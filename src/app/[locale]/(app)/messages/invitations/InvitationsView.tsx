@@ -7,7 +7,7 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { ConfirmSheet } from "@/components/ui/Controls";
 import { Alert, Avatar, Badge, Overline } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
 import { initials } from "@/lib/format";
 import type { ReceivedInvitation, SentInvitation } from "@/lib/messaging-types";
@@ -17,6 +17,7 @@ type Answered = { accepted: boolean; conversationId: string | null };
 
 export function InvitationsView({ received: initialReceived, sent: initialSent }: { received: ReceivedInvitation[]; sent: SentInvitation[] }) {
   const t = useTranslations("messaging.invitations");
+  const router = useRouter();
   const [received, setReceived] = useState(initialReceived);
   const [sent, setSent] = useState(initialSent);
   const [answers, setAnswers] = useState<Record<string, Answered>>({});
@@ -44,6 +45,8 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
     try {
       const { conversationId } = await api<{ conversationId: string | null }>(`/api/invitations/${id}`, { body: { accept } });
       setAnswers((a) => ({ ...a, [id]: { accepted: accept, conversationId } }));
+      // Comme depuis la page de l'invitation : accepter ouvre la conversation.
+      if (accept && conversationId) return router.push(`/messages/${conversationId}`);
       // A declined invitation simply leaves the list; the sender is not told.
       if (!accept) {
         setReceived((list) => list.filter((x) => x.id !== id));
@@ -77,6 +80,8 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
               <p className="text-[13px] text-muted">{t("intro")}</p>
               {received.map((i) => {
                 const done = answers[i.id];
+                // Un seul bouton indigo par écran : celui de la première invitation encore sans réponse.
+                const first = received.find((x) => !answers[x.id])?.id === i.id;
                 return (
                   <article key={i.id} className="grid gap-3 rounded-lg border-2 border-line-strong bg-raised p-3.5">
                     <Link href={`/messages/invitations/${i.id}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 text-ink no-underline">
@@ -106,7 +111,7 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
                         <Button variant="secondary" disabled={busy !== null} onClick={() => setDeclining(i)}>
                           {t("decline")}
                         </Button>
-                        <Button disabled={busy !== null} onClick={() => answer(i.id, true)}>
+                        <Button variant={first ? "primary" : "ink"} disabled={busy !== null} onClick={() => answer(i.id, true)}>
                           {t("accept")}
                         </Button>
                       </div>
@@ -137,7 +142,7 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
             <ul className="m-0 list-none overflow-hidden rounded-lg border-2 border-line-strong bg-raised p-0 [&>li+li]:border-t-2 [&>li+li]:border-line">
               {sent.map((i) => (
                 <li key={i.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3">
-                  <Avatar initials={initials(i.to.name)} size="sm" />
+                  <Avatar initials={initials(i.to.name)} src={i.to.photo} size="sm" />
                   <span className="grid min-w-0">
                     <Link href={`/profil/${i.toId}`} className="truncate text-[15px] font-extrabold text-ink no-underline">
                       {i.to.name}
@@ -146,7 +151,7 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
                   </span>
                   <span className="grid justify-items-end gap-1">
                     <Badge tone="brand">{t("pending")}</Badge>
-                    <button type="button" onClick={() => cancel(i.id)} aria-label={t("cancelLabel", { name: i.to.name })} className="min-h-8 text-xs font-extrabold text-muted underline-offset-2 hover:underline">
+                    <button type="button" onClick={() => cancel(i.id)} aria-label={t("cancelLabel", { name: i.to.name })} className="min-h-11 text-xs font-extrabold text-muted underline-offset-2 hover:underline">
                       {t("cancel")}
                     </button>
                   </span>

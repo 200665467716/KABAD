@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink, IconButton } from "@/components/ui/Button";
@@ -12,6 +12,7 @@ import { api } from "@/lib/api";
 import { initials } from "@/lib/format";
 import type { ConversationSummary, ReceivedInvitation, SentInvitation } from "@/lib/messaging-types";
 import { useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
+import { localizeGroupName, localizeSystemText } from "@/lib/system-text";
 import { useChatTime } from "./useChatTime";
 
 type Filter = "all" | "people" | "groups";
@@ -34,6 +35,7 @@ export function Inbox({
   initialSent: SentInvitation[];
 }) {
   const t = useTranslations("messaging.inbox");
+  const locale = useLocale();
   const time = useChatTime();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
@@ -106,7 +108,7 @@ export function Inbox({
           <Link href="/messages/invitations" className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border-2 border-dashed border-line-strong p-3.5 text-ink no-underline">
             <AvatarGroup>
               {invitations.slice(0, 2).map((i) => (
-                <Avatar key={i.id} initials={initials(i.from.name)} size="sm" />
+                <Avatar key={i.id} initials={initials(i.from.name)} src={i.from.photo} size="sm" />
               ))}
             </AvatarGroup>
             <span className="grid min-w-0">
@@ -150,7 +152,7 @@ export function Inbox({
                 return (
                   <li key={`sent-${i.id}`}>
                     <Link href="/messages/invitations" className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 text-ink no-underline hover:bg-bg">
-                      <Avatar initials={initials(i.to.name)} />
+                      <Avatar initials={initials(i.to.name)} src={i.to.photo} />
                       <span className="grid min-w-0">
                         <b className="truncate text-[15px] leading-5">{i.to.name}</b>
                         <small className="truncate text-[13px] leading-[18px] text-muted">{i.message ? `${t("you")} : ${i.message.split("\n")[0]}` : t("inviteSentNoMessage")}</small>
@@ -165,14 +167,15 @@ export function Inbox({
               }
               const c = row.c;
               const group = c.kind === "GROUP";
+              const title = group ? localizeGroupName(c.title, locale) : c.title;
               const author = c.last && !c.last.system && (group || c.last.authorId === me) ? `${c.last.authorId === me ? t("you") : (c.last.authorName ?? "").split(" ")[0]} : ` : "";
               return (
                 <li key={c.id}>
                   <Link href={`/messages/${c.id}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 text-ink no-underline hover:bg-bg">
-                    <Avatar initials={initials(c.title)} src={c.photo} square={group} tone={group ? "neutral" : "brand"} />
+                    <Avatar initials={initials(title)} src={c.photo} square={group} tone={group ? "neutral" : "brand"} />
                     <span className="grid min-w-0">
-                      <b className="truncate text-[15px] leading-5">{c.title}</b>
-                      <small className={c.unread > 0 ? "truncate text-[13px] leading-[18px] font-bold text-ink" : "truncate text-[13px] leading-[18px] text-muted"}>{c.last ? `${author}${c.last.body.split("\n")[0] || (c.last.attachment === "VOICE" ? t("voiceNote") : c.last.attachment === "FILE" ? t("file") : "")}` : t("noMessage")}</small>
+                      <b className="truncate text-[15px] leading-5">{title}</b>
+                      <small className={c.unread > 0 ? "truncate text-[13px] leading-[18px] font-bold text-ink" : "truncate text-[13px] leading-[18px] text-muted"}>{c.last ? `${author}${localizeSystemText(c.last.body, locale, c.last.system).split("\n")[0] || (c.last.attachment === "VOICE" ? t("voiceNote") : c.last.attachment === "FILE" ? t("file") : "")}` : t("noMessage")}</small>
                     </span>
                     <span className="grid justify-items-end gap-1">
                       <span className="text-xs text-muted tabular">{time.short(c.lastMessageAt)}</span>

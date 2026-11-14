@@ -35,7 +35,8 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <>
-      <TopBar back="/hackathons" title={t("title")} />
+      {/* Once answered, the mission is no longer "offered". */}
+      <TopBar back="/hackathons" title={m.status === "PROPOSED" ? t("title") : m.status === "ACCEPTED" ? t("accepted") : t("declined")} />
       <Page narrow>
         {/* The organizer: a tap opens their profile (P16), from where one can write to them. */}
         {m.organizerId ? (

@@ -7,8 +7,14 @@ import { ConfirmSheet } from "@/components/ui/Controls";
 import { useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
 
-/** Closes a live room: it leaves the « en direct » band of the project. The Meet call itself ends on Google's side. */
-export function CloseRoomButton({ projectId, eventId }: { projectId: string; eventId: string }) {
+/** "room": a live room; "end": a scheduled event that is live; "cancel": a scheduled event not started yet. */
+export type CloseMode = "room" | "end" | "cancel";
+
+/**
+ * Closes a live room or event: it leaves the « en direct » band of the project. The Meet call itself ends on Google's side.
+ * Before it starts, the same action cancels the event: its reminder is not sent.
+ */
+export function CloseRoomButton({ projectId, eventId, mode }: { projectId: string; eventId: string; mode: CloseMode }) {
   const t = useTranslations("rise.event");
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -23,7 +29,7 @@ export function CloseRoomButton({ projectId, eventId }: { projectId: string; eve
       setOpen(false);
       router.refresh();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : t("closeError"));
+      setError(e instanceof ApiError ? e.message : t(`${mode}.error`));
     } finally {
       setBusy(false);
     }
@@ -31,10 +37,11 @@ export function CloseRoomButton({ projectId, eventId }: { projectId: string; eve
 
   return (
     <>
-      <Button variant="secondary" block onClick={() => setOpen(true)}>
-        {t("close")}
+      <Button variant={mode === "cancel" ? "ghost" : "secondary"} block onClick={() => setOpen(true)}>
+        {t(`${mode}.action`)}
       </Button>
-      <ConfirmSheet open={open} onClose={() => setOpen(false)} onConfirm={close} title={t("closeTitle")} text={t("closeText")} confirm={t("closeConfirm")} busy={busy}>
+      {/* The confirm button names the action, so it is not mistaken for the sheet's « Fermer » cross. */}
+      <ConfirmSheet open={open} onClose={() => setOpen(false)} onConfirm={close} title={t(`${mode}.title`)} text={t(`${mode}.text`)} confirm={t(`${mode}.action`)} cancel={mode === "cancel" ? t("cancel.keep") : undefined} busy={busy}>
         {error && <p className="text-sm font-extrabold text-danger">{error}</p>}
       </ConfirmSheet>
     </>

@@ -10,10 +10,12 @@ export function BookingSummary({ startsAt, minutes, topic, otherName, timeZone, 
   const format = useFormatter();
   const at = new Date(startsAt);
   const end = new Date(at.getTime() + minutes * 60_000);
-  const date = `${format.dateTime(at, { weekday: "short", day: "numeric", month: "short", timeZone })} · ${format.dateTime(at, { hour: "2-digit", minute: "2-digit", timeZone })} – ${format.dateTime(end, { hour: "2-digit", minute: "2-digit", timeZone })}`;
+  // "18:30" in French, "6:30 PM" in English: the minutes are kept (a session can start at half past).
+  const clock = (d: Date) => format.dateTime(d, { hour: "numeric", minute: "2-digit", timeZone });
+  const date = `${format.dateTime(at, { weekday: "short", day: "numeric", month: "short", timeZone })} · ${clock(at)} – ${clock(end)}`;
   return (
     <div className="flex items-center gap-3.5">
-      <TimeBlock time={format.dateTime(at, { hour: "numeric", timeZone })} length={t("minutes", { count: minutes })} />
+      <TimeBlock time={clock(at)} length={t("minutes", { count: minutes })} />
       <div className="grid min-w-0 flex-1 gap-1">
         {topic ? (
           <>

@@ -140,6 +140,12 @@
       "alreadySuspended": "déjà suspendu",
       "alreadyHidden": "déjà retiré",
       "decision": "Décision : {resolution}",
+      "decisions": {
+        "dismiss": "Classé sans suite",
+        "hide": "Contenu retiré",
+        "warn": "Membre averti",
+        "suspend": "Membre suspendu"
+      },
       "noteLabel": "Motif ou note (lu par le membre en cas d’avertissement)",
       "dismiss": "Classer sans suite",
       "closeRoom": "Fermer le salon",
@@ -157,6 +163,7 @@
       "intro": "Chaque action de l’équipe est enregistrée ici, pour pouvoir en répondre.",
       "empty": "Aucune action pour l’instant.",
       "actions": {
+        "unknown": "a fait une action ({code})",
         "reportDismiss": "a classé un signalement",
         "reportHide": "a retiré un contenu",
         "reportWarn": "a averti un membre",
@@ -168,7 +175,14 @@
         "challengeCreate": "a créé un défi",
         "challengeClose": "a clôturé un défi",
         "challengePublish": "a publié des résultats",
-        "payoutSent": "a enregistré un versement"
+        "payoutSent": "a enregistré un versement",
+        "badgeGrant": "a accordé le badge mentor",
+        "badgeRefuse": "a refusé une demande de badge mentor",
+        "badgeRevoke": "a retiré le badge mentor",
+        "hackathonJury": "a nommé le jury d’un hackathon",
+        "hackathonPublish": "a publié un hackathon",
+        "hackathonClose": "a clôturé un hackathon",
+        "hackathonPublishResults": "a publié les résultats d’un hackathon"
       }
     }
   }

@@ -10,7 +10,7 @@
     "me": {
       "title": "Mon profil",
       "edit": "Modifier mon profil",
-      "mentor": "Mentor vérifié",
+      "mentor": "{gender, select, FEMALE {Mentore vérifiée} MALE {Mentor vérifié} other {Badge mentor vérifié}}",
       "sessions": "Mes séances de mentorat",
       "sessionsCount": "{count, plural, =0 {Aucune à venir} one {# à venir} other {# à venir}}",
       "hackathons": "Mes hackathons",
@@ -76,7 +76,7 @@
       "share": "Partager le profil",
       "report": "Signaler ou bloquer ce membre",
       "reportSubject": "ce profil",
-      "mentor": "Mentor vérifié",
+      "mentor": "{gender, select, FEMALE {Mentore vérifiée} MALE {Mentor vérifié} other {Badge mentor vérifié}}",
       "diaspora": "Diaspora",
       "years": "{count, plural, one {# an} other {# ans}} d’expérience",
       "sessions": "séances tenues",
@@ -106,7 +106,8 @@
       "earlier": "Plus tôt",
       "none": "Aucune notification pour l’instant.",
       "allRead": "Tu as tout lu. Rien de nouveau pour l’instant.",
-      "unreadDot": "Non lue"
+      "unreadDot": "Non lue",
+      "unreadLabel": "Non lue :"
     },
     "account": {
       "title": "Mon compte",

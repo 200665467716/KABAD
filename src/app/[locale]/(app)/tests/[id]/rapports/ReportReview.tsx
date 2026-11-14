@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "@/i18n/navigation";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { Button } from "@/components/ui/Button";
@@ -14,11 +14,10 @@ import type { TestAppSummary, TestReportView } from "@/lib/domain-types";
 
 const TONE = { SUBMITTED: "accent", VALIDATED: "success", REFUSED: "danger" } as const;
 
-function ReportCard({ r }: { r: TestReportView }) {
+function ReportCard({ r, now }: { r: TestReportView; now: number }) {
   const router = useRouter();
   const t = useTranslations("tests.review");
   const format = useFormatter();
-  const now = useNow();
   const first = r.tester.name.split(" ")[0];
   const [refusing, setRefusing] = useState(false);
   const [reason, setReason] = useState("");
@@ -107,13 +106,14 @@ function ReportCard({ r }: { r: TestReportView }) {
   );
 }
 
-export function ReportReview({ app, reports }: { app: TestAppSummary; reports: TestReportView[] }) {
+/** `now` comes from the server: "il y a 7 secondes" is then the same text on the server and in the browser. */
+export function ReportReview({ app, reports, now }: { app: TestAppSummary; reports: TestReportView[]; now: number }) {
   const t = useTranslations("tests.review");
   return (
     <>
       <TopBar back="/tests" title={t("title")} subtitle={t("subtitle", { name: app.name, count: app.reportsCount, toRead: app.toRead })} />
       <Page narrow>
-        {reports.length === 0 ? <p className="py-8 text-center text-muted">{t("empty")}</p> : reports.map((r) => <ReportCard key={r.id} r={r} />)}
+        {reports.length === 0 ? <p className="py-8 text-center text-muted">{t("empty")}</p> : reports.map((r) => <ReportCard key={r.id} r={r} now={now} />)}
       </Page>
     </>
   );

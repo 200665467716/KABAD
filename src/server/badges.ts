@@ -57,6 +57,20 @@ export async function myBadgeRequest(userId: string, prisma: Db = db): Promise<B
   return r && toView(r);
 }
 
+/**
+ * The badge was granted, then taken back by the KABAD team (src/server/admin.ts, revokeBadge): the reason
+ * lives in the team's log. Null when the badge was never granted, is still held, or a new request followed.
+ */
+export async function badgeRevocation(userId: string, prisma: Db = db): Promise<{ reason: string | null } | null> {
+  const [user, last] = await Promise.all([
+    prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { seniorVerifiedAt: true } }),
+    prisma.mentorBadgeRequest.findFirst({ where: { userId }, orderBy: { createdAt: "desc" }, select: { status: true, reviewedAt: true } }),
+  ]);
+  if (user.seniorVerifiedAt || last?.status !== "APPROVED") return null;
+  const log = await prisma.adminAction.findFirst({ where: { action: "badge:revoke", targetId: userId, ...(last.reviewedAt ? { createdAt: { gte: last.reviewedAt } } : {}) }, orderBy: { createdAt: "desc" }, select: { details: true } });
+  return { reason: log?.details ?? null };
+}
+
 function check(input: BadgeInput) {
   if (input.domains.length === 0 || input.domains.length > 3) throw new DomainError("domains", "Choisis de 1 à 3 domaines d’expertise.", 400, "domains");
   if (input.domains.some((d) => !(BADGE_DOMAINS as readonly string[]).includes(d))) throw new DomainError("domains", "Domaine inconnu.", 400, "domains");

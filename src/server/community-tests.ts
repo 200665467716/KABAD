@@ -10,6 +10,7 @@ import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
 import { joinCommunityGroup, leaveCommunityGroup, openCommunityGroup } from "./messaging";
 import { pushNotifications } from "./notifications";
+import { rateLimit } from "./rate-limit";
 import type { TestAppDetail, TestAppSummary, TestQuestion, TestReportView } from "@/lib/domain-types";
 
 export const SCREENSHOT_MAX_BYTES = 2 * 1024 * 1024;
@@ -96,6 +97,9 @@ export async function createTestApp(
   return prisma.$transaction(async (tx) => {
     const conversationId = await openTestersGroup(tx, { ownerId, name: input.name, url: input.url });
     const a = await tx.testApp.create({ data: { ownerId, ...input, questions: input.questions, conversationId } });
+    // 5 listings a day. Counted in the same transaction, once everything else is valid:
+    // a refused listing counts for nothing, and the 6th rolls back along with its counter.
+    await rateLimit(`test-app:${ownerId}`, 5, 24 * 3600_000, "Tu as publié beaucoup d’applications aujourd’hui.", tx);
     return { id: a.id, conversationId };
   });
 }
@@ -140,7 +144,10 @@ export async function joinTest(userId: string, testAppId: string, prisma: Db = d
     await joinCommunityGroup(tx, conversationId, userId);
     if (!already) {
       const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
-      await pushNotifications(tx, [{ userId: a.ownerId, actor: me.name, key: "testJoined", params: { title: a.name }, href: `/tests/${a.id}`, icon: "users", tone: "brand" }]);
+      const href = `/tests/${a.id}`;
+      // A tester who gives their place back then joins again is announced to the author once only.
+      const told = await tx.notification.findFirst({ where: { userId: a.ownerId, key: "testJoined", actor: me.name, href }, select: { id: true } });
+      if (!told) await pushNotifications(tx, [{ userId: a.ownerId, actor: me.name, key: "testJoined", params: { title: a.name }, href, icon: "users", tone: "brand" }]);
     }
     return { conversationId };
   });
@@ -160,15 +167,23 @@ export async function leaveTest(userId: string, testAppId: string, prisma: Db = 
 
 /** Ticks or unticks a step of the scenario. */
 export async function setStep(userId: string, testAppId: string, index: number, done: boolean, prisma: Db = db) {
-  const p = await prisma.testParticipant.findUnique({ where: { testAppId_userId: { testAppId, userId } }, include: { testApp: { select: { steps: true } } } });
-  if (!p) throw forbidden("Rejoins d’abord le groupe de testeurs.");
-  if (!Number.isInteger(index) || index < 0 || index >= p.testApp.steps.length) throw new DomainError("step", "Étape inconnue.");
-  const set = new Set(p.doneSteps);
-  if (done) set.add(index);
-  else set.delete(index);
-  const doneSteps = [...set].sort((x, y) => x - y);
-  await prisma.testParticipant.update({ where: { testAppId_userId: { testAppId, userId } }, data: { doneSteps } });
-  return { doneSteps };
+  return prisma.$transaction(async (tx) => {
+    // The tester's row is locked: two ticks sent together are applied one after the other,
+    // each on the list the other left, instead of both rewriting the list they read.
+    const [p] = await tx.$queryRaw<Array<{ doneSteps: number[]; stepsCount: number }>>`
+      SELECT p."doneSteps", cardinality(a.steps) AS "stepsCount"
+      FROM "TestParticipant" p JOIN "TestApp" a ON a.id = p."testAppId"
+      WHERE p."testAppId" = ${testAppId} AND p."userId" = ${userId}
+      FOR UPDATE OF p`;
+    if (!p) throw forbidden("Rejoins d’abord le groupe de testeurs.");
+    if (!Number.isInteger(index) || index < 0 || index >= Number(p.stepsCount)) throw new DomainError("step", "Étape inconnue.");
+    const set = new Set(p.doneSteps);
+    if (done) set.add(index);
+    else set.delete(index);
+    const doneSteps = [...set].sort((x, y) => x - y);
+    await tx.testParticipant.update({ where: { testAppId_userId: { testAppId, userId } }, data: { doneSteps } });
+    return { doneSteps };
+  });
 }
 
 export type ScreenshotInput = { mime: string; data: Uint8Array };

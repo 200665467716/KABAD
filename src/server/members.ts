@@ -85,19 +85,20 @@ export async function recommendations(userId: string, prisma: Db = db): Promise<
   const scored = others.map((o) => {
     const shared = o.stack.filter((s) => me.stack.includes(s));
     let score = shared.length * 2;
-    let why = shared.length ? (o.seniorVerifiedAt ? `Mentor en ${shared[0]}` : `${shared.slice(0, 2).join(", ")} en commun`) : "";
+    // La raison est une clé du dictionnaire (auth.suggestions.why), affichée dans la langue de la page.
+    let why: Recommendation["why"] | null = shared.length ? (o.seniorVerifiedAt ? { key: "mentorIn", tech: shared[0] } : { key: "shared", tech: shared.slice(0, 2).join(", ") }) : null;
     if (me.city && o.city === me.city) {
       score += 3;
-      why ||= "Même ville";
+      why ??= { key: "sameCity" };
     } else if (me.country && o.country === me.country) {
       score += 1;
-      why ||= "Même pays";
+      why ??= { key: "sameCountry" };
     }
     if (o.seniorVerifiedAt && !me.seniorVerifiedAt) {
       score += 1;
-      why ||= "Mentor disponible";
+      why ??= { key: "mentorAvailable" };
     }
-    return { ...toCard(o), why: why || "Membre actif de la communauté", score };
+    return { ...toCard(o), why: why ?? { key: "active" }, score };
   });
   return scored
     .sort((a, b) => b.score - a.score)

@@ -7,15 +7,18 @@ import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Display";
 import { RadioCard, Select, TextArea, TextField } from "@/components/ui/Field";
 import { useRouter } from "@/i18n/navigation";
+import { choiceLabel } from "@/lib/choice-labels";
 import { api, ApiError } from "@/lib/api";
 import type { Level } from "@/lib/domain-types";
 import { BIO_MAX, COUNTRIES, LEVELS } from "@/lib/schemas";
 
-export function ProfileStep({ initial }: { initial: { country: string; city: string; level: Level; headline: string; bio: string } }) {
+export function ProfileStep({ initial }: { initial: { country: string; city: string; level: Level | null; headline: string; bio: string } }) {
   const t = useTranslations("auth.profile");
   const tl = useTranslations("auth.levels");
+  const tc = useTranslations("common.choices");
   const router = useRouter();
-  const [level, setLevel] = useState<Level>(initial.level);
+  // Aucun niveau coché d’avance : c’est la question de cette étape.
+  const [level, setLevel] = useState<Level | null>(initial.level);
   // P8: a presentation from the start, read on the profile and by whoever receives an invitation.
   const [bio, setBio] = useState(initial.bio);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +30,7 @@ export function ProfileStep({ initial }: { initial: { country: string; city: str
     const country = String(data.get("country") ?? "");
     const city = String(data.get("city") ?? "").trim();
     const headline = String(data.get("headline") ?? "").trim();
-    if (!country || city.length < 2) return setError(t("required"));
+    if (!country || city.length < 2 || !level) return setError(t("required"));
     setBusy(true);
     setError(null);
     try {
@@ -60,7 +63,7 @@ export function ProfileStep({ initial }: { initial: { country: string; city: str
             </option>
             {COUNTRIES.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {choiceLabel(c, tc)}
               </option>
             ))}
           </Select>

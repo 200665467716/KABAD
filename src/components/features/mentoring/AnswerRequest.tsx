@@ -13,7 +13,7 @@ import { api, ApiError } from "@/lib/api";
  * The mentor accepts a request (then sees the confirmed session, M7), or declines it after a
  * confirmation sheet, with an optional reason (screen M6).
  */
-export function AnswerRequest({ id, name, block }: { id: string; name: string; block?: boolean }) {
+export function AnswerRequest({ id, name, block, primary = true }: { id: string; name: string; block?: boolean; primary?: boolean }) {
   const t = useTranslations("mentoring");
   const router = useRouter();
   const [declining, setDeclining] = useState(false);
@@ -61,7 +61,7 @@ export function AnswerRequest({ id, name, block }: { id: string; name: string; b
         <Button variant="secondary" size={block ? "lg" : "md"} onClick={() => setDeclining(true)} disabled={busy}>
           {t("requests.decline")}
         </Button>
-        <Button size={block ? "lg" : "md"} onClick={() => answer(true)} disabled={busy}>
+        <Button variant={primary ? "primary" : "ink"} size={block ? "lg" : "md"} onClick={() => answer(true)} disabled={busy}>
           {t("requests.accept")}
         </Button>
       </div>
