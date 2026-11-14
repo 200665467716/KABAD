@@ -221,7 +221,7 @@ Les manques relevés dans `docs/etat-et-plan-de-test.md` pour l'inscription, les
 - [x] Les 9 majeurs corrigés, ainsi que la quasi-totalité des mineurs et des détails (cinq branches de correction fusionnées dans `dev/main`).
 - [x] Huit comptes de test en base (`test.*@kabad-test.dev`, mot de passe `kabad-test-2026`), à recréer après un seed ou des e2e.
 - [ ] Reporté : modifier un projet Rise-Up ; dire qui a annulé une séance (migration).
-- [ ] À trancher : l'organisateur peut-il s'inscrire à son propre hackathon ?
+- [x] Tranché le 14 novembre : l'organisateur ne participe pas à son propre hackathon (refus côté serveur, « Participer » masqué).
 - Tests : 62 unitaires, 107 d'intégration, 112 e2e.
 
 ## P1 — Les « Must » manquants et Africa Rise-Up (objectif : 11 novembre)

@@ -172,12 +172,12 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
           <ButtonLink href={`/hackathons/${h.id}/resultats`} size="lg" block>
             {t("seeResults")}
           </ButtonLink>
-        ) : registrationsOpen && !h.amJuror ? (
+        ) : registrationsOpen && !h.amJuror && !h.amOrganizer ? (
           <ButtonLink href={`/hackathons/${h.id}/participer`} size="lg" block>
             {t("join")}
           </ButtonLink>
         ) : (
-          <Badge className="justify-self-center">{h.amJuror ? t("youJudge") : !h.published ? t("notPublished") : t("closed")}</Badge>
+          <Badge className="justify-self-center">{h.amJuror ? t("youJudge") : h.amOrganizer ? t("youOrganize") : !h.published ? t("notPublished") : t("closed")}</Badge>
         )}
       </ActionBar>
     </>

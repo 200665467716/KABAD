@@ -27,12 +27,12 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations("hackathons.register");
   const top = <TopBar back={`/hackathons/${id}`} title={t("title")} />;
   const open = h.published && h.status === "OPEN" && new Date(h.closesAt).getTime() > readClock();
-  if (!open || h.amJuror) {
+  if (!open || h.amJuror || h.amOrganizer) {
     return (
       <>
         {top}
         <Page narrow>
-          <Alert tone="info">{h.amJuror ? t("juror") : t("closed")}</Alert>
+          <Alert tone="info">{h.amJuror ? t("juror") : h.amOrganizer ? t("organizer") : t("closed")}</Alert>
         </Page>
       </>
     );

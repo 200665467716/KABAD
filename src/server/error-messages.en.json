@@ -194,6 +194,8 @@
     "Tu es déjà inscrit à ce hackathon.": "You’re already registered for this hackathon.",
     "Tu es le dernier administrateur : nommes-en un autre avant de partir.": "You’re the last administrator: appoint another one before leaving.",
     "Tu fais partie du jury de ce hackathon : tu ne peux pas y participer.": "You’re on this hackathon’s jury: you can’t take part in it.",
+    "Tu organises ce hackathon : tu ne peux pas y participer.": "You’re organizing this hackathon: you can’t take part in it.",
+    "L’organisateur du hackathon ne peut pas rejoindre une équipe.": "The hackathon’s organizer can’t join a team.",
     "Tu ne peux ajouter que tes contacts.": "You can only add your contacts.",
     "Tu ne peux pas accepter cette invitation : l’un de vous deux a bloqué l’autre.": "You can’t accept this invitation: one of you has blocked the other.",
     "Tu ne peux pas ajouter un membre avec qui un blocage est en place.": "You can’t add a member when one of you has blocked the other.",

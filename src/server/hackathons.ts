@@ -193,6 +193,7 @@ export async function getHackathon(viewerId: string | null, id: string, prisma: 
     jury: h.jurors.map((j) => j.user),
     instructorsList: h.missions.map((m) => m.mentor),
     amJuror: viewerId !== null && h.jurors.some((j) => j.user.id === viewerId),
+    amOrganizer: viewerId !== null && h.createdById === viewerId,
     myTeam: myTeam && viewerId ? toTeam(myTeam, viewerId) : null,
     openTeams: open
       // A place held for an invited member is taken: a team whose places are all held is not offered.
@@ -308,8 +309,12 @@ async function openForEntries(prisma: Tx, hackathonId: string, userId: string) {
   if (!h || !h.publishedAt) throw notFound("Hackathon introuvable.");
   if (h.status !== "OPEN" || h.closesAt.getTime() <= Date.now()) throw new DomainError("closed", "Les inscriptions à ce hackathon sont closes.", 409);
   if (h.jurors.some((j) => j.userId === userId)) throw forbidden("Tu fais partie du jury de ce hackathon : tu ne peux pas y participer.");
+  if (h.createdById === userId) throw forbidden(ORGANIZER_OUT);
   return h;
 }
+
+/** The organizer runs the hackathon: they do not compete in it, alone or in a team. */
+const ORGANIZER_OUT = "Tu organises ce hackathon : tu ne peux pas y participer.";
 
 const alreadyIn = () => new DomainError("already_in", "Tu es déjà inscrit à ce hackathon.", 409);
 
@@ -405,7 +410,7 @@ export async function teamDiscussion(userId: string, teamId: string, prisma: Db 
  */
 async function sendTeamInvites(
   tx: Prisma.TransactionClient,
-  h: { id: string; title: string; teamMax: number; jurors: Array<{ userId: string }> },
+  h: { id: string; title: string; teamMax: number; createdById: string | null; jurors: Array<{ userId: string }> },
   team: { id: string; name: string; captainId: string },
   captainName: string,
   memberIds: string[],
@@ -414,6 +419,7 @@ async function sendTeamInvites(
   if (ids.length === 0) return { invited: 0 };
   if ((await tx.contact.count({ where: { userId: team.captainId, contactId: { in: ids } } })) !== ids.length) throw forbidden("Tu ne peux inviter que tes contacts.");
   if (ids.some((id) => h.jurors.some((j) => j.userId === id))) throw new DomainError("juror", "Un membre du jury ne peut pas rejoindre une équipe.", 409);
+  if (h.createdById && ids.includes(h.createdById)) throw new DomainError("organizer", "L’organisateur du hackathon ne peut pas rejoindre une équipe.", 409);
   const [seated, members, pending] = await Promise.all([
     tx.teamMember.count({ where: { hackathonId: h.id, userId: { in: ids } } }),
     tx.teamMember.count({ where: { teamId: team.id } }),
@@ -480,6 +486,7 @@ export async function answerJoinRequest(userId: string, requestId: string, accep
         : new DomainError("full", held ? "Ton équipe est complète avec les invitations en attente : annule une invitation pour accepter cette demande." : "Ton équipe est complète.", 409);
     }
     if (r.invited && h.jurors.some((j) => j.userId === userId)) throw forbidden("Tu fais partie du jury de ce hackathon : tu ne peux pas y participer.");
+    if (r.invited && h.createdById === userId) throw forbidden(ORGANIZER_OUT);
   }
   try {
     return await prisma.$transaction(async (tx) => {

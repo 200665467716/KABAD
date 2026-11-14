@@ -116,6 +116,25 @@ describe("places d’une équipe : les invitations en attente comptent", () => {
   });
 });
 
+describe("l’organisateur ne participe pas à son hackathon", () => {
+  it("il ne s’inscrit pas, seul ou en équipe, et on ne peut pas l’inviter", async () => {
+    await hackathon({ createdById: "kossi" });
+    const detail = await getHackathon("kossi", "h", prisma);
+    expect(detail.amOrganizer).toBe(true);
+    expect((await getHackathon("yao", "h", prisma)).amOrganizer).toBe(false);
+    await refused(register("kossi", "h", { mode: "solo" }, prisma), "forbidden");
+    await refused(register("kossi", "h", { mode: "create", teamName: "Baobab" }, prisma), "forbidden");
+
+    // A captain cannot invite the organizer, and an invitation sent anyway cannot be accepted.
+    await makeContacts("yao", "kossi");
+    await refused(register("yao", "h", { mode: "create", teamName: "Kora", invite: ["kossi"] }, prisma), "organizer");
+    const { teamId } = (await register("yao", "h", { mode: "create", teamName: "Kora" }, prisma)) as { teamId: string };
+    const invite = await prisma.teamJoinRequest.create({ data: { teamId, userId: "kossi", invited: true } });
+    await refused(answerJoinRequest("kossi", invite.id, true, prisma), "forbidden");
+    await refused(register("kossi", "h", { mode: "join", teamId }, prisma), "forbidden");
+  });
+});
+
 describe("noms d’équipe", () => {
   it("deux équipes ne portent pas le même nom à la casse près", async () => {
     await hackathon();

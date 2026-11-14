@@ -69,6 +69,7 @@
       "seeResults": "Voir les résultats",
       "join": "Participer",
       "youJudge": "Tu fais partie du jury",
+      "youOrganize": "Tu organises ce hackathon",
       "closed": "Inscriptions closes",
       "pendingMentorText": "L’équipe KABAD relit ce hackathon avant de le publier. Tu le vois déjà parce qu’on t’a proposé une mission d’instructeur.",
       "notPublished": "Pas encore publié"
@@ -108,6 +109,7 @@
       "back": "Retour au hackathon",
       "closed": "Les inscriptions à ce hackathon sont closes.",
       "juror": "Tu fais partie du jury de ce hackathon : tu ne peux pas y participer.",
+      "organizer": "Tu organises ce hackathon : tu ne peux pas y participer.",
       "needRules": "Accepte d’abord le règlement du hackathon.",
       "invitedTitle": "{team} t’invite",
       "invitedText": "Invitation de {name} · {count} sur {max}",

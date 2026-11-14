@@ -180,6 +180,8 @@ export type HackathonDetail = HackathonSummary & {
   jury: Array<{ id: string; name: string }>;
   instructorsList: Array<{ id: string; name: string }>;
   amJuror: boolean;
+  /** The viewer proposed this hackathon: they run it and cannot take part. */
+  amOrganizer: boolean;
   myTeam: TeamView | null;
   openTeams: OpenTeam[];
   /** Teams whose captain invited the viewer, who has not answered yet. */

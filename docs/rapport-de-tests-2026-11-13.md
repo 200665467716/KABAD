@@ -58,6 +58,7 @@ Attention : `npm run db:seed` et les tests e2e vident la table des comptes. Ces 
 - Un seul bouton indigo sur « Demandes reçues ».
 
 **Hackathons**
+- Tranché le 14 novembre : l’organisateur ne participe pas à son propre hackathon. Le serveur refuse son inscription, seul ou en équipe, et son invitation dans une équipe ; l’écran affiche « Tu organises ce hackathon » au lieu de « Participer ».
 - Un départ laisse « X a quitté le groupe » dans la discussion, et la passation au nouveau chef d'équipe ; la personne concernée est prévenue.
 - Les jurés sont prévenus au passage au jury ; « Clore maintenant » passe par le même chemin que la fin normale.
 - Un hackathon en jury sans solution peut se terminer, sans classement.
@@ -92,7 +93,6 @@ Attention : `npm run db:seed` et les tests e2e vident la table des comptes. Ces 
 - Erreurs d'hydratation vues une fois sur `/mentorat/badge` et sur une conversation (téléphone) : aucune cause trouvée dans le code.
 
 **Questions à trancher par l'équipe**
-- L'organisateur peut-il s'inscrire à son propre hackathon ? Laissé possible.
 - Pastille de non-lus sur téléphone : évolution de la barre du bas, hors correctif.
 - Formats d'heure : « 18:30 » dans le pavé et le calendrier, « 18 h 30 » dans les phrases.
 
