@@ -1,11 +1,12 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { ACCOUNTS } from "./accounts";
 
 /*
  * Voice rooms with real audio: LiveKit runs locally (livekit-server --dev) and Chromium uses a fake
  * microphone that plays a tone. Two members join the same room; the host brings the listener on stage.
  */
-const PASSWORD = "kabad-demo-2026";
-const EMAIL = { moussa: "moussa.traore@exemple.fr", kossi: "kossi.mensah@exemple.tg" } as const;
+// The host (Kwame) and the listener (Koffi), from the seed (e2e/accounts.ts).
+const EMAIL = { moussa: ACCOUNTS.kwame, kossi: ACCOUNTS.koffi } as const;
 
 test.describe.configure({ mode: "serial" });
 
@@ -13,8 +14,8 @@ async function signIn(browser: Browser, who: keyof typeof EMAIL): Promise<Page> 
   const context = await browser.newContext({ locale: "fr-FR", viewport: { width: 412, height: 915 }, permissions: ["microphone"] });
   const page = await context.newPage();
   await page.goto("/connexion?suite=/salons");
-  await page.getByLabel("Adresse e-mail").fill(EMAIL[who]);
-  await page.getByLabel("Mot de passe").fill(PASSWORD);
+  await page.getByLabel("Adresse e-mail").fill(EMAIL[who].email);
+  await page.getByLabel("Mot de passe").fill(EMAIL[who].password);
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL((url) => url.pathname === "/salons");
   return page;
@@ -58,7 +59,7 @@ test("un salon vocal : l’hôte fait monter un auditeur sur scène, le son pass
   await expect.poll(() => moussa.locator("audio").count(), { timeout: 15_000 }).toBeGreaterThan(0);
 
   // Moussa removes him: Kossi is cut and cannot come back.
-  await moussa.getByRole("button", { name: "Retirer Kossi Mensah du salon" }).click();
+  await moussa.getByRole("button", { name: "Retirer Koffi Mensah du salon" }).click();
   await expect(kossi.getByText("L’hôte t’a retiré de ce salon.")).toBeVisible({ timeout: 10_000 });
   await kossi.reload();
   await expect(kossi.getByRole("button", { name: "Tu as été retiré" })).toBeDisabled();

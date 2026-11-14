@@ -10,13 +10,13 @@ const SIGNED_IN = [
   "/membres",
   "/compte",
   "/profil",
-  "/profil/awa",
+  "/profil/aminata",
   "/inscription/profil",
   "/inscription/interets",
   "/inscription/recommandations",
   "/mentorat",
-  "/mentorat/mentors/awa",
-  "/mentorat/mentors/awa/creneaux",
+  "/mentorat/mentors/aminata",
+  "/mentorat/mentors/aminata/creneaux",
   "/mentorat/seances",
   "/mentorat/seances/seance-momo",
   "/mentorat/badge",
@@ -28,7 +28,7 @@ const SIGNED_IN = [
   "/hackathons/inscription-accessible/resultats",
   "/en/hackathons/fintech-inclusion",
   "/rise-up",
-  "/rise-up/forages-sahel",
+  "/rise-up/forages-louga",
   "/rise-up/nouveau",
   "/tests",
   "/tests/marche-vert",
@@ -61,7 +61,7 @@ test.describe("écrans publics", () => {
 });
 
 test.describe("écrans du membre connecté", () => {
-  test.use({ storageState: "e2e/.auth/kossi.json" });
+  test.use({ storageState: "e2e/.auth/koffi.json" });
   for (const route of SIGNED_IN) test(`${route} s’affiche`, ({ page }) => check(page, route, true));
 
   test("les pages de l’équipe n’existent pas pour un membre", async ({ page }) => {

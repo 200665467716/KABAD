@@ -97,7 +97,7 @@ Bon à savoir :
 | --- | --- |
 | A2 sans cocher la case des conditions | Le bouton « Continuer » reste grisé (texte gris, non cliquable) ; il s'active dès qu'on coche |
 | Mot de passe `kabad` puis `motdepasse` | Messages sous le champ, en rouge avec une icône : « au moins 8 caractères », puis « au moins un chiffre » |
-| E-mail d'un compte existant (`kossi.mensah@exemple.tg`) | Sous le champ : « Un compte existe déjà avec cet e-mail. » avec un lien « Se connecter » qui y mène |
+| E-mail d'un compte existant (`success2025lord@gmail.com` (Koffi)) | Sous le champ : « Un compte existe déjà avec cet e-mail. » avec un lien « Se connecter » qui y mène |
 | Inscription valide | Arrivée sur « Confirme ton e-mail » ; le code apparaît dans le terminal de `npm run dev` |
 | Écran du code | Six cases, une par chiffre ; chaque chiffre tapé passe à la case suivante, « Retour arrière » revient à la précédente, un code collé remplit les six cases |
 | Saisir un faux code (`000000`) | Sous le champ : « Ce code est incorrect ou a expiré. Un code reste valable 10 minutes. » ; l'encart passe en bordure rouge avec « Demande un nouveau code » |
@@ -180,7 +180,7 @@ Bon à savoir :
 | Étape 2 sans aucun lien | Erreur « Ajoute au moins un lien : GitHub, LinkedIn ou portfolio. » |
 | Présentation de plus de 280 caractères | Le compteur l'empêche |
 | Envoyer | Écran « Demande en examen » avec les étapes ; la demande reste modifiable |
-| `equipe@kabad.app` → Admin → Badges | La demande apparaît dans « À examiner » avec tout le dossier |
+| `kabadteam@gmail.com` → Admin → Badges | La demande apparaît dans « À examiner » avec tout le dossier |
 | Refuser sans motif | Impossible : le motif est obligatoire |
 | Valider | Le candidat reçoit une notification ; écran « Badge accordé » ; il apparaît dans la liste des mentors |
 
@@ -210,7 +210,7 @@ Bon à savoir :
 | Lien d'un dépôt public tapé sans `https://` | Accepté ; `https://` est ajouté tout seul |
 | Soumettre correctement | Confirmation ; la solution est modifiable jusqu'à la fin |
 | Proposer un hackathon (Organiser) | Trois étapes : « Ton hackathon », « Le défi et les prix », « Recrute des instructeurs ». Fin avant début refusée ; « Pas de prix pour ce hackathon » retire la liste des prix ; sans rémunération, les boutons « Proposer » des mentors sont grisés ; avec, « Proposer » devient « Proposée » et le compteur suit. Une fois envoyé, le hackathon n'est pas public tant que l'équipe KABAD ne l'a pas publié ; les mentors choisis reçoivent la mission |
-| `equipe@kabad.app` → Admin → Hackathons → Publier | Le hackathon apparaît dans la liste de tous |
+| `kabadteam@gmail.com` → Admin → Hackathons → Publier | Le hackathon apparaît dans la liste de tous |
 | Jury : Ibrahim sur « Raccourcisseur » | Il note les solutions sans voir qui les a faites, 4 critères de 1 à 5 |
 | Publier les résultats (équipe KABAD) | Classement affiché avec le prix de chaque équipe primée ; chaque membre d'une équipe primée reçoit « ton équipe finit à la place N et gagne … » ; les autres reçoivent « les résultats sont publiés » |
 | Mission d'instructeur → « Refuser » | Feuille « Refuser la mission ? » ; après refus, retour aux notifications ; l'organisateur est prévenu |
@@ -307,7 +307,7 @@ Bon à savoir :
 
 | Tester | Attendu, et indicateur que ça marche |
 | --- | --- |
-| `equipe@kabad.app` → `/admin` | Tableau de bord avec les compteurs |
+| `kabadteam@gmail.com` → `/admin` | Tableau de bord avec les compteurs |
 | Kossi → `/admin` | Page introuvable |
 | Signalements → retirer un message | Le message devient « Message retiré par la modération. » chez tous |
 | Membres → suspendre Moussa | Moussa est déconnecté partout et ne peut plus se connecter ; réintégrer lui rend l'accès |
