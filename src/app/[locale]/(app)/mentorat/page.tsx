@@ -99,7 +99,8 @@ async function MentoringData({ searchParams }: { searchParams: Promise<Search> }
         </Link>
       )}
 
-      <form method="get" role="search" className="flex gap-2">
+      {/* min-w-0: without it, the natural width of the field widens the page on a 360 px screen. */}
+      <form method="get" role="search" className="flex min-w-0 gap-2">
         {domaine && <input type="hidden" name="domaine" value={domaine} />}
         <label className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-md border-2 border-line-strong bg-raised px-3.5">
           <Icon name="search" size={18} className="text-muted" />

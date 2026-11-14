@@ -249,6 +249,8 @@ Document d'Emmerson du 14 novembre (KABAD 5), appliqué après la reprise de `de
 - [x] Hackathons : l'équipe refuse une proposition avec une raison lue par l'organisateur.
 - [x] Page `/bienvenue` supprimée (la landing mène directement à l'inscription et à la connexion) ; « spams » au lieu de « courriers indésirables » ; `favicon.ico` ajouté (il remplissait les journaux d'erreurs) ; requêtes d'une transaction passées l'une après l'autre (avertissement de `pg`).
 - [x] Données de départ : les 7 comptes de l'équipe (3 mentors, 4 membres, 7 pays) et `kabadteam@gmail.com` pour l'équipe KABAD ; mots de passe dans `.env` (`SEED_PASSWORD_…`), jamais dans le dépôt ; 5 projets Rise-Up sur des problèmes concrets ; notifications de la démo marquées comme envoyées.
+- [x] Trouvé en préparant le pitch : la page Mentorat débordait de 30 px sur un écran de 360 px (champ de recherche) ; un rapport de test sans question de contrôle n'affiche plus de titre vide ; l'avatar d'un testeur n'est plus en maïs (couleur réservée à Africa Rise-Up) ; l'app Kalo de la démo a deux questions de contrôle, avec les réponses des testeurs.
+- Pitch : les écrans du deck sont des captures de l'application avec les données de départ, plus des maquettes.
 - Expliqué sans code : e-mails classés en spam (expéditeur Gmail personnel et liens vers `localhost` ; en production, une adresse sur le domaine de KABAD avec SPF et DKIM) ; erreur `JSON.parse` des journaux (cache `.next` abîmé, à supprimer).
 - Migrations : `rise_coresponsables_salons_moderation`, `refus_d_un_hackathon`.
 - Tests : 76 unitaires, 124 d'intégration, 110 e2e (la page `/bienvenue` en moins).

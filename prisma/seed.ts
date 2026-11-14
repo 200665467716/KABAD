@@ -105,6 +105,11 @@ const nextWeekday = (weekday: number, hour: number, minute = 0, minDays = 1) => 
   }
   throw new Error("unreachable");
 };
+// Control questions of Kalo: only someone who really tested the app knows the answers.
+const KALO_QUESTIONS = [
+  { q: "Quelle couleur a le bouton pour ajouter une dépense ?", options: ["Vert", "Rouge", "Bleu"], answer: "Vert" },
+  { q: "Quel total affiche le budget du mois ?", answer: "18 500 F" },
+];
 // Screens of an app under test, one per step, for the testers' reports (prisma/seed-captures).
 const CAPTURES = [1, 2, 3].map((n) => readFileSync(new URL(`./seed-captures/etape-${n}.png`, import.meta.url)));
 const directKey = (a: string, b: string) => [a, b].sort().join(":");
@@ -413,11 +418,11 @@ async function main() {
   });
 
   /* Apps to test (screens T1 to T4) */
-  const testApp = async (id: string, ownerId: string, data: { name: string; platforms: Array<"WEB" | "ANDROID" | "IOS">; url: string; minutes: number; slots: number; pitch: string; task: string; steps: string[] }, testers: Array<[string, number[]]>) => {
+  const testApp = async (id: string, ownerId: string, data: { name: string; platforms: Array<"WEB" | "ANDROID" | "IOS">; url: string; minutes: number; slots: number; pitch: string; task: string; steps: string[]; questions?: Array<{ q: string; options?: string[]; answer: string }> }, testers: Array<[string, number[]]>) => {
     const conversationId = await conversation("GROUP", [ownerId, ...testers.map(([u]) => u)], [
       [null, `${firstName(ownerId)} a ouvert le groupe de test. Installer l’app : ${data.url}`, 60 * 24 * 8],
     ], { name: `Testeurs ${data.name}`, theme: "Test", createdById: ownerId });
-    await db.testApp.create({ data: { id, ownerId, ...data, questions: [], conversationId, createdAt: minutesAgo(60 * 24 * 8), participants: { create: testers.map(([userId, doneSteps]) => ({ userId, doneSteps })) } } });
+    await db.testApp.create({ data: { id, ownerId, ...data, questions: data.questions ?? [], conversationId, createdAt: minutesAgo(60 * 24 * 8), participants: { create: testers.map(([userId, doneSteps]) => ({ userId, doneSteps })) } } });
     return conversationId;
   };
   const marche = await testApp("marche-vert", "aicha", { name: "Marché Vert", platforms: ["ANDROID"], url: "https://marche-vert.exemple.bf/apk", minutes: 15, slots: 10, pitch: "Une app pour commander des légumes aux maraîchers de Ouagadougou et se faire livrer le jour même.", task: "Passer une commande et suivre la livraison.", steps: ["Créer un compte avec ton numéro", "Passer une commande de 3 produits", "Suivre la livraison et noter le livreur"] },
@@ -430,15 +435,17 @@ async function main() {
     ],
   });
   await testApp("tontine-app", "chidi", { name: "TontineApp", platforms: ["WEB"], url: "https://tontine.exemple.ng", minutes: 20, slots: 5, pitch: "Une épargne de groupe entre amis ou collègues, avec rappels automatiques.", task: "Créer une tontine et inviter des membres.", steps: ["Créer une tontine de 5 000 F CFA par mois", "Inviter trois personnes", "Vérifier le rappel du premier versement"] }, [["sadio", [0]], ["nadia", []]]);
-  await testApp("kalo", "koffi", { name: "Kalo", platforms: ["ANDROID", "WEB"], url: "https://kalo.exemple.tg", minutes: 10, slots: 8, pitch: "Un carnet de dépenses partagé pour les colocations.", task: "Ajouter une dépense et partager le budget.", steps: ["S’inscrire avec un numéro", "Ajouter une dépense", "Partager le budget du mois"] }, [["sadio", [0, 1, 2]], ["nadia", [0, 1, 2]], ["chidi", [0, 1, 2]], ["aminata", [0, 1]]]);
-  const report = async (testAppId: string, testerId: string, remarks: string, status: "SUBMITTED" | "VALIDATED", ago: number) => {
-    const r = await db.testReport.create({ data: { testAppId, testerId, device: "Android", status, remarks, answers: [], createdAt: minutesAgo(ago), reviewedAt: status === "VALIDATED" ? minutesAgo(ago - 60) : null } });
+  await testApp("kalo", "koffi", { name: "Kalo", platforms: ["ANDROID", "WEB"], url: "https://kalo.exemple.tg", minutes: 10, slots: 8, pitch: "Un carnet de dépenses partagé pour les colocations.", task: "Ajouter une dépense et partager le budget.", steps: ["S’inscrire avec un numéro", "Ajouter une dépense", "Partager le budget du mois"], questions: KALO_QUESTIONS }, [["sadio", [0, 1, 2]], ["nadia", [0, 1, 2]], ["chidi", [0, 1, 2]], ["aminata", [0, 1]]]);
+  // `given`: the tester's answers to the control questions of the app, checked against the expected ones.
+  const report = async (testAppId: string, testerId: string, remarks: string, status: "SUBMITTED" | "VALIDATED", ago: number, given: string[] = []) => {
+    const answers = given.map((answer, i) => ({ question: KALO_QUESTIONS[i].q, answer, correct: answer === KALO_QUESTIONS[i].answer }));
+    const r = await db.testReport.create({ data: { testAppId, testerId, device: "Android", status, remarks, answers, createdAt: minutesAgo(ago), reviewedAt: status === "VALIDATED" ? minutesAgo(ago - 60) : null } });
     const steps = (await db.testApp.findUniqueOrThrow({ where: { id: testAppId }, select: { steps: true } })).steps.length;
     await db.screenshot.createMany({ data: Array.from({ length: steps }, (_, position) => ({ reportId: r.id, position, mime: "image/png", data: CAPTURES[position % CAPTURES.length] })) });
   };
-  await report("kalo", "sadio", "Clair et rapide. Le bouton de partage est un peu caché.", "VALIDATED", 60 * 24 * 2);
-  await report("kalo", "nadia", "La saisie du montant accepte les lettres.", "VALIDATED", 60 * 24 * 2 - 30);
-  await report("kalo", "chidi", "Rien à signaler, tout marche sur mon Tecno.", "SUBMITTED", 60 * 5);
+  await report("kalo", "sadio", "Clair et rapide. Le bouton de partage est un peu caché.", "VALIDATED", 60 * 24 * 2, ["Vert", "18 500 F"]);
+  await report("kalo", "nadia", "La saisie du montant accepte les lettres.", "VALIDATED", 60 * 24 * 2 - 30, ["Vert", "18 500 F"]);
+  await report("kalo", "chidi", "Rien à signaler, tout marche sur mon Tecno.", "SUBMITTED", 60 * 5, ["Vert", "18 500 F"]);
   await report("marche-vert", "sadio", "Le bouton « Valider » reste gris après la commande sur Tecno Spark.", "SUBMITTED", 120);
   await report("marche-vert", "nadia", "Commande simple. Les photos chargent lentement en 3G.", "VALIDATED", 60 * 24);
 

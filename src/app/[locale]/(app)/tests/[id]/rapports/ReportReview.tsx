@@ -75,23 +75,26 @@ function ReportCard({ r, now }: { r: TestReportView; now: number }) {
   return (
     <Card className="gap-3.5">
       <div className="flex items-start justify-between gap-2">
-        <PersonRow avatar={<Avatar initials={initials(r.tester.name)} tone="accent" />} name={r.tester.name} meta={`${r.device} · ${format.relativeTime(new Date(r.createdAt), now)}`} />
+        <PersonRow avatar={<Avatar initials={initials(r.tester.name)} />} name={r.tester.name} meta={`${r.device} · ${format.relativeTime(new Date(r.createdAt), now)}`} />
         <Badge tone={TONE[r.status]}>{t(`status.${r.status}`)}</Badge>
       </div>
-      <div className="grid gap-2">
-        <Overline as="h3">{t("questions")}</Overline>
-        {r.answers.map((a) => (
-          <div key={a.question} className="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2.5">
-            <Icon name={a.correct ? "checkCircle" : "info"} size={20} className={a.correct ? "text-success" : "text-danger"} strokeWidth={2} />
-            <span className="grid">
-              <span className="text-sm text-muted">{a.question}</span>
-              <span className="text-sm font-bold">
-                {a.answer} · {a.correct ? t("correct") : t("unexpected")}
+      {/* An app without control questions shows no empty heading. */}
+      {r.answers.length > 0 && (
+        <div className="grid gap-2">
+          <Overline as="h3">{t("questions")}</Overline>
+          {r.answers.map((a) => (
+            <div key={a.question} className="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2.5">
+              <Icon name={a.correct ? "checkCircle" : "info"} size={20} className={a.correct ? "text-success" : "text-danger"} strokeWidth={2} />
+              <span className="grid">
+                <span className="text-sm text-muted">{a.question}</span>
+                <span className="text-sm font-bold">
+                  {a.answer} · {a.correct ? t("correct") : t("unexpected")}
+                </span>
               </span>
-            </span>
-          </div>
-        ))}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="grid gap-2">
         <Overline as="h3">{t("shots")}</Overline>
         <div className="flex flex-wrap gap-2">
