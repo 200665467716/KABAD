@@ -98,7 +98,7 @@ export const addMembersSchema = z.object({
 export const REPORT_REASONS = ["Spam ou arnaque", "Harcèlement ou propos haineux", "Faux profil ou faux badge mentor", "Plagiat dans un hackathon", "Autre"] as const;
 
 export const reportSchema = z.object({
-  targetType: z.enum(["USER", "MESSAGE", "CONVERSATION", "INVITATION", "ROOM"]),
+  targetType: z.enum(["USER", "MESSAGE", "CONVERSATION", "INVITATION", "ROOM", "RISE_POST"]),
   targetId: id,
   reason: z.enum(REPORT_REASONS, "Choisis un motif."),
   details: z.string().max(1000).optional(),
@@ -308,7 +308,7 @@ export const deleteAccountSchema = z.object({ password: z.string().max(200).opti
 /* Team tools */
 
 export const adminReportSchema = z.object({
-  decision: z.enum(["dismiss", "hide", "warn", "suspend"]),
+  decision: z.enum(["dismiss", "hide", "restore", "warn", "suspend"]),
   note: z.string().trim().max(250).optional(),
 });
 
@@ -352,6 +352,12 @@ export const riseRoomSchema = z.object({
   title: z.string().trim().max(100, "100 caractères au plus.").optional(),
   meetingUrl: meetLink,
 });
+
+/** The initiator names a co-lead, or takes the role back. */
+export const coLeadSchema = z.object({ coLead: z.boolean() });
+
+/** A lead approves or refuses a room proposed by a member. */
+export const answerRoomSchema = z.object({ approve: z.boolean() });
 
 export const joinSchema = z.object({ skill: z.string().trim().max(30).optional() });
 

@@ -50,6 +50,8 @@ export type ConversationDetail = {
   photo: string | null;
   other: { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string; photo: string | null } | null;
   isOwner: boolean;
+  /** Removes other members' messages: the group's owner, and the co-leads of a Rise-Up project's channel. */
+  canModerate: boolean;
   /** A community group follows an app to test, a Rise-Up project or a hackathon team (id: the hackathon): one joins or leaves it from there. */
   linked: { kind: "test" | "rise" | "team" | "instructors"; id: string } | null;
   /** The testers' group of an app (T4): its tasks, the install link, and what this member ticked (null for the author). */

@@ -34,7 +34,7 @@
       "skills": "Compétences recherchées",
       "noPosts": "Pas encore de message. Lance la discussion !",
       "noEvents": "Aucun événement prévu.",
-      "initiator": "Initiateur",
+      "initiator": "Responsable",
       "replies": "{count, plural, =0 {Répondre} one {# réponse} other {# réponses}}",
       "composerLabel": "Écrire au projet",
       "composerPlaceholder": "Partage une avancée, une question…",
@@ -44,7 +44,19 @@
       "joinToWrite": "Rejoins le projet pour participer à la discussion.",
       "openChat": "Canal de discussion",
       "error": "Une erreur est survenue. Réessaie.",
-      "tabInfo": "Fiche"
+      "tabInfo": "Fiche",
+      "coLead": "Co-responsable",
+      "makeCoLead": "Nommer co-responsable",
+      "removeCoLead": "Retirer le rôle",
+      "leadsOnly": "Le responsable et les co-responsables programment les événements. Tu peux proposer un salon dans l’onglet Discussion.",
+      "pendingTitle": "Salons à valider",
+      "pendingMineTitle": "Ton salon",
+      "pendingBy": "Proposé par {name}",
+      "pendingMine": "En attente de validation par un responsable du projet.",
+      "approve": "Valider",
+      "refuse": "Refuser",
+      "report": "Signaler",
+      "reportSubject": "ce message"
     },
     "room": {
       "open": "Lancer un salon",
@@ -57,7 +69,10 @@
       "linkHint": "Crée une réunion sur meet.google.com, puis colle son lien ici.",
       "start": "Ouvrir le salon",
       "starting": "Ouverture…",
-      "error": "Le salon n’a pas été ouvert. Réessaie."
+      "error": "Le salon n’a pas été ouvert. Réessaie.",
+      "propose": "Proposer un salon",
+      "proposeText": "Un responsable du projet le valide, puis il s’ouvre aux membres pour une heure. Ils sont prévenus à ce moment-là.",
+      "proposeSend": "Envoyer la proposition"
     },
     "thread": {
       "metaTitle": "Discussion du projet",
@@ -119,7 +134,13 @@
         "text": "Il disparaît du projet et son rappel n’est pas envoyé. Les membres prévenus reçoivent une notification.",
         "keep": "Garder l’événement",
         "error": "L’événement n’a pas été annulé. Réessaie."
-      }
+      },
+      "pending": "À valider",
+      "pendingLead": "Un membre propose ce salon. Valide-le pour l’ouvrir aux membres pendant une heure, ou refuse-le.",
+      "pendingAuthor": "Ton salon attend la validation d’un responsable du projet. Les membres le verront dès qu’il sera validé.",
+      "approve": "Valider le salon",
+      "refuse": "Refuser",
+      "answerError": "La réponse n’est pas partie. Réessaie."
     },
     "newEvent": {
       "metaTitle": "Programmer un événement",

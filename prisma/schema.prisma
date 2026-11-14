@@ -246,6 +246,8 @@ model Message {
   createdAt      DateTime     @default(now())
   /// Hidden by the moderation team: the members see that a message was removed, not its content.
   hiddenAt       DateTime?
+  /// The group's lead who removed it, or null when the KABAD team did. The team can show it again.
+  hiddenById     String?
   attachment     Attachment?
   /// The message this one answers, quoted above it.
   replyToId      String?
@@ -289,6 +291,8 @@ enum ReportTarget {
   MESSAGE
   CONVERSATION
   INVITATION
+  /// A post or a reply in a Rise-Up project's discussion.
+  RISE_POST
 }
 
 enum ReportStatus {
@@ -735,6 +739,12 @@ model RiseProject {
   @@index([domain, createdAt])
 }
 
+/// The initiator leads the project; the co-leads they name lead it with them (events, rooms, moderation).
+enum RiseRole {
+  MEMBER
+  CO_LEAD
+}
+
 model RiseMember {
   projectId String
   userId    String
@@ -742,6 +752,7 @@ model RiseMember {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Mobile, Data, Backend…
   skill     String      @default("") @db.VarChar(30)
+  role      RiseRole    @default(MEMBER)
   joinedAt  DateTime    @default(now())
 
   @@id([projectId, userId])
@@ -761,6 +772,10 @@ model RisePost {
   body      String      @db.VarChar(2000)
   createdAt DateTime    @default(now())
   hiddenAt  DateTime?
+  /// The lead who hid it when reporting it, or null when the KABAD team did; only the team shows it again.
+  hiddenById   String?
+  /// Why a lead hid it: required, read by the KABAD team.
+  hiddenReason String?  @db.VarChar(300)
 
   @@index([projectId, parentId, createdAt])
 }
@@ -784,6 +799,9 @@ model RiseEvent {
   remindedAt  DateTime?
   /// Set when the author closes a live room before its planned end.
   endedAt     DateTime?
+  /// A room proposed by a member who does not lead the project waits for a lead: null until approved.
+  /// Events and the rooms of the leads are approved when created.
+  approvedAt  DateTime?
   createdAt   DateTime    @default(now())
 
   @@index([projectId, startsAt])

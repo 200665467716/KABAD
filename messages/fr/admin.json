@@ -131,7 +131,8 @@
         "MESSAGE": "Message",
         "CONVERSATION": "Conversation",
         "INVITATION": "Invitation",
-        "ROOM": "Salon vocal"
+        "ROOM": "Salon vocal",
+        "RISE_POST": "Message Rise-Up"
       },
       "needNote": "Écris le motif : le membre le lira.",
       "meta": "{when} · par <link>{name}</link>",
@@ -144,12 +145,16 @@
         "dismiss": "Classé sans suite",
         "hide": "Contenu retiré",
         "warn": "Membre averti",
-        "suspend": "Membre suspendu"
+        "suspend": "Membre suspendu",
+        "restore": "Contenu rétabli"
       },
       "noteLabel": "Motif ou note (lu par le membre en cas d’avertissement)",
       "dismiss": "Classer sans suite",
       "closeRoom": "Fermer le salon",
       "hideMessage": "Retirer le message",
+      "restoreMessage": "Rétablir le message",
+      "seeProject": "Voir le projet",
+      "hiddenNow": "Ce message est masqué en ce moment.",
       "warn": "Avertir",
       "suspend": "Suspendre le compte",
       "tabOpen": "À traiter",

@@ -241,6 +241,12 @@ export type RiseProjectSummary = {
 
 export type RisePostView = { id: string; body: string; createdAt: string; author: { id: string; name: string } | null; replies: number };
 
+/** « initiator » leads the project; the « co_lead » members lead it with them. */
+export type RiseRole = "initiator" | "co_lead" | "member";
+
+/** A room proposed by a member who does not lead the project, waiting for a lead. */
+export type RisePendingRoom = { id: string; title: string; author: { id: string; name: string } | null; createdAt: string };
+
 export type RiseProjectDetail = RiseProjectSummary & {
   problem: string;
   createdAt: string;
@@ -248,7 +254,11 @@ export type RiseProjectDetail = RiseProjectSummary & {
   conversationId: string | null;
   posts: RisePostView[];
   events: RiseEventView[];
-  people: Array<{ id: string; name: string; city: string; skill: string; initiator: boolean }>;
+  people: Array<{ id: string; name: string; city: string; skill: string; initiator: boolean; role: RiseRole }>;
+  /** The viewer's role, or null when they are not a member. */
+  viewerRole: RiseRole | null;
+  /** Rooms waiting for approval: all of them for a lead, their own for a member. */
+  pendingRooms: RisePendingRoom[];
 };
 
 export type TestQuestion = { q: string; options?: string[]; answer: string };

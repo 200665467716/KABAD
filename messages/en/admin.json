@@ -131,7 +131,8 @@
         "MESSAGE": "Message",
         "CONVERSATION": "Conversation",
         "INVITATION": "Invitation",
-        "ROOM": "Voice room"
+        "ROOM": "Voice room",
+        "RISE_POST": "Rise-Up post"
       },
       "needNote": "Write the reason: the member will read it.",
       "meta": "{when} · by <link>{name}</link>",
@@ -144,12 +145,16 @@
         "dismiss": "Dismissed",
         "hide": "Content removed",
         "warn": "Member warned",
-        "suspend": "Member suspended"
+        "suspend": "Member suspended",
+        "restore": "Content restored"
       },
       "noteLabel": "Reason or note (read by the member if warned)",
       "dismiss": "Dismiss",
       "closeRoom": "Close the room",
       "hideMessage": "Remove the message",
+      "restoreMessage": "Restore the message",
+      "seeProject": "See the project",
+      "hiddenNow": "This message is hidden right now.",
       "warn": "Warn",
       "suspend": "Suspend the account",
       "tabOpen": "To review",

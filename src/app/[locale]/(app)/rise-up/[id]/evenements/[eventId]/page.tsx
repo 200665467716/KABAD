@@ -5,13 +5,14 @@ import { Suspense } from "react";
 import { RiseSymbol } from "@/components/features/rise/RiseSymbol";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink } from "@/components/ui/Button";
-import { Badge, Overline } from "@/components/ui/Display";
+import { Alert, Badge, Overline } from "@/components/ui/Display";
 import { Link } from "@/i18n/navigation";
 import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 import { getEvent } from "@/server/rise";
 import { AddToCalendar } from "@/components/features/AddToCalendar";
 import { localizeRoomTitle } from "@/lib/system-text";
+import { AnswerRoom } from "./AnswerRoom";
 import { CloseRoomButton } from "./CloseRoomButton";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -39,7 +40,15 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
       <Page narrow className="flex-1">
         <section className="grid gap-3 rounded-xl bg-ink p-5 text-raised">
           <div className="flex items-center justify-between gap-3">
-            {e.live ? <Badge tone="live" className="bg-raised/10">{t("live")}</Badge> : <Badge tone="neutral">{e.cancelled ? t("cancelled") : ended ? t("ended") : t("upcoming")}</Badge>}
+            {e.pending && !ended ? (
+              <Badge tone="neutral">{t("pending")}</Badge>
+            ) : e.live ? (
+              <Badge tone="live" className="bg-raised/10">
+                {t("live")}
+              </Badge>
+            ) : (
+              <Badge tone="neutral">{e.cancelled ? t("cancelled") : ended ? t("ended") : t("upcoming")}</Badge>
+            )}
             <RiseSymbol size={36} leaf="#f2b705" className="text-accent" />
           </div>
           <h2 className="font-display text-2xl font-extrabold uppercase">{title}</h2>
@@ -61,10 +70,18 @@ async function EventData({ params }: { params: Promise<{ id: string; eventId: st
         )}
         {e.createdBy && <p className="text-[13px] text-muted">{t("by", { name: e.createdBy.name })}</p>}
         {!e.isMember && <p className="text-sm text-muted">{t("membersOnly")}</p>}
+        {/* P5: a room proposed by a member waits for a lead of the project before the members see it. */}
+        {e.pending && !ended && <Alert tone="info">{e.canApprove ? t("pendingLead") : t("pendingAuthor")}</Alert>}
       </Page>
       {!ended && (
         <ActionBar>
-          {e.isMember ? (
+          {e.pending ? (
+            e.canApprove ? (
+              <AnswerRoom projectId={id} eventId={eventId} />
+            ) : (
+              e.canClose && <CloseRoomButton projectId={id} eventId={eventId} mode="room" />
+            )
+          ) : e.isMember ? (
             <>
               <ButtonLink href={e.meetingUrl} target="_blank" rel="noreferrer" size="lg" block icon="video" variant={e.live ? "primary" : "secondary"}>
                 {t("join")}

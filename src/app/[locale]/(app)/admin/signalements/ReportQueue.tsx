@@ -84,6 +84,11 @@ function ReportCard({ r }: { r: ReportContext }) {
           ))}
         </ul>
       )}
+      {r.riseProjectId && (
+        <Link href={`/rise-up/${r.riseProjectId}`} className="justify-self-start text-sm font-bold">
+          {t("reports.seeProject")}
+        </Link>
+      )}
       {r.status === "REVIEWED" ? (
         <p className="text-sm text-muted">{t("reports.decision", { resolution: decisionText })}</p>
       ) : (
@@ -93,10 +98,17 @@ function ReportCard({ r }: { r: ReportContext }) {
             <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => decide("dismiss")}>
               {t("reports.dismiss")}
             </Button>
-            {(r.targetType === "MESSAGE" || r.targetType === "ROOM") && (
-              <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => decide("hide")}>
-                {r.targetType === "ROOM" ? t("reports.closeRoom") : t("reports.hideMessage")}
+            {/* A message hidden already (by a lead, or a group's lead) can be shown again by the team only. */}
+            {(r.targetType === "MESSAGE" || r.targetType === "RISE_POST") && r.targetHidden ? (
+              <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => decide("restore")}>
+                {t("reports.restoreMessage")}
               </Button>
+            ) : (
+              (r.targetType === "MESSAGE" || r.targetType === "ROOM" || r.targetType === "RISE_POST") && (
+                <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => decide("hide")}>
+                  {r.targetType === "ROOM" ? t("reports.closeRoom") : t("reports.hideMessage")}
+                </Button>
+              )
             )}
             {r.target && (
               <>

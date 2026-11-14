@@ -2,11 +2,12 @@
  * La décision d'un signalement est enregistrée en français dans `Report.resolution` (« Contenu retiré : note »),
  * et l'était aussi dans le journal d'administration avant ce correctif. On la relit ici pour l'afficher traduite.
  */
-export type ReportDecision = "dismiss" | "hide" | "warn" | "suspend";
+export type ReportDecision = "dismiss" | "hide" | "restore" | "warn" | "suspend";
 
 export const DECISION_LABEL: Record<ReportDecision, string> = {
   dismiss: "Classé sans suite",
   hide: "Contenu retiré",
+  restore: "Contenu rétabli",
   warn: "Membre averti",
   suspend: "Membre suspendu",
 };

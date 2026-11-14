@@ -73,6 +73,9 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   const [adding, setAdding] = useState(false);
   const [people, setPeople] = useState(false);
   const [reportMessage, setReportMessage] = useState<string | null>(null);
+  // The message the group's lead is about to remove (P5).
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
   // The message being answered, quoted above the composer.
   const [replyTo, setReplyTo] = useState<Shown | null>(null);
   // Where the cursor stands in the draft: an @ just before it opens the list of members to mention.
@@ -240,6 +243,22 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
     }
   }
 
+  /** The lead of the group removes a message unfit for the group; the members see « Message retiré par la modération. ». */
+  async function remove() {
+    if (!removing) return;
+    setRemoveBusy(true);
+    setPinError(null);
+    try {
+      await api(`/api/conversations/${detail.id}/messages/${removing}`, { method: "DELETE" });
+      setRemoving(null);
+      await reload();
+    } catch (e) {
+      setPinError(e instanceof ApiError ? e.message : t("removeFailed"));
+    } finally {
+      setRemoveBusy(false);
+    }
+  }
+
   /** Brings a quoted message into view, when it is among the loaded ones. */
   function showMessage(id: string) {
     const el = document.getElementById(`m-${id}`);
@@ -304,7 +323,11 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
   const actionsFor = (m: Shown): BubbleAction[] =>
     m.id.startsWith("tmp-") || m.hidden
       ? []
-      : [{ label: t("reply"), onClick: () => answer(m) }, ...(canPin ? [{ label: m.pinned ? t("unpin") : t("pin"), onClick: () => pin(m, !m.pinned) }] : [])];
+      : [
+          { label: t("reply"), onClick: () => answer(m) },
+          ...(canPin ? [{ label: m.pinned ? t("unpin") : t("pin"), onClick: () => pin(m, !m.pinned) }] : []),
+          ...(detail.canModerate && m.authorId !== me.id && !m.system ? [{ label: t("remove"), onClick: () => setRemoving(m.id) }] : []),
+        ];
   const quoteOf = (m: Shown, mine: boolean) => m.replyTo && <Quote quote={m.replyTo} mine={mine} onOpen={() => showMessage(m.replyTo!.id)} />;
 
   return (
@@ -469,6 +492,7 @@ export function ConversationView({ me, initial }: { me: { id: string; name: stri
       </form>
 
       <ReportSheet open={report} onClose={() => setReport(false)} subject={t("subjectConversation")} target={{ type: "CONVERSATION", id: detail.id }} onBlocked={() => !group && setBlocked(true)} />
+      <ConfirmSheet open={removing !== null} onClose={() => setRemoving(null)} onConfirm={remove} title={t("removeTitle")} text={t("removeText")} confirm={t("removeConfirm")} busy={removeBusy} />
       <ReportSheet open={reportMessage !== null} onClose={() => setReportMessage(null)} subject={t("subjectMessage")} target={{ type: "MESSAGE", id: reportMessage ?? "" }} onBlocked={() => !group && setBlocked(true)} />
       {group && <MembersSheet open={people} onClose={() => setPeople(false)} detail={detail} meId={me.id} onChanged={reload} onLeft={() => router.replace("/messages")} />}
       {manageable && <AddMembersSheet open={adding} onClose={() => setAdding(false)} conversationId={detail.id} memberIds={detail.members.map((m) => m.id)} onAdded={reload} />}

@@ -99,7 +99,7 @@ export type ReportContext = {
   status: "OPEN" | "REVIEWED";
   resolution: string | null;
   reporter: { id: string; name: string };
-  targetType: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION" | "ROOM";
+  targetType: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION" | "ROOM" | "RISE_POST";
   targetId: string;
   target: { id: string; name: string; suspended: boolean } | null;
   /** How many reports this member has received in total: repeat offenders stand out. */
@@ -108,6 +108,10 @@ export type ReportContext = {
   excerpt: Array<{ author: string; body: string; reported?: boolean; hidden?: boolean }>;
   messageId: string | null;
   roomId: string | null;
+  /** The Rise-Up project of a reported post, to open it. */
+  riseProjectId: string | null;
+  /** The reported message or post is hidden now: the team may show it again. */
+  targetHidden: boolean;
 };
 
 export async function listReports(adminId: string, status: "OPEN" | "REVIEWED", prisma: Db = db): Promise<ReportContext[]> {
@@ -120,6 +124,8 @@ export async function listReports(adminId: string, status: "OPEN" | "REVIEWED", 
     let excerpt: ReportContext["excerpt"] = [];
     let messageId: string | null = null;
     let roomId: string | null = null;
+    let riseProjectId: string | null = null;
+    let targetHidden = false;
     if (r.targetType === "MESSAGE") {
       const m = await prisma.message.findUnique({ where: { id: r.targetId }, select: { id: true, conversationId: true, createdAt: true } });
       if (m) {
@@ -127,6 +133,7 @@ export async function listReports(adminId: string, status: "OPEN" | "REVIEWED", 
         // The reported message with the two messages before it, for context.
         const around = await prisma.message.findMany({ where: { conversationId: m.conversationId, createdAt: { lte: m.createdAt }, kind: "TEXT" }, orderBy: { createdAt: "desc" }, take: 3, include: { author: { select: { name: true } } } });
         excerpt = around.reverse().map((x) => ({ author: x.author?.name ?? "Compte supprimé", body: x.body, reported: x.id === m.id, hidden: x.hiddenAt !== null }));
+        targetHidden = excerpt.some((x) => x.reported && x.hidden);
       }
     } else if (r.targetType === "CONVERSATION") {
       const last = await prisma.message.findMany({ where: { conversationId: r.targetId, kind: "TEXT", createdAt: { lte: r.createdAt } }, orderBy: { createdAt: "desc" }, take: 6, include: { author: { select: { name: true } } } });
@@ -137,6 +144,14 @@ export async function listReports(adminId: string, status: "OPEN" | "REVIEWED", 
     } else if (r.targetType === "USER") {
       const u = await prisma.user.findUnique({ where: { id: r.targetId }, select: { name: true, headline: true, bio: true, profileLink: true } });
       if (u) excerpt = [{ author: u.name, body: [u.headline, u.bio, u.profileLink].filter(Boolean).join(" · ") || "(profil vide)" }];
+    } else if (r.targetType === "RISE_POST") {
+      // A post of a Rise-Up project, hidden at once when a lead of the project reported it.
+      const post = await prisma.risePost.findUnique({ where: { id: r.targetId }, include: { author: { select: { name: true } } } });
+      if (post) {
+        riseProjectId = post.projectId;
+        targetHidden = post.hiddenAt !== null;
+        excerpt = [{ author: post.author?.name ?? "Compte supprimé", body: post.body, reported: true, hidden: targetHidden }];
+      }
     } else if (r.targetType === "ROOM") {
       const room = await prisma.voiceRoom.findUnique({ where: { id: r.targetId }, include: { host: { select: { name: true } } } });
       if (room) {
@@ -159,6 +174,8 @@ export async function listReports(adminId: string, status: "OPEN" | "REVIEWED", 
       excerpt,
       messageId,
       roomId,
+      riseProjectId,
+      targetHidden,
     });
   }
   return out;
@@ -172,7 +189,8 @@ export async function resolveReport(adminId: string, reportId: string, decision:
   if (!r) throw notFound("Signalement introuvable.");
   if (r.status !== "OPEN") throw new DomainError("already_resolved", "Ce signalement est déjà traité.", 409);
   if ((decision === "warn" || decision === "suspend") && !r.targetUserId) throw new DomainError("no_member", "Ce signalement ne vise pas un membre précis.");
-  if (decision === "hide" && r.targetType !== "MESSAGE" && r.targetType !== "ROOM") throw new DomainError("not_hideable", "Seuls un message ou un salon peuvent être retirés.");
+  if (decision === "hide" && r.targetType !== "MESSAGE" && r.targetType !== "ROOM" && r.targetType !== "RISE_POST") throw new DomainError("not_hideable", "Seuls un message ou un salon peuvent être retirés.");
+  if (decision === "restore" && r.targetType !== "MESSAGE" && r.targetType !== "RISE_POST") throw new DomainError("not_restorable", "Seul un message peut être rétabli.");
   const resolution = [DECISION_LABEL[decision], note?.trim()].filter(Boolean).join(" : ");
 
   if (decision === "suspend") await suspendMember(adminId, r.targetUserId!, note?.trim() || r.reason, prisma);
@@ -186,6 +204,18 @@ export async function resolveReport(adminId: string, reportId: string, decision:
     }
     if (decision === "hide" && r.targetType === "ROOM") {
       await tx.voiceRoom.update({ where: { id: r.targetId }, data: { hiddenAt: new Date() } });
+    }
+    // A post hidden by the team; one already hidden by a lead stays so, now confirmed by the team.
+    if (decision === "hide" && r.targetType === "RISE_POST") {
+      await tx.risePost.updateMany({ where: { id: r.targetId, hiddenAt: null }, data: { hiddenAt: new Date() } });
+    }
+    // Only the KABAD team shows again a message hidden by a lead (P5).
+    if (decision === "restore" && r.targetType === "RISE_POST") {
+      await tx.risePost.update({ where: { id: r.targetId }, data: { hiddenAt: null, hiddenById: null, hiddenReason: null } });
+    }
+    if (decision === "restore" && r.targetType === "MESSAGE") {
+      const m = await tx.message.update({ where: { id: r.targetId }, data: { hiddenAt: null, hiddenById: null }, select: { conversationId: true, conversation: { select: { members: { select: { userId: true } } } } } });
+      await notify(tx, { t: "conversation", conversationId: m.conversationId, recipients: m.conversation.members.map((x) => x.userId) });
     }
     if (decision === "warn") {
       await pushNotifications(tx, [{ userId: r.targetUserId!, actor: "KABAD", key: "warning", params: { reason: note?.trim() || r.reason }, href: "/compte", icon: "info", tone: "accent" }]);

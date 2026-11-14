@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { DomainError } from "@/server/errors";
 import { createTestApp, joinTest, leaveTest, setStep } from "@/server/community-tests";
-import { closeRoom, createEvent, createProject, getEvent, getProject, joinProject, leaveProject, openRoom } from "@/server/rise";
+import { closeRoom, createEvent, createProject, getEvent, getProject, joinProject, leaveProject, openRoom, setCoLead } from "@/server/rise";
 import { remindRiseEvents } from "@/server/jobs";
 import { makeUsers, prisma, resetDb } from "./helpers";
 
@@ -68,9 +68,11 @@ describe("Africa Rise-Up : corrections du 13 novembre", () => {
     await joinProject("fatou", id, {}, prisma);
     await joinProject("kossi", id, {}, prisma);
     const startsAt = new Date(Date.now() + 3 * HOUR).toISOString();
+    // Fatou, co-responsable, programme l'événement.
+    await setCoLead("yao", id, "fatou", true, prisma);
     const e = await createEvent("fatou", id, { title: "Point d’étape", agenda: "Avancement.", startsAt, minutes: 60, meetingUrl: MEET, notify: true }, prisma);
 
-    // Ni un autre membre, ni après coup : seuls son auteur et l’initiateur l’annulent.
+    // Ni un autre membre, ni après coup : seuls son auteur et un responsable l’annulent.
     await refused(closeRoom("kossi", id, e.id, prisma), "forbidden");
     expect(await closeRoom("yao", id, e.id, prisma)).toMatchObject({ cancelled: true });
     expect(await getEvent("fatou", id, e.id, prisma)).toMatchObject({ ended: true, cancelled: true, canClose: false });

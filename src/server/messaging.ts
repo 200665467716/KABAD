@@ -192,7 +192,8 @@ export async function getConversation(userId: string, conversationId: string, op
       members: { include: { user: { select: { id: true, name: true, role: true, city: true, photoAt: true } } }, orderBy: [{ joinedAt: "asc" }, { userId: "asc" }] },
       // T4: the testers' group shows the tasks to tick and the install link.
       testApp: { select: { id: true, url: true, steps: true, platforms: true, ownerId: true, participants: { where: { userId }, select: { doneSteps: true } } } },
-      project: { select: { id: true } },
+      // The co-leads of a Rise-Up project moderate its channel with its initiator.
+      project: { select: { id: true, members: { where: { userId, role: "CO_LEAD" }, select: { userId: true } } } },
       team: { select: { hackathonId: true } },
       instructorsOf: { select: { id: true } },
     },
@@ -219,6 +220,7 @@ export async function getConversation(userId: string, conversationId: string, op
     photo: photoUrl(c),
     other: other ? { id: other.id, name: other.name, role: other.role, city: other.city, photo: avatarUrl(other) } : null,
     isOwner: c.createdById === userId,
+    canModerate: c.kind === "GROUP" && (c.createdById === userId || (c.project?.members.length ?? 0) > 0),
     linked: c.testApp
       ? { kind: "test", id: c.testApp.id }
       : c.project
@@ -301,6 +303,31 @@ export async function pinMessage(userId: string, conversationId: string, message
     const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
     await announceChange(tx, conversationId, m.conversation.members.map((x) => x.userId), `${firstName(me.name)} a ${pinned ? "épinglé" : "désépinglé"} un message`);
     return { pinned };
+  });
+}
+
+/**
+ * Who moderates a group: its owner and, in the channel of a Rise-Up project, the project's co-leads (P5).
+ * They remove a message unfit for the group; the KABAD team alone can show it again.
+ */
+async function moderates(prisma: Db | Prisma.TransactionClient, userId: string, conversation: { id: string; kind: string; createdById: string | null }) {
+  if (conversation.kind !== "GROUP") return false;
+  if (conversation.createdById === userId) return true;
+  return (await prisma.riseMember.count({ where: { userId, role: "CO_LEAD", project: { conversationId: conversation.id } } })) > 0;
+}
+
+/** The lead of a group removes another member's message: the members see that a message was removed. */
+export async function removeMessage(userId: string, conversationId: string, messageId: string, prisma: Db = db) {
+  const m = await membership(prisma, userId, conversationId);
+  if (!(await moderates(prisma, userId, m.conversation))) throw forbidden("Seul le responsable du groupe retire un message.");
+  const target = await prisma.message.findUnique({ where: { id: messageId }, select: { conversationId: true, kind: true, hiddenAt: true } });
+  if (!target || target.conversationId !== conversationId || target.kind === "SYSTEM") throw notFound("Message introuvable.");
+  if (target.hiddenAt) return { ok: true };
+  return prisma.$transaction(async (tx) => {
+    // Kept for the KABAD team, who can show it again; a removed message is unpinned.
+    await tx.message.update({ where: { id: messageId }, data: { hiddenAt: new Date(), hiddenById: userId, pinnedAt: null } });
+    await notify(tx, { t: "conversation", conversationId, recipients: m.conversation.members.map((x) => x.userId) });
+    return { ok: true };
   });
 }
 

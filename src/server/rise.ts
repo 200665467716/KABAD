@@ -4,19 +4,23 @@
  *   the project comes with its members' chat;
  * - members join and leave freely; the initiator cannot leave a project that still has members;
  * - the discussion feed holds posts and their replies; only members write;
- * - members schedule events (checkpoint, workshop…) held on a Google Meet link, which is required;
+ * - the initiator leads the project and names co-leads among its members (P5); together they are its leads;
+ * - only the leads schedule events (checkpoint, workshop…) held on a Google Meet link, which is required;
  *   the other members are notified, and an event is "live" while it runs;
- * - a member opens a room at any time: an event that starts now, on a Google Meet link. One room at a
- *   time per project; its author or the project's initiator closes it;
- * - the same two people cancel an event that has not started yet: it leaves the project, its reminder
- *   is not sent, and the members who were told about it are told it is cancelled.
+ * - a room is an event that starts now, on a Google Meet link. A lead opens it at once; any other member
+ *   proposes it, and it stays hidden from the project until a lead approves it (it then starts). One room
+ *   at a time per project; its author or a lead closes it;
+ * - the same people cancel an event that has not started yet: it leaves the project, its reminder
+ *   is not sent, and the members who were told about it are told it is cancelled;
+ * - anyone reports a post; a lead who reports one hides it at once, with a reason for the KABAD team,
+ *   who alone can show it again.
  */
 import { Prisma } from "@/generated/prisma/client";
 import { db, type Db } from "./db";
 import { DomainError, forbidden, notFound } from "./errors";
-import { joinCommunityGroup, leaveCommunityGroup, openCommunityGroup } from "./messaging";
+import { block, joinCommunityGroup, leaveCommunityGroup, openCommunityGroup } from "./messaging";
 import { pushNotifications } from "./notifications";
-import type { RiseDomain, RiseEventView, RisePostView, RiseProjectDetail, RiseProjectSummary } from "@/lib/domain-types";
+import type { RiseDomain, RiseEventView, RisePostView, RiseProjectDetail, RiseProjectSummary, RiseRole } from "@/lib/domain-types";
 
 type Tx = Db | Prisma.TransactionClient;
 
@@ -44,7 +48,7 @@ const eventSelect = { id: true, title: true, agenda: true, startsAt: true, minut
 /** The event running now, otherwise the next one, for each project. */
 async function currentEvents(prisma: Tx, projectIds: string[]) {
   const since = new Date(Date.now() - 6 * 3600_000);
-  const rows = await prisma.riseEvent.findMany({ where: { projectId: { in: projectIds }, startsAt: { gte: since } }, select: eventSelect, orderBy: { startsAt: "asc" } });
+  const rows = await prisma.riseEvent.findMany({ where: { projectId: { in: projectIds }, startsAt: { gte: since }, approvedAt: { not: null } }, select: eventSelect, orderBy: { startsAt: "asc" } });
   const out = new Map<string, RiseEventView>();
   const now = Date.now();
   for (const e of rows) {
@@ -97,12 +101,15 @@ export async function getProject(viewerId: string | null, id: string, prisma: Db
   const p = await prisma.riseProject.findUnique({
     where: { id },
     include: {
-      members: { select: { skill: true, user: { select: { id: true, name: true, country: true, city: true } } }, orderBy: { joinedAt: "asc" } },
+      members: { select: { skill: true, role: true, user: { select: { id: true, name: true, country: true, city: true } } }, orderBy: { joinedAt: "asc" } },
       initiator: { select: { id: true, name: true } },
     },
   });
   if (!p) throw notFound("Projet introuvable.");
-  const [events, posts, upcoming] = await Promise.all([
+  const roleOf = (m: { role: "MEMBER" | "CO_LEAD"; user: { id: string } }): RiseRole => (m.user.id === p.initiatorId ? "initiator" : m.role === "CO_LEAD" ? "co_lead" : "member");
+  const mine = viewerId ? p.members.find((m) => m.user.id === viewerId) : undefined;
+  const viewerRole = mine ? roleOf(mine) : null;
+  const [events, posts, upcoming, pending] = await Promise.all([
     currentEvents(prisma, [id]),
     prisma.risePost.findMany({
       where: { projectId: id, parentId: null, hiddenAt: null },
@@ -110,7 +117,15 @@ export async function getProject(viewerId: string | null, id: string, prisma: Db
       orderBy: { createdAt: "desc" },
       take: 50,
     }),
-    prisma.riseEvent.findMany({ where: { projectId: id, startsAt: { gte: new Date(Date.now() - 6 * 3600_000) } }, select: eventSelect, orderBy: { startsAt: "asc" }, take: 20 }),
+    prisma.riseEvent.findMany({ where: { projectId: id, startsAt: { gte: new Date(Date.now() - 6 * 3600_000) }, approvedAt: { not: null } }, select: eventSelect, orderBy: { startsAt: "asc" }, take: 20 }),
+    // Rooms waiting for a lead: the leads see them all, a member only their own.
+    viewerRole
+      ? prisma.riseEvent.findMany({
+          where: { projectId: id, approvedAt: null, endedAt: null, startsAt: { gte: new Date(Date.now() - ROOM_MINUTES * 60_000) }, ...(isLead(viewerRole) ? {} : { createdById: viewerId }) },
+          select: { id: true, title: true, createdAt: true, createdBy: { select: { id: true, name: true } } },
+          orderBy: { createdAt: "asc" },
+        })
+      : Promise.resolve([]),
   ]);
   const summary = toSummary({ ...p, members: p.members.map((m) => ({ user: m.user })) }, events, viewerId);
   return {
@@ -122,7 +137,9 @@ export async function getProject(viewerId: string | null, id: string, prisma: Db
     conversationId: summary.isMember ? p.conversationId : null,
     posts: posts.map((x) => ({ id: x.id, body: x.body, createdAt: x.createdAt.toISOString(), author: x.author, replies: x._count.replies })),
     events: upcoming.filter((e) => !isOver(e)).map((e) => ({ ...toEvent(e), meetingUrl: summary.isMember ? e.meetingUrl : "" })),
-    people: p.members.map((m) => ({ id: m.user.id, name: m.user.name, city: m.user.city, skill: m.skill, initiator: m.user.id === p.initiatorId })),
+    people: p.members.map((m) => ({ id: m.user.id, name: m.user.name, city: m.user.city, skill: m.skill, initiator: m.user.id === p.initiatorId, role: roleOf(m) })),
+    viewerRole,
+    pendingRooms: pending.map((e) => ({ id: e.id, title: e.title, author: e.createdBy, createdAt: e.createdAt.toISOString() })),
   };
 }
 
@@ -139,6 +156,44 @@ export async function createProject(userId: string, input: { name: string; domai
 
 async function memberOf(prisma: Tx, projectId: string, userId: string) {
   return prisma.riseMember.findUnique({ where: { projectId_userId: { projectId, userId } } });
+}
+
+/** The member's role in the project, or null when they are not a member. */
+async function roleIn(prisma: Tx, projectId: string, userId: string): Promise<RiseRole | null> {
+  const m = await prisma.riseMember.findUnique({ where: { projectId_userId: { projectId, userId } }, select: { role: true, project: { select: { initiatorId: true } } } });
+  if (!m) return null;
+  return m.project.initiatorId === userId ? "initiator" : m.role === "CO_LEAD" ? "co_lead" : "member";
+}
+
+/** The initiator and the co-leads lead the project. */
+const isLead = (role: RiseRole | null) => role === "initiator" || role === "co_lead";
+
+/** The leads of a project, to notify: the initiator and the co-leads. */
+async function leadIds(prisma: Tx, projectId: string) {
+  const p = await prisma.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { initiatorId: true, members: { where: { role: "CO_LEAD" }, select: { userId: true } } } });
+  return [...new Set([p.initiatorId, ...p.members.map((m) => m.userId)])];
+}
+
+/**
+ * The initiator names a member co-lead, or takes the role back (P5). A co-lead schedules events, approves
+ * the rooms proposed by the members and hides a post when reporting it.
+ */
+export async function setCoLead(userId: string, projectId: string, memberId: string, coLead: boolean, prisma: Db = db) {
+  const p = await prisma.riseProject.findUnique({ where: { id: projectId }, select: { name: true, initiatorId: true } });
+  if (!p) throw notFound("Projet introuvable.");
+  if (p.initiatorId !== userId) throw forbidden("Seul l’initiateur du projet nomme les co-responsables.");
+  if (memberId === userId) throw new DomainError("initiator", "Tu es déjà le responsable de ce projet.", 409);
+  const m = await memberOf(prisma, projectId, memberId);
+  if (!m) throw notFound("Ce membre ne fait pas partie du projet.");
+  if ((m.role === "CO_LEAD") === coLead) return { ok: true };
+  return prisma.$transaction(async (tx) => {
+    await tx.riseMember.update({ where: { projectId_userId: { projectId, userId: memberId } }, data: { role: coLead ? "CO_LEAD" : "MEMBER" } });
+    if (coLead) {
+      const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+      await pushNotifications(tx, [{ userId: memberId, actor: me.name, key: "riseCoLead", params: { title: p.name }, href: `/rise-up/${projectId}`, icon: "users", tone: "accent" }]);
+    }
+    return { ok: true };
+  });
 }
 
 export async function joinProject(userId: string, projectId: string, input: { skill?: string } = {}, prisma: Db = db) {
@@ -193,13 +248,35 @@ export async function getThread(viewerId: string | null, projectId: string, post
   });
   if (!post || post.projectId !== projectId || post.hiddenAt) throw notFound("Message introuvable.");
   const view = (x: { id: string; body: string; createdAt: Date; author: { id: string; name: string } | null }, replies = 0): RisePostView => ({ id: x.id, body: x.body, createdAt: x.createdAt.toISOString(), author: x.author, replies });
-  return { post: view(post, post.replies.length), replies: post.replies.map((r) => view(r)), canReply: viewerId !== null && (await memberOf(prisma, projectId, viewerId)) !== null };
+  const role = viewerId ? await roleIn(prisma, projectId, viewerId) : null;
+  // `lead`: a lead of the project hides a post at once when reporting it.
+  return { post: view(post, post.replies.length), replies: post.replies.map((r) => view(r)), canReply: role !== null, lead: isLead(role) };
+}
+
+/**
+ * Reports a post or a reply (P5). The KABAD team reads every report. A lead of the project who reports a post
+ * hides it at once from the project: the reason is required, and only the team can show it again.
+ */
+export async function reportPost(userId: string, postId: string, input: { reason: string; details?: string; block: boolean }, prisma: Db = db) {
+  const post = await prisma.risePost.findUnique({ where: { id: postId }, select: { id: true, projectId: true, authorId: true, hiddenAt: true } });
+  if (!post || post.hiddenAt) throw notFound("Message introuvable.");
+  const lead = isLead(await roleIn(prisma, post.projectId, userId));
+  const details = input.details?.trim() || undefined;
+  if (lead && (!details || details.length < 10)) throw new DomainError("reason_required", "Explique en une phrase pourquoi tu masques ce message : l’équipe KABAD le lira.", 400, "details");
+  await prisma.$transaction(async (tx) => {
+    if (lead) await tx.risePost.update({ where: { id: postId }, data: { hiddenAt: new Date(), hiddenById: userId, hiddenReason: details } });
+    // Two reports on the same post by the same member count once.
+    const already = await tx.report.count({ where: { reporterId: userId, targetType: "RISE_POST", targetId: postId, status: "OPEN" } });
+    if (!already) await tx.report.create({ data: { reporterId: userId, targetType: "RISE_POST", targetId: postId, targetUserId: post.authorId, reason: input.reason, details } });
+  });
+  if (input.block && post.authorId && post.authorId !== userId) await block(userId, post.authorId, prisma);
+  return { ok: true, hidden: lead };
 }
 
 /* Events */
 
 export async function createEvent(userId: string, projectId: string, input: { title: string; agenda: string; startsAt: string; minutes: number; meetingUrl: string; notify: boolean }, prisma: Db = db) {
-  if (!(await memberOf(prisma, projectId, userId))) throw forbidden("Seuls les membres du projet programment un événement.");
+  if (!isLead(await roleIn(prisma, projectId, userId))) throw forbidden("Seuls le responsable et les co-responsables du projet programment un événement.");
   const startsAt = new Date(input.startsAt);
   if (Number.isNaN(startsAt.getTime()) || startsAt.getTime() < Date.now()) throw new DomainError("past", "Choisis une date à venir.", 400, "startsAt");
   return prisma.$transaction(async (tx) => {
@@ -207,7 +284,7 @@ export async function createEvent(userId: string, projectId: string, input: { ti
     const e = await tx.riseEvent.create({
       // « Prévenir les membres » décoché : ni notification maintenant, ni rappel une heure avant.
       // Less than an hour before it starts, the notice sent now already plays the reminder: it is marked as sent.
-      data: { projectId, createdById: userId, title: input.title, agenda: input.agenda, startsAt, minutes: input.minutes, meetingUrl: input.meetingUrl, remind: input.notify, remindedAt: input.notify && startsAt.getTime() - Date.now() <= 3600_000 ? new Date() : null },
+      data: { projectId, createdById: userId, title: input.title, agenda: input.agenda, startsAt, minutes: input.minutes, meetingUrl: input.meetingUrl, remind: input.notify, remindedAt: input.notify && startsAt.getTime() - Date.now() <= 3600_000 ? new Date() : null, approvedAt: new Date() },
     });
     if (input.notify) {
       await pushNotifications(
@@ -219,26 +296,77 @@ export async function createEvent(userId: string, projectId: string, input: { ti
   });
 }
 
+/** Rooms that keep the project busy: live, and approved. */
+async function liveRoom(tx: Tx, projectId: string, now: Date) {
+  const recent = await tx.riseEvent.findMany({ where: { projectId, endedAt: null, approvedAt: { not: null }, startsAt: { lte: now, gte: new Date(now.getTime() - 6 * 3600_000) } }, select: { startsAt: true, minutes: true, endedAt: true } });
+  return recent.some((e) => isLive(e, now.getTime()));
+}
+
+/** Tells the project's members that a room is live, except the one who opened or approved it. */
+async function announceRoom(tx: Prisma.TransactionClient, projectId: string, eventId: string, title: string, exceptId: string) {
+  const p = await tx.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { name: true, members: { select: { userId: true } } } });
+  await pushNotifications(
+    tx,
+    p.members.filter((m) => m.userId !== exceptId).map((m) => ({ userId: m.userId, actor: p.name, key: "roomLive", params: { title }, href: `/rise-up/${projectId}/evenements/${eventId}`, icon: "radio", tone: "accent" })),
+  );
+}
+
 /**
  * Opens a room in the project's channel: a video call that starts now, on the member's Google Meet link.
- * The other members are told at once. One room at a time per project.
+ * A lead opens it at once and the members are told. Another member proposes it: the leads are told, and the
+ * room stays hidden from the project until one of them approves it (P5). One room at a time per project.
  */
 export async function openRoom(userId: string, projectId: string, input: { title?: string; meetingUrl: string }, prisma: Db = db) {
-  if (!(await memberOf(prisma, projectId, userId))) throw forbidden("Seuls les membres du projet ouvrent un salon.");
+  const role = await roleIn(prisma, projectId, userId);
+  if (!role) throw forbidden("Seuls les membres du projet ouvrent un salon.");
+  const lead = isLead(role);
   return prisma.$transaction(async (tx) => {
     // The project row is locked: two members opening a room at the same moment get one room.
     await tx.$queryRaw`SELECT 1 FROM "RiseProject" WHERE "id" = ${projectId} FOR UPDATE`;
     const now = new Date();
-    const recent = await tx.riseEvent.findMany({ where: { projectId, endedAt: null, startsAt: { lte: now, gte: new Date(now.getTime() - 6 * 3600_000) } }, select: { startsAt: true, minutes: true, endedAt: true } });
-    if (recent.some((e) => isLive(e, now.getTime()))) throw new DomainError("room_open", "Un salon est déjà ouvert dans ce canal. Rejoins-le.", 409);
-    const p = await tx.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { name: true, members: { select: { userId: true } } } });
+    if (await liveRoom(tx, projectId, now)) throw new DomainError("room_open", "Un salon est déjà ouvert dans ce canal. Rejoins-le.", 409);
+    if (!lead && (await tx.riseEvent.count({ where: { projectId, createdById: userId, approvedAt: null, endedAt: null, startsAt: { gte: new Date(now.getTime() - ROOM_MINUTES * 60_000) } } }))) {
+      throw new DomainError("room_pending", "Ton salon attend déjà la validation d’un responsable du projet.", 409);
+    }
     const title = input.title || "Salon de discussion";
-    const e = await tx.riseEvent.create({ data: { projectId, createdById: userId, title, agenda: "", startsAt: now, minutes: ROOM_MINUTES, meetingUrl: input.meetingUrl, remind: false } });
-    await pushNotifications(
-      tx,
-      p.members.filter((m) => m.userId !== userId).map((m) => ({ userId: m.userId, actor: p.name, key: "roomLive", params: { title }, href: `/rise-up/${projectId}/evenements/${e.id}`, icon: "radio", tone: "accent" })),
-    );
-    return { id: e.id };
+    const e = await tx.riseEvent.create({ data: { projectId, createdById: userId, title, agenda: "", startsAt: now, minutes: ROOM_MINUTES, meetingUrl: input.meetingUrl, remind: false, approvedAt: lead ? now : null } });
+    if (lead) {
+      await announceRoom(tx, projectId, e.id, title, userId);
+    } else {
+      const [p, me] = await Promise.all([tx.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { name: true } }), tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } })]);
+      await pushNotifications(
+        tx,
+        (await leadIds(tx, projectId)).map((id) => ({ userId: id, actor: me.name, key: "roomProposed", params: { title, project: p.name }, href: `/rise-up/${projectId}/evenements/${e.id}`, icon: "radio", tone: "accent" })),
+      );
+    }
+    return { id: e.id, pending: !lead };
+  });
+}
+
+/**
+ * A lead answers a proposed room. Approved, it starts now (for the planned hour) and the members are told;
+ * refused, it is closed and its author is told.
+ */
+export async function answerRoom(userId: string, projectId: string, eventId: string, approve: boolean, prisma: Db = db) {
+  if (!isLead(await roleIn(prisma, projectId, userId))) throw forbidden("Seuls le responsable et les co-responsables du projet valident un salon.");
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT 1 FROM "RiseProject" WHERE "id" = ${projectId} FOR UPDATE`;
+    const now = new Date();
+    const e = await tx.riseEvent.findUnique({ where: { id: eventId }, select: { projectId: true, title: true, createdById: true, approvedAt: true, endedAt: true, startsAt: true, minutes: true } });
+    if (!e || e.projectId !== projectId) throw notFound("Salon introuvable.");
+    if (e.approvedAt || e.endedAt || isOver(e, now.getTime())) throw new DomainError("answered", "Ce salon n’attend plus de validation.", 409);
+    if (approve) {
+      if (await liveRoom(tx, projectId, now)) throw new DomainError("room_open", "Un salon est déjà ouvert dans ce canal. Ferme-le avant d’en valider un autre.", 409);
+      await tx.riseEvent.update({ where: { id: eventId }, data: { approvedAt: now, startsAt: now } });
+      await announceRoom(tx, projectId, eventId, e.title, userId);
+    } else {
+      await tx.riseEvent.update({ where: { id: eventId }, data: { endedAt: now } });
+      if (e.createdById && e.createdById !== userId) {
+        const p = await tx.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { name: true } });
+        await pushNotifications(tx, [{ userId: e.createdById, actor: p.name, key: "roomRefused", params: { title: e.title }, href: `/rise-up/${projectId}`, icon: "radio", tone: "neutral" }]);
+      }
+    }
+    return { ok: true };
   });
 }
 
@@ -256,7 +384,7 @@ export async function closeRoom(userId: string, projectId: string, eventId: stri
     select: { projectId: true, createdById: true, title: true, startsAt: true, minutes: true, endedAt: true, remind: true, project: { select: { name: true, initiatorId: true, members: { select: { userId: true, user: { select: { timeZone: true } } } } } } },
   });
   if (!e || e.projectId !== projectId) throw notFound("Événement introuvable.");
-  if (e.createdById !== userId && e.project.initiatorId !== userId) throw forbidden("Seul son auteur ou l’initiateur du projet ferme ou annule cet événement.");
+  if (e.createdById !== userId && !isLead(await roleIn(prisma, projectId, userId))) throw forbidden("Seul son auteur ou un responsable du projet ferme ou annule cet événement.");
   if (isOver(e)) throw new DomainError("over", "Cet événement est déjà terminé.", 409);
   const now = new Date();
   const upcoming = e.startsAt.getTime() > now.getTime();
@@ -275,9 +403,13 @@ export async function closeRoom(userId: string, projectId: string, eventId: stri
 }
 
 export async function getEvent(viewerId: string | null, projectId: string, eventId: string, prisma: Db = db) {
-  const e = await prisma.riseEvent.findUnique({ where: { id: eventId }, select: { ...eventSelect, createdBy: { select: { id: true, name: true } }, project: { select: { name: true, initiatorId: true } } } });
+  const e = await prisma.riseEvent.findUnique({ where: { id: eventId }, select: { ...eventSelect, approvedAt: true, createdBy: { select: { id: true, name: true } }, project: { select: { name: true, initiatorId: true } } } });
   if (!e || e.projectId !== projectId) throw notFound("Événement introuvable.");
-  const isMember = viewerId !== null && (await memberOf(prisma, projectId, viewerId)) !== null;
+  const role = viewerId ? await roleIn(prisma, projectId, viewerId) : null;
+  const isMember = role !== null;
+  const pending = e.approvedAt === null;
+  // A proposed room is seen by its author and the leads only, until a lead approves it.
+  if (pending && !isLead(role) && e.createdBy?.id !== viewerId) throw notFound("Événement introuvable.");
   const view = toEvent(e);
   // The video link is for the project's members.
   return {
@@ -287,7 +419,10 @@ export async function getEvent(viewerId: string | null, projectId: string, event
     ended: isOver(e),
     cancelled: isCancelled(e),
     // A live event is closed, an upcoming one cancelled; an event over is left as it is.
-    canClose: !isOver(e) && viewerId !== null && (e.createdBy?.id === viewerId || e.project.initiatorId === viewerId),
+    canClose: !isOver(e) && viewerId !== null && (e.createdBy?.id === viewerId || isLead(role)),
+    // A proposed room: a lead approves or refuses it.
+    pending,
+    canApprove: pending && !isOver(e) && isLead(role),
     createdBy: e.createdBy,
   };
 }
@@ -295,7 +430,7 @@ export async function getEvent(viewerId: string | null, projectId: string, event
 /** Upcoming events of the member's projects, for the home screen. */
 export async function myUpcomingEvents(userId: string, prisma: Db = db): Promise<RiseEventView[]> {
   const rows = await prisma.riseEvent.findMany({
-    where: { project: { members: { some: { userId } } }, startsAt: { gte: new Date(Date.now() - 6 * 3600_000), lte: new Date(Date.now() + 14 * 86_400_000) } },
+    where: { project: { members: { some: { userId } } }, approvedAt: { not: null }, startsAt: { gte: new Date(Date.now() - 6 * 3600_000), lte: new Date(Date.now() + 14 * 86_400_000) } },
     select: eventSelect,
     orderBy: { startsAt: "asc" },
     take: 10,
