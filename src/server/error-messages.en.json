@@ -297,7 +297,7 @@
     "Indique la bonne réponse.": "Enter the correct answer.",
     "Donne le nom de l’application.": "Enter the app name.",
     "Indique le lien https de l’application.": "Enter the app’s https link.",
-    "Choisis 5, 8, 10 ou 20 testeurs.": "Choose 5, 8, 10 or 20 testers.",
+    "Indique un nombre de testeurs entre 1 et 50.": "Enter a number of testers between 1 and 50.",
     "Choisis une durée de 10, 15 ou 30 minutes.": "Choose a length of 10, 15 or 30 minutes.",
     "Présente l’application en une ou deux phrases.": "Describe the app in one or two sentences.",
     "500 caractères au plus.": "500 characters at most.",

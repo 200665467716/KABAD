@@ -9,12 +9,14 @@ import { Alert } from "@/components/ui/Display";
 import { Select, TextArea, TextField } from "@/components/ui/Field";
 import { useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
+import { TEST_SLOTS_MAX } from "@/lib/schemas";
 import { parseSteps } from "@/lib/test-steps";
 
 type Platform = "ANDROID" | "IOS" | "WEB";
 type Question = { q: string; options: string; answer: string };
 const PLATFORMS: Platform[] = ["ANDROID", "IOS", "WEB"];
-const SLOTS = [5, 8, 10, 20];
+/** Suggestions only: any number from 1 to 50 can be typed (P3). */
+const SLOTS = [5, 8, 10, 15, 20, 30, 50];
 const MINUTES = [10, 15, 30];
 
 /** Screen T3: publish a listing. Control questions are optional. */
@@ -22,7 +24,8 @@ export function TestAppForm() {
   const t = useTranslations("tests");
   const router = useRouter();
   const [platforms, setPlatforms] = useState<Platform[]>(["ANDROID"]);
-  const [slots, setSlots] = useState(8);
+  // Kept as typed text: the field may be empty while the number is being written.
+  const [slots, setSlots] = useState("8");
   const [minutes, setMinutes] = useState(10);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [busy, setBusy] = useState(false);
@@ -31,6 +34,8 @@ export function TestAppForm() {
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
+    const testers = Number(slots);
+    if (!Number.isInteger(testers) || testers < 1 || testers > TEST_SLOTS_MAX) return setError({ field: "slots", text: t("form.slotsInvalid", { max: TEST_SLOTS_MAX }) });
     setBusy(true);
     setError(null);
     try {
@@ -40,7 +45,7 @@ export function TestAppForm() {
           platforms,
           url: String(data.get("url") ?? "").trim(),
           minutes,
-          slots,
+          slots: testers,
           pitch: String(data.get("pitch") ?? ""),
           task: String(data.get("task") ?? ""),
           steps: parseSteps(String(data.get("steps") ?? "")),
@@ -84,13 +89,25 @@ export function TestAppForm() {
           {fieldError("platforms") && <span className="text-sm font-extrabold text-danger">{fieldError("platforms")}</span>}
         </fieldset>
         <div className="grid grid-cols-2 gap-2.5">
-          <Select id="slots" label={t("form.slots")} value={slots} onChange={(e) => setSlots(Number(e.target.value))}>
+          {/* Typed freely, with the usual numbers offered as suggestions (P3). */}
+          <TextField
+            id="slots"
+            label={t("form.slots")}
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={TEST_SLOTS_MAX}
+            list="slots-suggestions"
+            value={slots}
+            onChange={(e) => setSlots(e.target.value)}
+            hint={t("form.slotsHint", { max: TEST_SLOTS_MAX })}
+            error={fieldError("slots")}
+          />
+          <datalist id="slots-suggestions">
             {SLOTS.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
+              <option key={n} value={n} />
             ))}
-          </Select>
+          </datalist>
           <Select id="minutes" label={t("form.minutes")} value={minutes} onChange={(e) => setMinutes(Number(e.target.value))}>
             {MINUTES.map((n) => (
               <option key={n} value={n}>
