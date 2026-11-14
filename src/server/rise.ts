@@ -333,7 +333,8 @@ export async function openRoom(userId: string, projectId: string, input: { title
     if (lead) {
       await announceRoom(tx, projectId, e.id, title, userId);
     } else {
-      const [p, me] = await Promise.all([tx.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { name: true } }), tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } })]);
+      const p = await tx.riseProject.findUniqueOrThrow({ where: { id: projectId }, select: { name: true } });
+      const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
       await pushNotifications(
         tx,
         (await leadIds(tx, projectId)).map((id) => ({ userId: id, actor: me.name, key: "roomProposed", params: { title, project: p.name }, href: `/rise-up/${projectId}/evenements/${e.id}`, icon: "radio", tone: "accent" })),

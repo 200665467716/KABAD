@@ -23,8 +23,9 @@ const TONE = { OPEN: "brand", JURY: "neutral", DONE: "success" } as const;
 async function Data() {
   const user = await adminUser("/admin/hackathons");
   const [t, format, { hackathons }, mentors] = await Promise.all([getTranslations("hackathons.admin"), getFormatter(), adminOverview(user.id), badgedMentors(user.id)]);
-  // Proposals to review first, then by date.
-  const rows = [...hackathons].sort((a, b) => Number(a.published) - Number(b.published));
+  // Proposals to review first, then the published ones by date, the refused ones last.
+  const rank = (h: (typeof hackathons)[number]) => (h.rejected ? 2 : h.published ? 1 : 0);
+  const rows = [...hackathons].sort((a, b) => rank(a) - rank(b));
   const juries = await Promise.all(rows.map((h) => getHackathon(user.id, h.id).then((d) => d.jury.map((j) => j.id))));
   return (
     <Page>
@@ -37,7 +38,7 @@ async function Data() {
         {rows.map((h, i) => (
           <Card key={h.id} className="gap-2.5">
             <div className="flex flex-wrap items-center gap-2">
-              {h.published ? <Badge tone={TONE[h.status]}>{t(`status.${h.status}`)}</Badge> : <Badge icon="clock">{t("toReview")}</Badge>}
+              {h.published ? <Badge tone={TONE[h.status]}>{t(`status.${h.status}`)}</Badge> : h.rejected ? <Badge tone="danger">{t("rejected")}</Badge> : <Badge icon="clock">{t("toReview")}</Badge>}
               <Link href={`/hackathons/${h.id}`} className="font-extrabold text-ink">
                 {h.title}
               </Link>
@@ -51,7 +52,7 @@ async function Data() {
                 jury: juries[i].length,
               })}
             </p>
-            <AdminActions id={h.id} status={h.status} published={h.published} mentors={mentors} jury={juries[i]} />
+            <AdminActions id={h.id} status={h.status} published={h.published} rejected={h.rejected} mentors={mentors} jury={juries[i]} />
             {h.status === "DONE" && (
               <Link href={`/hackathons/${h.id}/resultats`} className="text-sm font-extrabold">
                 {t("seeResults")}

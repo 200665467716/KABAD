@@ -149,6 +149,8 @@ export type HackathonSummary = {
   instructorCount: number;
   /** False while the KABAD team has not published it: only its author and the team see it. */
   published: boolean;
+  /** The KABAD team refused to publish it (P7). */
+  rejected: boolean;
   teams: number;
   participants: number;
   resultsAt: string | null;
@@ -191,6 +193,8 @@ export type HackathonDetail = HackathonSummary & {
   /** Teams whose captain invited the viewer, who has not answered yet. */
   invitations: Array<{ id: string; team: string; captain: string; members: number }>;
   published: boolean;
+  /** Why the KABAD team refused it, for its organizer and the team; null otherwise. */
+  rejectionReason: string | null;
   canEdit: boolean;
 };
 

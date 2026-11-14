@@ -68,6 +68,7 @@ const summarySelect = {
   prizes: true,
   instructorCount: true,
   publishedAt: true,
+  rejectedAt: true,
   resultsAt: true,
 } as const;
 type SummaryRow = Prisma.HackathonGetPayload<{ select: typeof summarySelect }>;
@@ -79,11 +80,12 @@ async function summaries(rows: SummaryRow[], prisma: Tx): Promise<HackathonSumma
     const top = (await ranking(r.id, prisma))[0];
     if (top) winners.set(r.id, { team: top.team, captain: top.captain });
   }
-  return rows.map(({ publishedAt, ...r }) => {
+  return rows.map(({ publishedAt, rejectedAt, ...r }) => {
     const { instructors, ...rest } = t.get(r.id)!;
     return {
       ...r,
       published: publishedAt !== null,
+      rejected: publishedAt === null && rejectedAt !== null,
       startsAt: r.startsAt.toISOString(),
       endsAt: r.endsAt.toISOString(),
       closesAt: r.closesAt.toISOString(),
@@ -154,6 +156,7 @@ export async function getHackathon(viewerId: string | null, id: string, prisma: 
       publishedAt: true,
       createdById: true,
       instructorsConversationId: true,
+      rejectionReason: true,
       jurors: { select: { user: { select: { id: true, name: true } } } },
       missions: { where: { status: "ACCEPTED" }, select: { mentor: { select: { id: true, name: true } } } },
     },
@@ -204,6 +207,8 @@ export async function getHackathon(viewerId: string | null, id: string, prisma: 
       .map((t) => ({ id: t.id, name: t.name, lookingFor: t.lookingFor, members: t._count.members, requested: Array.isArray(t.requests) && t.requests.length > 0 })),
     invitations: invitations.map((i) => ({ id: i.id, team: i.team.name, captain: i.team.captain.name, members: i.team._count.members })),
     published: h.publishedAt !== null,
+    // Why the KABAD team refused it: for its organizer and the team.
+    rejectionReason: canEdit && !h.publishedAt ? h.rejectionReason : null,
     canEdit,
   };
 }
@@ -298,9 +303,30 @@ export async function publishHackathon(adminId: string, id: string, prisma: Db =
     const h = await tx.hackathon.findUnique({ where: { id }, select: { title: true, createdById: true, publishedAt: true } });
     if (!h) throw notFound("Hackathon introuvable.");
     if (h.publishedAt) throw new DomainError("published", "Ce hackathon est déjà publié.", 409);
-    await tx.hackathon.update({ where: { id }, data: { publishedAt: new Date() } });
+    // A hackathon refused by mistake can still be published: the refusal is then forgotten.
+    await tx.hackathon.update({ where: { id }, data: { publishedAt: new Date(), rejectedAt: null, rejectionReason: null } });
     await tx.adminAction.create({ data: { adminId, action: "hackathon:publish", targetId: id } });
     if (h.createdById) await pushNotifications(tx, [{ userId: h.createdById, actor: "KABAD", key: "hackathonPublished", params: { title: h.title }, href: `/hackathons/${id}`, icon: "trophy", tone: "success" }]);
+    return { ok: true };
+  });
+}
+
+/**
+ * The KABAD team refuses to publish a proposed hackathon (P7). The reason is required: the organizer is told
+ * and reads it on the hackathon's page. The hackathon stays visible to them and to the team only.
+ */
+export async function rejectHackathon(adminId: string, id: string, reason: string, prisma: Db = db) {
+  await requireAdmin(adminId, prisma);
+  const why = reason.trim();
+  if (why.length < 10) throw new DomainError("reason_required", "Explique à l’organisateur pourquoi ce hackathon n’est pas publié.", 400, "reason");
+  return prisma.$transaction(async (tx) => {
+    const h = await tx.hackathon.findUnique({ where: { id }, select: { title: true, createdById: true, publishedAt: true, rejectedAt: true } });
+    if (!h) throw notFound("Hackathon introuvable.");
+    if (h.publishedAt) throw new DomainError("published", "Ce hackathon est déjà publié.", 409);
+    if (h.rejectedAt) throw new DomainError("rejected", "Ce hackathon est déjà refusé.", 409);
+    await tx.hackathon.update({ where: { id }, data: { rejectedAt: new Date(), rejectionReason: why.slice(0, 500) } });
+    await tx.adminAction.create({ data: { adminId, action: "hackathon:reject", targetId: id, details: why.slice(0, 500) } });
+    if (h.createdById) await pushNotifications(tx, [{ userId: h.createdById, actor: "KABAD", key: "hackathonRejected", params: { title: h.title, reason: why }, href: `/hackathons/${id}`, icon: "trophy", tone: "neutral" }]);
     return { ok: true };
   });
 }
@@ -420,11 +446,10 @@ async function sendTeamInvites(
   if (ids.length === 0) return { invited: 0 };
   if ((await tx.contact.count({ where: { userId: team.captainId, contactId: { in: ids } } })) !== ids.length) throw forbidden("Tu ne peux inviter que tes contacts.");
   if (ids.some((id) => h.jurors.some((j) => j.userId === id))) throw new DomainError("juror", "Un membre du jury ne peut pas rejoindre une équipe.", 409);
-  const [seated, members, pending] = await Promise.all([
-    tx.teamMember.count({ where: { hackathonId: h.id, userId: { in: ids } } }),
-    tx.teamMember.count({ where: { teamId: team.id } }),
-    tx.teamJoinRequest.findMany({ where: { teamId: team.id, status: "PENDING" }, select: { userId: true, invited: true } }),
-  ]);
+  // One connection per transaction: its queries run one after the other (pg refuses queries sent at once).
+  const seated = await tx.teamMember.count({ where: { hackathonId: h.id, userId: { in: ids } } });
+  const members = await tx.teamMember.count({ where: { teamId: team.id } });
+  const pending = await tx.teamJoinRequest.findMany({ where: { teamId: team.id, status: "PENDING" }, select: { userId: true, invited: true } });
   if (seated) throw new DomainError("already_in", "Un des membres invités participe déjà à ce hackathon.", 409);
   if (pending.some((p) => !p.invited && ids.includes(p.userId))) throw new DomainError("asked", "Un de ces membres a déjà demandé à rejoindre ton équipe : accepte sa demande.", 409);
   // Members already invited and still thinking are not invited twice.

@@ -477,6 +477,9 @@ model Hackathon {
   instructorCount  Int             @default(0)
   /// Set by a moderator. Until then only its author and the team see it.
   publishedAt      DateTime?
+  /// The KABAD team refused to publish it (P7): the organizer reads why on the hackathon's page.
+  rejectedAt       DateTime?
+  rejectionReason  String?         @db.VarChar(500)
   createdAt        DateTime        @default(now())
 
   jurors        HackathonJuror[]

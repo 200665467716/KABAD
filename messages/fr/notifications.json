@@ -18,6 +18,7 @@
       "juryAppointed": " t’a nommé au jury du hackathon « {title} ».",
       "hackathonProposed": " propose le hackathon « {title} ».",
       "hackathonPublished": " a publié ton hackathon « {title} ».",
+      "hackathonRejected": " n’a pas publié « {title} » : {reason}",
       "teamJoinRequested": " demande à rejoindre l’équipe {team} ({title}).",
       "teamJoinAccepted": " t’a accepté·e dans l’équipe ({title}).",
       "teamJoinDeclined": " n’a pas retenu ta demande ({title}).",

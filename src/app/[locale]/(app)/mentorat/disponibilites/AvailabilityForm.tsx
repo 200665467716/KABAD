@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import type { AvailabilityView } from "@/lib/domain-types";
-import { daysBetween, groupDays, MAX_BLOCKED_DAYS, suggestRange } from "@/lib/slots";
+import { daysBetween, groupDays, isDay, MAX_BLOCKED_DAYS, suggestRange } from "@/lib/slots";
 import { zoneChoices, zoneCity } from "@/lib/time-zones";
 
 type Range = { startMin: number; endMin: number };
@@ -234,12 +234,12 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
           )}
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
             <TextField id="blocked-day" type="date" label={t("availability.blockedDay")} value={newDay} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setNewDay(e.target.value)} />
-            <TextField id="blocked-end" type="date" label={t("availability.blockedEnd")} hint={t("availability.blockedEndHint")} value={newEnd} min={newDay || new Date().toISOString().slice(0, 10)} onChange={(e) => setNewEnd(e.target.value)} />
+            <TextField id="blocked-end" type="date" label={t("availability.blockedEnd")} hint={t("availability.blockedEndHint")} value={newEnd} min={isDay(newDay) ? newDay : new Date().toISOString().slice(0, 10)} onChange={(e) => setNewEnd(e.target.value)} />
             <TextField id="blocked-reason" label={t("availability.blockedReason")} value={newReason} maxLength={80} onChange={(e) => setNewReason(e.target.value)} className="sm:col-span-2" />
             <Button
               variant="secondary"
               className="sm:col-span-2 sm:justify-self-start"
-              disabled={!newDay || blocked.length >= MAX_BLOCKED_DAYS}
+              disabled={!isDay(newDay) || blocked.length >= MAX_BLOCKED_DAYS}
               onClick={() => {
                 const taken = new Set(blocked.map((b) => b.day));
                 const added = daysBetween(newDay, newEnd, MAX_BLOCKED_DAYS - blocked.length).filter((d) => !taken.has(d));
@@ -249,7 +249,7 @@ export function AvailabilityForm({ initial }: { initial: AvailabilityView }) {
                 setNewReason("");
               }}
             >
-              {newEnd && newEnd > newDay ? t("availability.addBlockedRange", { count: daysBetween(newDay, newEnd).length }) : t("availability.addBlocked")}
+              {daysBetween(newDay, newEnd).length > 1 ? t("availability.addBlockedRange", { count: daysBetween(newDay, newEnd).length }) : t("availability.addBlocked")}
             </Button>
           </div>
         </section>

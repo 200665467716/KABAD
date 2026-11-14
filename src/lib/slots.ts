@@ -146,11 +146,23 @@ function addDays(day: string, n: number): string {
 }
 
 /**
+ * True for a real calendar day written « 2026-12-20 ». A date field being typed in can hold « 202612-01-05 » or
+ * « 2026-02-31 » for a moment: such a value is not a day (it made the availability screen crash, P5-6).
+ */
+export function isDay(value: string | null | undefined): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const d = new Date(`${value}T12:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+}
+
+/**
  * The days from `from` to `to`, both included (P17: block a holiday in one go). An end before the start, or no end,
- * gives the start day alone; the list stops at `max` days.
+ * gives the start day alone; the list stops at `max` days. A start that is not a day gives nothing; an end that is
+ * not one is ignored.
  */
 export function daysBetween(from: string, to: string | null | undefined, max = MAX_BLOCKED_DAYS): string[] {
-  if (!to || to <= from) return [from];
+  if (!isDay(from)) return [];
+  if (!isDay(to) || to <= from) return [from];
   const out: string[] = [];
   for (let day = from; day <= to && out.length < max; day = addDays(day, 1)) out.push(day);
   return out;

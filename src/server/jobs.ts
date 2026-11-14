@@ -137,6 +137,7 @@ export const EMAILED_KEYS: NotificationKey[] = [
   "teamInvited",
   "missionProposed",
   "hackathonPublished",
+  "hackathonRejected",
   "resultsPublished",
   "teamWonPrize",
   "teamWon",

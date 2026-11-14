@@ -73,12 +73,18 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       <Page narrow>
-        {!h.published && (
-          <Alert tone="info" title={t("pendingTitle")}>
-            {/* Besides its author and the KABAD team, only a mentor offered a mission sees it. */}
-            {h.canEdit || user.isAdmin ? t("pendingText") : t("pendingMentorText")}
-          </Alert>
-        )}
+        {!h.published &&
+          (h.rejected && h.rejectionReason !== null ? (
+            // P7: the organizer reads why the KABAD team did not publish it.
+            <Alert tone="danger" title={t("rejectedTitle")}>
+              {t("rejectedText", { reason: h.rejectionReason })}
+            </Alert>
+          ) : (
+            <Alert tone="info" title={t("pendingTitle")}>
+              {/* Besides its author and the KABAD team, only a mentor offered a mission sees it. */}
+              {h.canEdit || user.isAdmin ? t("pendingText") : t("pendingMentorText")}
+            </Alert>
+          ))}
         <Header h={h} now={now} />
 
         <dl className="m-0 grid grid-cols-2 gap-2.5">
@@ -160,7 +166,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
                 {t("instructorsGroup")}
               </ButtonLink>
             )}
-            {user.isAdmin && <AdminActions id={h.id} status={h.status} published={h.published} mentors={mentors} jury={h.jury.map((j) => j.id)} />}
+            {user.isAdmin && <AdminActions id={h.id} status={h.status} published={h.published} rejected={h.rejected} mentors={mentors} jury={h.jury.map((j) => j.id)} />}
           </section>
         )}
       </Page>

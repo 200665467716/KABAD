@@ -542,10 +542,9 @@ export async function createGroup(userId: string, input: { name: string; theme?:
   if (ids.length + 1 > GROUP_MAX_MEMBERS) throw new DomainError("too_many", `Un groupe compte ${GROUP_MAX_MEMBERS} membres au plus.`);
   return prisma.$transaction(async (tx) => {
     await assertAllContacts(tx, userId, ids);
-    const [owner, added] = await Promise.all([
-      tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
-      tx.user.findMany({ where: { id: { in: ids } }, select: { name: true } }),
-    ]);
+    // One connection per transaction: its queries run one after the other (pg refuses queries sent at once).
+    const owner = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+    const added = await tx.user.findMany({ where: { id: { in: ids } }, select: { name: true } });
     const group = await tx.conversation.create({
       data: {
         kind: "GROUP",
@@ -576,10 +575,9 @@ export async function addGroupMembers(userId: string, conversationId: string, me
 
   return prisma.$transaction(async (tx) => {
     await assertAllContacts(tx, userId, ids);
-    const [owner, added] = await Promise.all([
-      tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
-      tx.user.findMany({ where: { id: { in: ids } }, select: { name: true } }),
-    ]);
+    // One connection per transaction: its queries run one after the other (pg refuses queries sent at once).
+    const owner = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+    const added = await tx.user.findMany({ where: { id: { in: ids } }, select: { name: true } });
     await tx.conversationMember.createMany({ data: ids.map((id) => ({ conversationId, userId: id })) });
     const msg = await tx.message.create({
       data: { conversationId, kind: "SYSTEM", body: `${firstName(owner.name)} a ajouté ${listNames(added.map((a) => firstName(a.name)))}` },
@@ -607,10 +605,8 @@ export async function removeGroupMember(userId: string, conversationId: string, 
   if (!everyone.includes(memberId)) throw notFound("Ce membre ne fait pas partie du groupe.");
 
   return prisma.$transaction(async (tx) => {
-    const [owner, removed] = await Promise.all([
-      tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
-      tx.user.findUniqueOrThrow({ where: { id: memberId }, select: { name: true } }),
-    ]);
+    const owner = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+    const removed = await tx.user.findUniqueOrThrow({ where: { id: memberId }, select: { name: true } });
     if (app) await tx.testParticipant.deleteMany({ where: { testAppId: app.id, userId: memberId } });
     await tx.conversationMember.delete({ where: { conversationId_userId: { conversationId, userId: memberId } } });
     const msg = await tx.message.create({ data: { conversationId, kind: "SYSTEM", body: `${firstName(owner.name)} a retiré ${firstName(removed.name)}${app ? " du test" : ""}` } });

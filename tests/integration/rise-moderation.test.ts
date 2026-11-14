@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { DomainError } from "@/server/errors";
-import { resolveReport } from "@/server/admin";
+import { dashboard, resolveReport } from "@/server/admin";
+import { createHackathon, getHackathon, publishHackathon, rejectHackathon } from "@/server/hackathons";
 import { createGroup, getConversation, removeMessage, sendMessage } from "@/server/messaging";
 import { addPost, answerRoom, createEvent, createProject, getEvent, getProject, getThread, joinProject, openRoom, reportPost, setCoLead } from "@/server/rise";
 import { makeContacts, makeUsers, prisma, resetDb } from "./helpers";
@@ -9,7 +10,7 @@ import { makeContacts, makeUsers, prisma, resetDb } from "./helpers";
  * Remarques du 14 novembre (P5) : l'initiateur d'un projet Rise-Up nomme des co-responsables ; eux seuls
  * programment les événements ; le salon proposé par un contributeur attend leur validation ; un responsable
  * qui signale un message le masque tout de suite, et seule l'équipe KABAD le rétablit ; dans un groupe,
- * le responsable retire un message.
+ * le responsable retire un message. L'équipe refuse un hackathon avec une raison (P7).
  */
 
 async function refused(p: Promise<unknown>, code: string) {
@@ -153,5 +154,39 @@ describe("groupes : le responsable retire un message", () => {
     const msg = await sendMessage("kossi", conversationId!, { body: "Spam" }, prisma);
     await removeMessage("fatou", conversationId!, msg.id, prisma);
     expect((await getConversation("kossi", conversationId!, {}, prisma)).messages.find((m) => m.id === msg.id)?.hidden).toBe(true);
+  });
+});
+
+describe("hackathons : l'équipe refuse une proposition (P7)", () => {
+  const DAY = 86_400_000;
+  const input = {
+    title: "Agritech Sahel",
+    organizerName: "Réseau Agritech",
+    format: "ONLINE" as const,
+    startsAt: new Date(Date.now() + 3 * DAY).toISOString(),
+    endsAt: new Date(Date.now() + 5 * DAY).toISOString(),
+    closesAt: new Date(Date.now() + 2 * DAY).toISOString(),
+    teamMin: 2,
+    teamMax: 5,
+    level: "Tous niveaux",
+    stack: "Web ou mobile",
+    description: "Des outils pour les coopératives agricoles.",
+    prizes: [],
+  };
+
+  it("le refus exige une raison, prévient l'organisateur, qui la lit ; l'équipe peut encore publier", async () => {
+    const { id } = await createHackathon("kossi", input, prisma);
+    await refused(rejectHackathon("kossi", id, "Pas assez précis sur les prix.", prisma), "forbidden");
+    await refused(rejectHackathon("equipe", id, "Bof", prisma), "reason_required");
+    await rejectHackathon("equipe", id, "Le règlement manque : ajoute-le puis propose à nouveau.", prisma);
+    expect(await notes("kossi", "hackathonRejected")).toBe(1);
+    const seen = await getHackathon("kossi", id, prisma);
+    expect(seen).toMatchObject({ published: false, rejected: true, rejectionReason: "Le règlement manque : ajoute-le puis propose à nouveau." });
+    await refused(getHackathon("fatou", id, prisma), "not_found");
+    await refused(rejectHackathon("equipe", id, "Encore une fois, non merci.", prisma), "rejected");
+    // Plus « à publier » sur le tableau de bord de l'équipe.
+    expect((await dashboard("equipe", prisma)).toPublish).toBe(0);
+    await publishHackathon("equipe", id, prisma);
+    expect(await getHackathon("fatou", id, prisma)).toMatchObject({ published: true, rejected: false });
   });
 });

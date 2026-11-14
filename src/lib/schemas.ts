@@ -353,6 +353,9 @@ export const riseRoomSchema = z.object({
   meetingUrl: meetLink,
 });
 
+/** The KABAD team refuses a proposed hackathon, with a reason for its organizer. */
+export const rejectHackathonSchema = z.object({ reason: z.string().trim().min(10, "Explique à l’organisateur pourquoi ce hackathon n’est pas publié.").max(500, "500 caractères au plus.") });
+
 /** The initiator names a co-lead, or takes the role back. */
 export const coLeadSchema = z.object({ coLead: z.boolean() });
 

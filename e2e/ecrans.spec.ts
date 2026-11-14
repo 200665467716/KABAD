@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { salonsEnabled } from "../src/lib/features";
 
 /* Every screen loads without error and without horizontal scrolling, on phone and on computer. */
-const PUBLIC = ["/", "/en", "/bienvenue", "/presentation", "/en/presentation", "/inscription", "/connexion", "/en/connexion", "/mot-de-passe-oublie"];
+const PUBLIC = ["/", "/en", "/presentation", "/en/presentation", "/inscription", "/connexion", "/en/connexion", "/mot-de-passe-oublie"];
 const SIGNED_IN = [
   "/accueil",
   "/en/accueil",

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Display";
-import { Checkbox } from "@/components/ui/Field";
+import { Checkbox, TextArea } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
 import { ActionButton } from "./ActionButton";
 
@@ -72,11 +72,65 @@ function JuryPicker({ hackathonId, mentors, current }: { hackathonId: string; me
   );
 }
 
-/** The KABAD team's actions on a hackathon: publish a proposal, name the jury, close, publish the results. */
-export function AdminActions({ id, status, published, mentors, jury }: { id: string; status: "OPEN" | "JURY" | "DONE"; published: boolean; mentors: Mentor[]; jury: string[] }) {
+/** Refuses a proposed hackathon: the reason is required, its organizer reads it (P7). */
+function RejectForm({ hackathonId }: { hackathonId: string }) {
   const t = useTranslations("hackathons.admin");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function reject() {
+    if (reason.trim().length < 10) return setError(t("rejectReasonShort"));
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/api/hackathons/${hackathonId}/reject`, { body: { reason: reason.trim() } });
+      setOpen(false);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : t("failed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+        {t("reject")}
+      </Button>
+    );
+  }
+  return (
+    <div className="grid w-full gap-2 rounded-action border-2 border-line-strong bg-bg p-3">
+      <TextArea id={`reject-${hackathonId}`} label={t("rejectReason")} hint={t("rejectHint")} rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
+      <div className="flex gap-2">
+        <Button size="sm" variant="secondary" onClick={() => setOpen(false)} disabled={busy}>
+          {t("cancel")}
+        </Button>
+        <Button size="sm" variant="danger" onClick={reject} disabled={busy}>
+          {t("rejectConfirm")}
+        </Button>
+      </div>
+      {error && (
+        <Alert tone="danger" role="alert">
+          {error}
+        </Alert>
+      )}
+    </div>
+  );
+}
+
+/** The KABAD team's actions on a hackathon: publish or refuse a proposal, name the jury, close, publish the results. */
+export function AdminActions({ id, status, published, rejected, mentors, jury }: { id: string; status: "OPEN" | "JURY" | "DONE"; published: boolean; rejected?: boolean; mentors: Mentor[]; jury: string[] }) {
+  const t = useTranslations("hackathons.admin");
+  // A refused hackathon has no action left; the team can still publish it from its page if it changes its mind.
+  if (rejected) return null;
   return (
     <div className="flex flex-wrap items-start gap-2">
+      {!published && <RejectForm hackathonId={id} />}
       {!published && (
         // En encre, pas en indigo : la page de l'admin montre ces actions pour chaque hackathon, et un écran n'a qu'un bouton indigo.
         <ActionButton url={`/api/hackathons/${id}/publish`} variant="ink" size="sm" confirm={t("publishConfirm")}>

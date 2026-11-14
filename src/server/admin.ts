@@ -40,7 +40,8 @@ export async function dashboard(adminId: string, prisma: Db = db) {
     prisma.mentoringBooking.aggregate({ where: { status: "ACCEPTED", startsAt: { lt: now } }, _sum: { minutes: true } }),
     prisma.hackathon.count({ where: { status: "OPEN", publishedAt: { not: null } } }),
     prisma.hackathon.count({ where: { status: "JURY" } }),
-    prisma.hackathon.count({ where: { publishedAt: null } }),
+    // A refused hackathon is handled: it is no longer to publish.
+    prisma.hackathon.count({ where: { publishedAt: null, rejectedAt: null } }),
     prisma.riseProject.count(),
     // Day by day: only the days with activity come back, dailyCounts fills the others with 0.
     prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
