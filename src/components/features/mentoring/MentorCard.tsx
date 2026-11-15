@@ -15,7 +15,7 @@ export function MentorCard({ mentor, timeZone }: { mentor: Mentor; timeZone: str
   return (
     <Link href={`/mentorat/mentors/${mentor.id}`} className="grid gap-3 rounded-lg border-2 border-line-strong bg-raised p-4 text-ink no-underline transition-[box-shadow,translate] duration-200 ease-kb hover:-translate-y-0.5 hover:shadow-pop active:translate-y-0 active:shadow-none">
       <div className="flex items-center gap-3">
-        <Avatar initials={initials(mentor.name)} size="lg" tone="brand" />
+        <Avatar initials={initials(mentor.name)} src={mentor.photo} size="lg" tone="brand" verified />
         <div className="grid min-w-0">
           <span className="truncate font-display text-base font-bold">{mentor.name}</span>
           <span className="truncate text-[13px] text-muted">{[mentor.domains[0] ? domain(mentor.domains[0]) : mentor.headline, mentor.city].filter(Boolean).join(" · ")}</span>

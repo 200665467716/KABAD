@@ -6,6 +6,7 @@ import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink } from "@/components/ui/Button";
 import { Avatar, Badge, Card, Overline } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
+import { Link } from "@/i18n/navigation";
 import { ActionButton } from "@/components/features/hackathons/ActionButton";
 import { formatFCFA, initials } from "@/lib/format";
 import { getMission } from "@/server/hackathons";
@@ -37,12 +38,22 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
       {/* Once answered, the mission is no longer "offered". */}
       <TopBar back="/hackathons" title={m.status === "PROPOSED" ? t("title") : m.status === "ACCEPTED" ? t("accepted") : t("declined")} />
       <Page narrow>
-        <div className="flex items-center gap-3">
-          <Avatar initials={initials(h.organizerName)} size="lg" tone="neutral" />
-          <p className="text-[15px]">
-            <b>{h.organizerName}</b> {t("offers")}
-          </p>
-        </div>
+        {/* The organizer: a tap opens their profile (P16), from where one can write to them. */}
+        {m.organizerId ? (
+          <Link href={`/profil/${m.organizerId}`} className="flex items-center gap-3 text-ink no-underline">
+            <Avatar initials={initials(h.organizerName)} size="lg" tone="neutral" />
+            <p className="text-[15px]">
+              <b className="underline decoration-2 underline-offset-2">{h.organizerName}</b> {t("offers")}
+            </p>
+          </Link>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Avatar initials={initials(h.organizerName)} size="lg" tone="neutral" />
+            <p className="text-[15px]">
+              <b>{h.organizerName}</b> {t("offers")}
+            </p>
+          </div>
+        )}
         <Card featured className="gap-2">
           <span className="text-xs font-extrabold tracking-[0.08em] text-brand-text uppercase">
             {t("role")} · {tf(h.format)}
@@ -73,6 +84,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
           </section>
         )}
         <p className="text-sm text-muted">{t("payment")}</p>
+        {m.status === "ACCEPTED" && <p className="rounded-action bg-brand-wash px-4 py-3 text-sm">{m.groupId ? t("acceptedText") : t("acceptedNoGroup")}</p>}
       </Page>
       <ActionBar>
         {m.status === "PROPOSED" ? (
@@ -80,7 +92,7 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
             <ActionButton url={`/api/missions/${m.id}`} body={{ accept: false }} size="lg" block then="/notifications" sheet={{ title: t("declineTitle"), text: t("declineText", { name: h.organizerName }), confirm: t("decline") }}>
               {t("decline")}
             </ActionButton>
-            <ActionButton url={`/api/missions/${m.id}`} body={{ accept: true }} variant="primary" size="lg" block then={`/hackathons/${h.id}`}>
+            <ActionButton url={`/api/missions/${m.id}`} body={{ accept: true }} variant="primary" size="lg" block then={`/hackathons/missions/${m.id}`}>
               {t("accept")}
             </ActionButton>
           </div>
@@ -89,6 +101,11 @@ async function Data({ params }: { params: Promise<{ id: string }> }) {
             <Badge tone={m.status === "ACCEPTED" ? "success" : "neutral"} className="justify-self-center">
               {m.status === "ACCEPTED" ? t("accepted") : t("declined")}
             </Badge>
+            {m.groupId && (
+              <ButtonLink href={`/messages/${m.groupId}`} variant="primary" icon="users" block>
+                {t("openGroup")}
+              </ButtonLink>
+            )}
             <ButtonLink href={`/hackathons/${h.id}`} variant="secondary" block>
               {t("see")}
             </ButtonLink>

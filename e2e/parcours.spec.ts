@@ -1,16 +1,15 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { ACCOUNTS, type AccountId } from "./accounts";
 
 /* Journeys that change data: one worker, in order, on the demo data reset by e2e/global-setup.ts. */
 test.describe.configure({ mode: "serial" });
 
-const PASSWORD = "kabad-demo-2026";
-
-async function signIn(browser: Browser, email: string, next = "/accueil"): Promise<Page> {
+async function signIn(browser: Browser, who: AccountId, next = "/accueil"): Promise<Page> {
   const context = await browser.newContext({ locale: "fr-FR", viewport: { width: 412, height: 915 } });
   const page = await context.newPage();
   await page.goto(`/connexion?suite=${encodeURIComponent(next)}`);
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Mot de passe", { exact: true }).fill(PASSWORD);
+  await page.getByLabel("E-mail").fill(ACCOUNTS[who].email);
+  await page.getByLabel("Mot de passe", { exact: true }).fill(ACCOUNTS[who].password);
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL((url) => url.pathname === next.split("?")[0]);
   return page;
@@ -56,76 +55,79 @@ test("mot de passe oublié : même réponse que le compte existe ou non", async 
   await page.goto("/mot-de-passe-oublie");
   await page.getByLabel("E-mail").fill("personne@exemple.org");
   await page.getByRole("button", { name: "Recevoir le lien" }).click();
-  await expect(page.getByText("Lien envoyé. Pense aussi aux courriers indésirables.")).toBeVisible();
+  await expect(page.getByText("Lien envoyé. Pense à regarder dans tes spams.")).toBeVisible();
 });
 
-test("mentorat : Kossi lit la fiche d’Aïcha, réserve un créneau, Aïcha accepte, la séance est confirmée", async ({ browser }) => {
-  const kossi = await signIn(browser, "kossi.mensah@exemple.tg", "/mentorat/mentors/aicha");
+test("mentorat : Koffi lit la fiche d’Aïcha, réserve un créneau, Aïcha accepte, la séance est confirmée", async ({ browser }) => {
+  const koffi = await signIn(browser, "koffi", "/mentorat/mentors/aicha");
   // M2, the mentor's sheet: what the team checked for the badge, then « Réserver une séance » leads to the calendar (M3).
-  await expect(kossi.getByText("Vérifiée par KABAD")).toBeVisible();
-  await expect(kossi.getByRole("link", { name: "LinkedIn" })).toHaveAttribute("href", /linkedin\.com/);
-  await kossi.getByRole("link", { name: "Réserver une séance" }).click();
-  await expect(kossi).toHaveURL(/\/mentorat\/mentors\/aicha\/creneaux$/);
-  const hours = kossi.getByRole("main").getByRole("group", { name: "Heures disponibles" });
+  await expect(koffi.getByText("Vérifiée par KABAD")).toBeVisible();
+  await expect(koffi.getByRole("link", { name: "LinkedIn" })).toHaveAttribute("href", /linkedin\.com/);
+  await koffi.getByRole("link", { name: "Réserver une séance" }).click();
+  await expect(koffi).toHaveURL(/\/mentorat\/mentors\/aicha\/creneaux$/);
+  const hours = koffi.getByRole("main").getByRole("group", { name: "Heures disponibles" });
   await hours.getByRole("button").first().click();
-  await kossi.getByRole("link", { name: /Continuer/ }).click();
-  await expect(kossi).toHaveURL(/\/reserver\?creneau=/);
-  await kossi.getByLabel("Sujet de la séance").fill("Rendre mon app Flutter utilisable en 3G");
-  await kossi.getByLabel("Ton problème précis").fill("Mes écrans se figent quand la connexion coupe pendant un envoi de formulaire.");
-  await kossi.getByRole("button", { name: "Envoyer la demande" }).click();
-  await expect(kossi.getByRole("heading", { name: "Demande envoyée" }).first()).toBeVisible();
-  const sessionUrl = kossi.url();
+  await koffi.getByRole("link", { name: /Continuer/ }).click();
+  await expect(koffi).toHaveURL(/\/reserver\?creneau=/);
+  await koffi.getByLabel("Sujet de la séance").fill("Rendre mon app Flutter utilisable en 3G");
+  await koffi.getByLabel("Ton problème précis").fill("Mes écrans se figent quand la connexion coupe pendant un envoi de formulaire.");
+  await koffi.getByRole("button", { name: "Envoyer la demande" }).click();
+  await expect(koffi.getByRole("heading", { name: "Demande envoyée" }).first()).toBeVisible();
+  const sessionUrl = koffi.url();
 
-  const aicha = await signIn(browser, "aicha.kouassi@exemple.ci", "/mentorat/demandes");
+  const aicha = await signIn(browser, "aicha", "/mentorat/demandes");
   await expect(aicha.getByText("Rendre mon app Flutter utilisable en 3G")).toBeVisible();
   await aicha.getByRole("button", { name: "Accepter" }).first().click();
   // M6 → M7: once accepted, the mentor lands on the confirmed session.
   await expect(aicha).toHaveURL(/\/mentorat\/seances\//);
   await expect(aicha.getByRole("heading", { name: "Séance confirmée" }).first()).toBeVisible();
 
-  await kossi.goto(sessionUrl);
-  await expect(kossi.getByRole("heading", { name: "Séance confirmée" }).first()).toBeVisible();
-  await expect(kossi.getByRole("link", { name: /Rejoindre sur Google Meet/ })).toBeVisible();
-  await kossi.context().close();
+  await koffi.goto(sessionUrl);
+  await expect(koffi.getByRole("heading", { name: "Séance confirmée" }).first()).toBeVisible();
+  await expect(koffi.getByRole("link", { name: /Rejoindre sur Google Meet/ })).toBeVisible();
+  await koffi.context().close();
   await aicha.context().close();
 });
 
-test("badge mentor : la demande de Moussa est validée par l’équipe, qui la voit disparaître de la file", async ({ browser }) => {
-  const team = await signIn(browser, "equipe@kabad.app", "/admin/badges");
-  await team.getByRole("link", { name: /Moussa Traoré/ }).click();
+test("badge mentor : la demande de Nadia est validée par l’équipe, qui la voit disparaître de la file", async ({ browser }) => {
+  const team = await signIn(browser, "equipe", "/admin/badges");
+  await team.getByRole("link", { name: /Nadia Kouassi/ }).click();
   await team.getByRole("button", { name: "Valider le badge" }).click();
   await expect(team).toHaveURL(/\/admin\/badges$/);
-  await expect(team.getByRole("link", { name: /Moussa Traoré/ })).toHaveCount(0);
+  await expect(team.getByRole("link", { name: /Nadia Kouassi/ })).toHaveCount(0);
   await team.context().close();
 
-  const moussa = await signIn(browser, "moussa.traore@exemple.ci", "/mentorat/badge");
-  await expect(moussa.getByText(/Tu es mentor KABAD/i)).toBeVisible();
-  await moussa.context().close();
+  const nadia = await signIn(browser, "nadia", "/mentorat/badge");
+  await expect(nadia.getByText(/Tu es mentor KABAD/i)).toBeVisible();
+  await nadia.context().close();
 });
 
-test("hackathon : Aïcha demande à rejoindre l’équipe Kora, son chef l’accepte", async ({ browser }) => {
-  const aicha = await signIn(browser, "aicha.kouassi@exemple.ci", "/hackathons/fintech-inclusion/participer");
-  await aicha.getByRole("radio", { name: /Rejoindre une équipe/ }).check();
+test("hackathon : Aminata demande à rejoindre l’équipe Kora, son chef l’accepte", async ({ browser }) => {
+  // Aminata: her instructor mission is only proposed. Aïcha, an accepted instructor, may not take part.
+  const aminata = await signIn(browser, "aminata", "/hackathons/fintech-inclusion/participer");
+  await aminata.getByRole("radio", { name: /Rejoindre une équipe/ }).check();
   // H3: the rules first, then "Demander" on the team sends the request at once.
-  await aicha.getByRole("checkbox", { name: /J’accepte/ }).check();
-  await aicha.getByRole("listitem").filter({ hasText: "Équipe Kora" }).getByRole("button", { name: /Demander/ }).click();
-  await expect(aicha.getByText("Demande envoyée.")).toBeVisible();
+  await aminata.getByRole("checkbox", { name: /J’accepte/ }).check();
+  await aminata.getByRole("listitem").filter({ hasText: "Équipe Kora" }).getByRole("button", { name: /Demander/ }).click();
+  await expect(aminata.getByText("Demande envoyée.")).toBeVisible();
 
-  const chidi = await signIn(browser, "chidi.okafor@exemple.ng", "/hackathons/fintech-inclusion/equipe");
+  const chidi = await signIn(browser, "chidi", "/hackathons/fintech-inclusion/equipe");
   await chidi.getByRole("button", { name: "Accepter" }).first().click();
-  await expect(chidi.getByText("Aïcha Kouassi")).toBeVisible();
-  // H4: the team has its discussion in the messaging; Aïcha, just accepted, is in it.
+  // Aminata's name is already on the request: wait for the answer to be saved, the request then leaves the list.
+  await expect(chidi.getByRole("button", { name: "Accepter" })).toHaveCount(0);
+  await expect(chidi.getByText("Aminata Traoré")).toBeVisible();
+  // H4: the team has its discussion in the messaging; Aminata, just accepted, is in it.
   await chidi.getByRole("button", { name: "Discussion de l’équipe" }).click();
   await expect(chidi.getByRole("heading", { name: "Équipe Kora" })).toBeVisible();
   await chidi.getByRole("button", { name: "Infos du groupe" }).click();
-  await expect(chidi.getByRole("dialog").getByRole("link", { name: "Aïcha Kouassi" })).toBeVisible();
+  await expect(chidi.getByRole("dialog").getByRole("link", { name: "Aminata Traoré" })).toBeVisible();
   await expect(chidi.getByRole("dialog").getByRole("link", { name: "Voir mon équipe" })).toBeVisible();
-  await aicha.context().close();
+  await aminata.context().close();
   await chidi.context().close();
 });
 
 test("le jury note une solution sur 20", async ({ browser }) => {
-  const page = await signIn(browser, "ibrahim.keita@exemple.ml", "/hackathons/raccourcisseur/jury");
+  const page = await signIn(browser, "kwame", "/hackathons/raccourcisseur/jury");
   for (const criterion of ["Ça fonctionne", "Qualité du code", "Tests", "Explication"]) await page.getByRole("button", { name: `${criterion} : 4 sur 5` }).click();
   await expect(page.getByText("16 / 20")).toBeVisible();
   await page.getByRole("button", { name: "Enregistrer et suivante" }).click();
@@ -133,29 +135,40 @@ test("le jury note une solution sur 20", async ({ browser }) => {
   await page.context().close();
 });
 
-test("Africa Rise-Up : rejoindre un projet, écrire dans sa discussion, puis lancer un salon sur Google Meet", async ({ browser }) => {
-  const page = await signIn(browser, "kossi.mensah@exemple.tg", "/rise-up/prix-recoltes");
-  await page.getByRole("button", { name: /Rejoindre le projet/ }).click();
+test("Africa Rise-Up : rejoindre un projet, y écrire, proposer un salon que le responsable valide", async ({ browser }) => {
+  const koffi = await signIn(browser, "koffi", "/rise-up/prix-recoltes");
+  await koffi.getByRole("button", { name: /Rejoindre le projet/ }).click();
   const text = `Je peux brancher la passerelle SMS (${Date.now()})`;
-  await page.getByRole("textbox").first().fill(text);
-  await page.getByRole("button", { name: /Publier/ }).click();
-  await expect(page.getByText(text)).toBeVisible();
+  await koffi.getByRole("textbox").first().fill(text);
+  await koffi.getByRole("button", { name: /Publier/ }).click();
+  await expect(koffi.getByText(text)).toBeVisible();
 
-  // A room is a Google Meet call opened now: another service is refused, then the room shows as live.
-  await page.getByRole("button", { name: "Lancer un salon" }).click();
-  await page.getByLabel("Lien Google Meet").fill("https://zoom.us/j/1");
-  await page.getByRole("button", { name: "Ouvrir le salon" }).click();
-  await expect(page.getByText(/Colle un lien Google Meet/)).toBeVisible();
-  await page.getByLabel("Lien Google Meet").fill("meet.google.com/abc-defg-hij");
-  await page.getByRole("button", { name: "Ouvrir le salon" }).click();
-  await expect(page.getByText("Salon en direct")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Rejoindre la visio" })).toHaveAttribute("href", "https://meet.google.com/abc-defg-hij");
-  await expect(page.getByRole("button", { name: "Lancer un salon" })).toHaveCount(0);
-  await page.context().close();
+  // P5: a member proposes a room on a Google Meet link (another service is refused); it waits for a lead.
+  await koffi.getByRole("button", { name: "Proposer un salon" }).click();
+  await koffi.getByLabel("Lien Google Meet").fill("https://zoom.us/j/1");
+  await koffi.getByRole("button", { name: "Envoyer la proposition" }).click();
+  await expect(koffi.getByText(/Colle un lien Google Meet/)).toBeVisible();
+  await koffi.getByLabel("Lien Google Meet").fill("meet.google.com/abc-defg-hij");
+  await koffi.getByRole("button", { name: "Envoyer la proposition" }).click();
+  await expect(koffi.getByText("En attente de validation par un responsable du projet.")).toBeVisible();
+  await expect(koffi.getByText("Salon en direct")).toHaveCount(0);
+
+  // Chidi leads the project: he approves it, and the room is live for the members.
+  const chidi = await signIn(browser, "chidi", "/rise-up/prix-recoltes");
+  await expect(chidi.getByRole("heading", { name: "Salons à valider" })).toBeVisible();
+  await chidi.getByRole("button", { name: "Valider" }).click();
+  await expect(chidi.getByText("Salon en direct")).toBeVisible();
+
+  await koffi.reload();
+  await expect(koffi.getByText("Salon en direct")).toBeVisible();
+  await expect(koffi.getByRole("link", { name: "Rejoindre la visio" })).toHaveAttribute("href", "https://meet.google.com/abc-defg-hij");
+  await expect(koffi.getByRole("button", { name: "Proposer un salon" })).toHaveCount(0);
+  await koffi.context().close();
+  await chidi.context().close();
 });
 
 test("tests d’apps : rejoindre le groupe de testeurs puis cocher une étape", async ({ browser }) => {
-  const page = await signIn(browser, "kossi.mensah@exemple.tg", "/tests/tontine-app");
+  const page = await signIn(browser, "koffi", "/tests/tontine-app");
   await page.getByRole("button", { name: /Rejoindre le groupe de testeurs/ }).click();
   // Joining opens the testers' group, where the install link is shared.
   await expect(page.getByRole("heading", { name: "Testeurs TontineApp" })).toBeVisible();
@@ -176,7 +189,7 @@ test("tests d’apps : rejoindre le groupe de testeurs puis cocher une étape", 
 });
 
 test("organiser un hackathon en 3 étapes : infos, défi sans prix, instructeurs", async ({ browser }) => {
-  const page = await signIn(browser, "kossi.mensah@exemple.tg", "/hackathons/organiser");
+  const page = await signIn(browser, "koffi", "/hackathons/organiser");
   const local = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 11) + "09:00";
   // Each step is checked before the next one: every error at once, the focus on the first field in error.
   await page.getByRole("button", { name: "Continuer" }).click();
@@ -200,8 +213,8 @@ test("organiser un hackathon en 3 étapes : infos, défi sans prix, instructeurs
   await expect(page.getByRole("heading", { name: "Recrute des instructeurs" })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Proposer la mission à/ }).first()).toBeDisabled();
   await page.getByLabel("Rémunération par instructeur (F CFA)").fill("50000");
-  await page.getByRole("button", { name: "Proposer la mission à Awa Diop" }).click();
-  await expect(page.getByRole("button", { name: "Mission proposée à Awa Diop" })).toHaveText("Proposée");
+  await page.getByRole("button", { name: "Proposer la mission à Aminata Traoré" }).click();
+  await expect(page.getByRole("button", { name: "Mission proposée à Aminata Traoré" })).toHaveText("Proposée");
   await expect(page.getByText("1 proposée")).toBeVisible();
   await page.getByRole("button", { name: "Proposer le hackathon" }).click();
   await expect(page).toHaveURL(/\/hackathons\/sante-connectee-[0-9a-f]{6}$/);
@@ -210,40 +223,40 @@ test("organiser un hackathon en 3 étapes : infos, défi sans prix, instructeurs
 });
 
 test("l’annuaire : trouver un membre et l’inviter", async ({ browser }) => {
-  const page = await signIn(browser, "kossi.mensah@exemple.tg", "/membres");
-  await page.getByLabel("Rechercher un membre").fill("Ibrahim");
+  const page = await signIn(browser, "koffi", "/membres");
+  await page.getByLabel("Rechercher un membre").fill("Kwame");
   await page.getByRole("button", { name: "Chercher" }).click();
-  await page.getByRole("button", { name: "Inviter Ibrahim Keïta" }).click();
-  await page.getByRole("dialog").getByRole("textbox").fill("Bonjour Ibrahim, j’aimerais ton avis sur mon hébergement.");
+  await page.getByRole("button", { name: "Inviter Kwame Asante" }).click();
+  await page.getByRole("dialog").getByRole("textbox").fill("Bonjour Kwame, j’aimerais ton avis sur mon hébergement.");
   await page.getByRole("dialog").getByRole("button", { name: /Envoyer/ }).click();
   await expect(page.getByRole("button", { name: /Invitation envoyée/ })).toBeVisible();
   await page.context().close();
 });
 
 test("modération : un message signalé est retiré par l’équipe et n’est plus lisible", async ({ browser }) => {
-  const kossi = await signIn(browser, "kossi.mensah@exemple.tg", "/messages");
-  await kossi.getByRole("link", { name: /Devs fintech Lomé/ }).click();
-  const thread = kossi.getByRole("main", { name: "Messages" });
+  const koffi = await signIn(browser, "koffi", "/messages");
+  await koffi.getByRole("link", { name: /Devs fintech Lomé/ }).click();
+  const thread = koffi.getByRole("main", { name: "Messages" });
   await expect(thread.getByText("J’ajoute la gestion des doublons ce soir.")).toBeVisible();
   await thread.getByRole("button", { name: /Signaler/ }).last().click();
-  await kossi.getByRole("radio", { name: "Spam ou arnaque" }).check();
-  await kossi.getByRole("button", { name: /Envoyer le signalement/ }).click();
-  await expect(kossi.getByText("L’équipe KABAD l’examine.")).toBeVisible();
+  await koffi.getByRole("radio", { name: "Spam ou arnaque" }).check();
+  await koffi.getByRole("button", { name: /Envoyer le signalement/ }).click();
+  await expect(koffi.getByText("L’équipe KABAD l’examine.")).toBeVisible();
 
-  const team = await signIn(browser, "equipe@kabad.app", "/admin/signalements");
+  const team = await signIn(browser, "equipe", "/admin/signalements");
   await expect(team.getByText("J’ajoute la gestion des doublons ce soir.")).toBeVisible();
   await team.getByRole("button", { name: "Retirer le message" }).click();
   await expect(team.getByText("Aucun signalement à traiter.")).toBeVisible();
 
-  await kossi.reload();
-  await expect(kossi.getByRole("main", { name: "Messages" }).getByText("Message retiré par la modération.")).toBeVisible();
-  await expect(kossi.getByRole("main", { name: "Messages" }).getByText("J’ajoute la gestion des doublons ce soir.")).toHaveCount(0);
-  await kossi.context().close();
+  await koffi.reload();
+  await expect(koffi.getByRole("main", { name: "Messages" }).getByText("Message retiré par la modération.")).toBeVisible();
+  await expect(koffi.getByRole("main", { name: "Messages" }).getByText("J’ajoute la gestion des doublons ce soir.")).toHaveCount(0);
+  await koffi.context().close();
   await team.context().close();
 });
 
 test("la version anglaise garde la langue d’une page à l’autre", async ({ browser }) => {
-  const page = await signIn(browser, "kossi.mensah@exemple.tg");
+  const page = await signIn(browser, "koffi");
   await page.goto("/en/accueil");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Hackathons" }).click();

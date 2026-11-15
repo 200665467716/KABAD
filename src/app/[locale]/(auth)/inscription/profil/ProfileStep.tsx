@@ -5,20 +5,23 @@ import { useState, type FormEvent } from "react";
 import { AuthFrame } from "@/components/shell/AuthFrame";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Display";
-import { RadioCard, Select, TextField } from "@/components/ui/Field";
+import { RadioCard, Select, TextArea, TextField } from "@/components/ui/Field";
 import { useRouter } from "@/i18n/navigation";
 import { choiceLabel } from "@/lib/choice-labels";
+import { deviceTimeZone } from "@/lib/device-time-zone";
 import { api, ApiError } from "@/lib/api";
 import type { Level } from "@/lib/domain-types";
-import { COUNTRIES, LEVELS } from "@/lib/schemas";
+import { BIO_MAX, COUNTRIES, LEVELS } from "@/lib/schemas";
 
-export function ProfileStep({ initial }: { initial: { country: string; city: string; level: Level | null } }) {
+export function ProfileStep({ initial }: { initial: { country: string; city: string; level: Level | null; headline: string; bio: string } }) {
   const t = useTranslations("auth.profile");
   const tl = useTranslations("auth.levels");
   const tc = useTranslations("common.choices");
   const router = useRouter();
   // Aucun niveau coché d’avance : c’est la question de cette étape.
   const [level, setLevel] = useState<Level | null>(initial.level);
+  // P8: a presentation from the start, read on the profile and by whoever receives an invitation.
+  const [bio, setBio] = useState(initial.bio);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -27,11 +30,13 @@ export function ProfileStep({ initial }: { initial: { country: string; city: str
     const data = new FormData(e.currentTarget);
     const country = String(data.get("country") ?? "");
     const city = String(data.get("city") ?? "").trim();
+    const headline = String(data.get("headline") ?? "").trim();
     if (!country || city.length < 2 || !level) return setError(t("required"));
     setBusy(true);
     setError(null);
     try {
-      await api("/api/me", { method: "PATCH", body: { country, city, level, diaspora: !["Bénin", "Burkina Faso", "Cameroun", "Côte d’Ivoire", "Ghana", "Mali", "Niger", "Nigeria", "RD Congo", "Sénégal", "Togo"].includes(country) } });
+      // The device's time zone: the times of sessions and events follow it (a Cotonou member is not on Lomé time).
+      await api("/api/me", { method: "PATCH", body: { country, city, level, headline, bio: bio.trim(), timeZone: deviceTimeZone(), diaspora: !["Bénin", "Burkina Faso", "Cameroun", "Côte d’Ivoire", "Ghana", "Mali", "Niger", "Nigeria", "RD Congo", "Sénégal", "Togo"].includes(country) } });
       router.push("/inscription/interets");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("failed"));
@@ -72,6 +77,18 @@ export function ProfileStep({ initial }: { initial: { country: string; city: str
             <RadioCard key={l} name="level" value={l} checked={level === l} onChange={() => setLevel(l)} heading={tl(`${l}.title`)} description={tl(`${l}.desc`)} />
           ))}
         </fieldset>
+        <TextField id="headline" name="headline" label={t("headline")} hint={t("optional")} placeholder={t("headlinePlaceholder")} maxLength={80} defaultValue={initial.headline} />
+        <TextArea
+          id="bio"
+          label={t("bio")}
+          hint={t("bioHint")}
+          placeholder={t("bioPlaceholder")}
+          rows={5}
+          maxLength={BIO_MAX}
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          counter={`${bio.length} / ${BIO_MAX}`}
+        />
         {error && (
           <Alert tone="danger" role="alert">
             {error}

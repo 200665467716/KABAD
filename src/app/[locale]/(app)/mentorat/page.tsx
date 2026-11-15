@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { Link } from "@/i18n/navigation";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { IconButton } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { BookingSummary } from "@/components/features/mentoring/BookingSummary";
 import { MentorCard } from "@/components/features/mentoring/MentorCard";
@@ -100,7 +99,8 @@ async function MentoringData({ searchParams }: { searchParams: Promise<Search> }
         </Link>
       )}
 
-      <form method="get" role="search" className="flex gap-2">
+      {/* min-w-0: without it, the natural width of the field widens the page on a 360 px screen. */}
+      <form method="get" role="search" className="flex min-w-0 gap-2">
         {domaine && <input type="hidden" name="domaine" value={domaine} />}
         <label className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-md border-2 border-line-strong bg-raised px-3.5">
           <Icon name="search" size={18} className="text-muted" />
@@ -135,14 +135,34 @@ async function MentoringData({ searchParams }: { searchParams: Promise<Search> }
       </section>
 
       {!isMentor && (
-        <Link href="/mentorat/badge" className="text-ink no-underline">
-          <Card className="grid-cols-[minmax(0,1fr)_auto] items-center gap-3 bg-brand-soft">
+        // P10: the call to become a mentor, in a dashed card (P1). While the request is reviewed, it shows where it stands.
+        <Link href="/mentorat/badge" className="grid gap-3 rounded-lg border-2 border-dashed border-line-strong bg-raised p-4 text-ink no-underline hover:bg-bg">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+            <span className="grid size-12 place-items-center rounded-full bg-brand text-on-brand" aria-hidden="true">
+              <Icon name="seal" size={24} />
+            </span>
             <span className="grid gap-0.5">
-              <b className="text-[15px]">{t("list.badgeTitle")}</b>
+              <b className="font-display text-base leading-5">{badge?.status === "PENDING" ? t("list.badgePendingTitle") : t("list.badgeTitle")}</b>
               <span className="text-[13px] text-muted">{badge?.status === "PENDING" ? t("list.badgePending") : t("list.badgeText")}</span>
             </span>
             <Icon name="chevron" size={18} />
-          </Card>
+          </div>
+          {badge?.status === "PENDING" ? (
+            <ol aria-label={t("list.badgeSteps")} className="m-0 grid list-none grid-cols-3 gap-1.5 p-0 text-center text-[11px] font-extrabold">
+              <li className="rounded-full bg-success-soft px-2 py-1.5 text-success">{t("list.badgeStep1")}</li>
+              <li className="rounded-full bg-brand-wash px-2 py-1.5 text-brand-text">{t("list.badgeStep2")}</li>
+              <li className="rounded-full bg-bg px-2 py-1.5 text-muted">{t("list.badgeStep3")}</li>
+            </ol>
+          ) : (
+            <ul className="m-0 grid list-none gap-1.5 p-0 text-[13px] sm:grid-cols-3">
+              {(["badgePerk1", "badgePerk2", "badgePerk3"] as const).map((k) => (
+                <li key={k} className="flex items-center gap-1.5">
+                  <Icon name="check" size={16} className="text-success" />
+                  {t(`list.${k}`)}
+                </li>
+              ))}
+            </ul>
+          )}
         </Link>
       )}
     </Page>

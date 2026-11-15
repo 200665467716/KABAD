@@ -2,6 +2,7 @@
 
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
+import { ReportSheet } from "@/components/features/ReportSheet";
 import { RiseSymbol } from "@/components/features/rise/RiseSymbol";
 import { Page } from "@/components/shell/TopBar";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -11,7 +12,7 @@ import { TextField } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Link, useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
-import type { RiseEventView, RiseProjectDetail } from "@/lib/domain-types";
+import type { RiseEventView, RisePendingRoom, RiseProjectDetail } from "@/lib/domain-types";
 import { initials } from "@/lib/format";
 import { localizeRoomTitle } from "@/lib/system-text";
 
@@ -26,12 +27,30 @@ export function ProjectView({ project: p, viewerId, timeZone, now }: { project: 
   const [tab, setTab] = useState<Tab>("talk");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The post being reported (P5).
+  const [reporting, setReporting] = useState<string | null>(null);
+  // P5: the initiator and the co-leads lead the project (events, rooms to approve, posts hidden when reported).
+  const lead = p.viewerRole === "initiator" || p.viewerRole === "co_lead";
 
   async function membership(join: boolean) {
     setBusy(true);
     setError(null);
     try {
       await api(`/api/rise/${p.id}/members`, join ? { method: "POST", body: {} } : { method: "DELETE" });
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : t("project.error"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** The initiator names a member co-lead, or takes the role back. */
+  async function coLead(memberId: string, on: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/api/rise/${p.id}/members/${memberId}`, { method: "PUT", body: { coLead: on } });
       router.refresh();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("project.error"));
@@ -97,8 +116,10 @@ export function ProjectView({ project: p, viewerId, timeZone, now }: { project: 
 
       {tab === "talk" && (
         <div className="grid gap-3">
-          {/* A room is a video call opened now for the project's members. One at a time. */}
-          {p.isMember && !live && <RoomButton projectId={p.id} />}
+          {/* A room is a video call opened now for the project's members. One at a time. A lead opens it,
+              a member proposes it and a lead approves it (P5). */}
+          {p.isMember && !live && (lead || p.pendingRooms.length === 0) && <RoomButton projectId={p.id} lead={lead} />}
+          {p.pendingRooms.length > 0 && <PendingRooms projectId={p.id} rooms={p.pendingRooms} lead={lead} />}
           {p.posts.map((post) => (
             <article key={post.id} className="grid gap-2 rounded-lg border-2 border-line-strong bg-raised p-3.5">
               <div className="flex items-center gap-2.5">
@@ -107,9 +128,17 @@ export function ProjectView({ project: p, viewerId, timeZone, now }: { project: 
                 <span className="text-[13px] text-muted">{format.relativeTime(new Date(post.createdAt), now)}</span>
               </div>
               <p className="text-[15px] leading-[22px] whitespace-pre-line">{post.body}</p>
-              <Link href={`/rise-up/${p.id}/messages/${post.id}`} className="justify-self-start text-[13px] font-extrabold text-brand-text no-underline">
-                {t("project.replies", { count: post.replies })}
-              </Link>
+              <div className="flex flex-wrap items-center gap-x-4">
+                <Link href={`/rise-up/${p.id}/messages/${post.id}`} className="text-[13px] font-extrabold text-brand-text no-underline">
+                  {t("project.replies", { count: post.replies })}
+                </Link>
+                {post.author?.id !== viewerId && (
+                  // Zone tactile de 44 px sans grossir la carte : la marge négative rend la hauteur ajoutée.
+                  <button type="button" onClick={() => setReporting(post.id)} className="-my-3 min-h-11 text-[13px] text-muted underline-offset-2 hover:underline">
+                    {t("project.report")}
+                  </button>
+                )}
+              </div>
             </article>
           ))}
           {p.posts.length === 0 && <p className="py-4 text-center text-muted">{t("project.noPosts")}</p>}
@@ -169,10 +198,12 @@ export function ProjectView({ project: p, viewerId, timeZone, now }: { project: 
             </Link>
           ))}
           {p.events.length === 0 && <p className="py-4 text-center text-muted">{t("project.noEvents")}</p>}
-          {p.isMember && (
+          {lead ? (
             <ButtonLink href={`/rise-up/${p.id}/evenements/nouveau`} variant="secondary" icon="plus">
               {t("project.schedule")}
             </ButtonLink>
+          ) : (
+            p.isMember && <p className="text-sm text-muted">{t("project.leadsOnly")}</p>
           )}
         </div>
       )}
@@ -180,14 +211,23 @@ export function ProjectView({ project: p, viewerId, timeZone, now }: { project: 
       {tab === "members" && (
         <div className="overflow-hidden rounded-lg border-2 border-line-strong bg-raised [&>*+*]:border-t-2 [&>*+*]:border-line">
           {p.people.map((m) => (
-            <Link key={m.id} href={`/profil/${m.id}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 text-ink no-underline">
-              <Avatar initials={initials(m.name)} />
-              <span className="grid min-w-0">
-                <b className="truncate text-[15px]">{m.name}</b>
-                <small className="text-[13px] text-muted">{[m.initiator ? t("project.initiator") : null, m.skill || null].filter(Boolean).join(" · ")}</small>
-              </span>
-              {m.city ? <Tag>{m.city}</Tag> : <span />}
-            </Link>
+            // On a phone the initiator's button goes under the member, so it never covers the name.
+            <div key={m.id} className="grid gap-2 px-3.5 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+              <Link href={`/profil/${m.id}`} className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 text-ink no-underline">
+                <Avatar initials={initials(m.name)} />
+                <span className="grid min-w-0">
+                  <b className="truncate text-[15px]">{m.name}</b>
+                  <small className="text-[13px] text-muted">{[m.role === "initiator" ? t("project.initiator") : m.role === "co_lead" ? t("project.coLead") : null, m.skill || null].filter(Boolean).join(" · ")}</small>
+                </span>
+                {m.city ? <Tag>{m.city}</Tag> : <span />}
+              </Link>
+              {/* P5: the initiator names the co-leads among the members. */}
+              {p.viewerRole === "initiator" && m.role !== "initiator" && (
+                <Button size="sm" variant="secondary" className="ml-13 justify-self-start sm:ml-0" disabled={busy} onClick={() => coLead(m.id, m.role !== "co_lead")}>
+                  {m.role === "co_lead" ? t("project.removeCoLead") : t("project.makeCoLead")}
+                </Button>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -207,6 +247,7 @@ export function ProjectView({ project: p, viewerId, timeZone, now }: { project: 
         </div>
       )}
     </Page>
+    <ReportSheet open={reporting !== null} onClose={() => setReporting(null)} subject={t("project.reportSubject")} target={{ type: "RISE_POST", id: reporting ?? "" }} hides={lead} onSent={() => lead && router.refresh()} />
     {/* R2: the writing zone stays at the bottom of the channel. */}
     {tab === "talk" && p.isMember && (
       <div className="sticky bottom-0 z-10 border-t-2 border-line-strong bg-raised">
@@ -247,8 +288,11 @@ function EventStrip({ event, isMember, t, format, timeZone }: { event: RiseEvent
   );
 }
 
-/** « Lancer un salon » : the member pastes a Google Meet link, the other members are told at once. */
-function RoomButton({ projectId }: { projectId: string }) {
+/**
+ * « Lancer un salon » for a lead: the members are told at once. « Proposer un salon » for a member: the room waits
+ * for a lead's approval before the members see it (P5).
+ */
+function RoomButton({ projectId, lead }: { projectId: string; lead: boolean }) {
   const t = useTranslations("rise.room");
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -274,11 +318,11 @@ function RoomButton({ projectId }: { projectId: string }) {
   return (
     <>
       <Button variant="secondary" icon="video" className="justify-self-start" onClick={() => setOpen(true)}>
-        {t("open")}
+        {lead ? t("open") : t("propose")}
       </Button>
-      <Sheet open={open} onClose={() => setOpen(false)} title={t("title")}>
+      <Sheet open={open} onClose={() => setOpen(false)} title={lead ? t("title") : t("propose")}>
         <form onSubmit={submit} noValidate className="grid gap-4">
-          <p className="text-sm font-medium text-muted">{t("text")}</p>
+          <p className="text-sm font-medium text-muted">{lead ? t("text") : t("proposeText")}</p>
           <TextField id="room-title" name="title" label={t("subject")} hint={t("optional")} placeholder={t("subjectPlaceholder")} maxLength={100} error={error?.field === "title" ? error.text : undefined} />
           <TextField id="room-link" name="meetingUrl" type="url" inputMode="url" label={t("link")} hint={t("linkHint")} placeholder="meet.google.com/abc-defg-hij" error={error?.field === "meetingUrl" ? error.text : undefined} />
           {error && !["title", "meetingUrl"].includes(error.field ?? "") && (
@@ -287,11 +331,64 @@ function RoomButton({ projectId }: { projectId: string }) {
             </Alert>
           )}
           <Button type="submit" variant="ink" block disabled={busy}>
-            {busy ? t("starting") : t("start")}
+            {busy ? t("starting") : lead ? t("start") : t("proposeSend")}
           </Button>
         </form>
       </Sheet>
     </>
+  );
+}
+
+/** Rooms proposed by members: a lead approves or refuses them; their author sees they are waiting (P5). */
+function PendingRooms({ projectId, rooms, lead }: { projectId: string; rooms: RisePendingRoom[]; lead: boolean }) {
+  const t = useTranslations("rise.project");
+  const locale = useLocale();
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function answer(id: string, approve: boolean) {
+    setBusy(id);
+    setError(null);
+    try {
+      await api(`/api/rise/${projectId}/events/${id}/answer`, { body: { approve } });
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : t("error"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <section aria-labelledby="pending-rooms" className="grid gap-2 rounded-lg border-2 border-dashed border-line-strong bg-raised p-3.5">
+      <Overline as="h3" id="pending-rooms">
+        {lead ? t("pendingTitle") : t("pendingMineTitle")}
+      </Overline>
+      {rooms.map((r) => (
+        <div key={r.id} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <span className="grid min-w-0">
+            <b className="truncate text-[15px]">{localizeRoomTitle(r.title, locale)}</b>
+            <small className="text-[13px] text-muted">{lead ? t("pendingBy", { name: r.author?.name ?? "—" }) : t("pendingMine")}</small>
+          </span>
+          {lead && (
+            <span className="flex gap-2">
+              <Button size="sm" variant="ink" disabled={busy !== null} onClick={() => answer(r.id, true)}>
+                {t("approve")}
+              </Button>
+              <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => answer(r.id, false)}>
+                {t("refuse")}
+              </Button>
+            </span>
+          )}
+        </div>
+      ))}
+      {error && (
+        <Alert tone="danger" role="alert">
+          {error}
+        </Alert>
+      )}
+    </section>
   );
 }
 

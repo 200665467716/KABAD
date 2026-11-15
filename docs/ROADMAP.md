@@ -223,6 +223,37 @@ Les manques relevés dans `docs/etat-et-plan-de-test.md` pour l'inscription, les
 - [ ] Reporté : modifier un projet Rise-Up ; dire qui a annulé une séance (migration).
 - [x] Tranché le 14 novembre : l'organisateur ne participe pas à son propre hackathon (refus côté serveur, « Participer » masqué).
 - Tests : 62 unitaires, 107 d'intégration, 112 e2e.
+## Mise à jour du 13 novembre (branche `dev/modifications`)
+
+Remarques du document d'Emmerson du 13 novembre (pages 8 à 39), appliquées après la reprise de `dev/main`.
+
+- [x] Profil : présentation (titre et bio) dès l'inscription ; zone de bio plus grande, avec compteur. Une invitation montre la présentation de la personne qui invite, et la notification mène à l'invitation.
+- [x] Niveau et badge séparés : le niveau déclaré (Aspirant, Débutant, Intermédiaire, Senior) s'affiche toujours, le badge « Mentor » et le sceau sur la photo à part. La barre de navigation montre la photo et le vrai niveau.
+- [x] Mentorat : fiche du mentor repensée (en-tête, chiffres, sujets numérotés, liens), bandeau du badge sur `/mentorat`, « Ajouter à Google Agenda » (ou Outlook, ou fichier .ics) au lieu du seul .ics, blocage d'une période (« Du … au … », 60 jours au plus).
+- [x] Groupes : description (300 caractères), photo et description à la création, nouveau groupe visible sans recharger, mentions @ (suggestions, mise en avant, notification), réponse à un message (citation), messages épinglés par le responsable (5 au plus en tête de la discussion). Le créateur d'un test modifie le groupe de testeurs (nom, photo, membres : retirer un testeur le retire du test).
+- [x] Hackathons : un groupe « Instructeurs · {hackathon} » s'ouvre à la première mission acceptée, animé par le créateur du hackathon ; un instructeur ne peut pas participer et la page du hackathon lui montre son rôle et le groupe. La notification « mission acceptée » mène au groupe.
+- [x] Tableau de bord de l'équipe : carte « À traiter », inscriptions et messages jour par jour sur 14 jours avec l'évolution sur une semaine, chiffres par module, derniers inscrits.
+- [x] Grand écran : plus d'espace vide entre le contenu et les boutons des pages étroites (événement Rise-Up, formulaires).
+- Sans changement de code, expliqué à l'équipe : erreur 500 de `/admin/signalements` et « os error 112 » (disque plein pendant que Turbopack écrit `.next`) ; erreurs d'hydratation `bis_skin_checked` (extension du navigateur Avast) ; carte Rise-Up bleue dans Avast Secure Browser (couleurs modifiées par ce navigateur, maïs dans Edge).
+- Migration : `groupes_reponses_epingles_instructeurs`.
+- Tests : 60 unitaires, 87 d'intégration, 112 e2e.
+
+## Mise à jour du 14 novembre (branche `dev/modifications`)
+
+Document d'Emmerson du 14 novembre (KABAD 5), appliqué après la reprise de `dev/main` (campagne de tests du 13 novembre). Chaque correction a été vérifiée dans le navigateur.
+
+- [x] Messagerie : les messages arrivent sans recharger même quand le serveur temps réel ne répond pas (conversation relue toutes les 3 s, liste toutes les 5 s, compteurs et notifications toutes les 10 s, seulement pendant la coupure) ; le badge « Messages » se met à jour dès qu'une conversation est lue ; les heures des messages, de la liste et des notifications suivent l'horloge de l'appareil (le serveur affichait tout à l'heure de Lomé) et l'inscription enregistre le fuseau de l'appareil ; une vidéo est refusée avant l'envoi avec la solution (partager un lien).
+- [x] Tests d'apps : nombre de testeurs écrit librement, de 1 à 50, avec des suggestions ; captures d'un rapport ouvertes en grand, une après l'autre, et téléchargeables.
+- [x] Africa Rise-Up : l'initiateur (« Responsable ») nomme des co-responsables ; eux seuls programment les événements ; un membre propose un salon, caché jusqu'à la validation d'un responsable ; chaque message du projet se signale ; signalé par un responsable avec un justificatif, il est masqué tout de suite et seule l'équipe KABAD le rétablit. Dans un groupe, le responsable retire le message d'un membre.
+- [x] Disponibilités : changer de mois sur une période bloquée ne fait plus planter l'écran.
+- [x] Hackathons : l'équipe refuse une proposition avec une raison lue par l'organisateur.
+- [x] Page `/bienvenue` supprimée (la landing mène directement à l'inscription et à la connexion) ; « spams » au lieu de « courriers indésirables » ; `favicon.ico` ajouté (il remplissait les journaux d'erreurs) ; requêtes d'une transaction passées l'une après l'autre (avertissement de `pg`).
+- [x] Données de départ : les 7 comptes de l'équipe (3 mentors, 4 membres, 7 pays) et `kabadteam@gmail.com` pour l'équipe KABAD ; mots de passe dans `.env` (`SEED_PASSWORD_…`), jamais dans le dépôt ; 5 projets Rise-Up sur des problèmes concrets ; notifications de la démo marquées comme envoyées.
+- [x] Trouvé en préparant le pitch : la page Mentorat débordait de 30 px sur un écran de 360 px (champ de recherche) ; un rapport de test sans question de contrôle n'affiche plus de titre vide ; l'avatar d'un testeur n'est plus en maïs (couleur réservée à Africa Rise-Up) ; l'app Kalo de la démo a deux questions de contrôle, avec les réponses des testeurs.
+- Pitch : les écrans du deck sont des captures de l'application avec les données de départ, plus des maquettes.
+- Expliqué sans code : e-mails classés en spam (expéditeur Gmail personnel et liens vers `localhost` ; en production, une adresse sur le domaine de KABAD avec SPF et DKIM) ; erreur `JSON.parse` des journaux (cache `.next` abîmé, à supprimer).
+- Migrations : `rise_coresponsables_salons_moderation`, `refus_d_un_hackathon`.
+- Tests : 76 unitaires, 124 d'intégration, 110 e2e (la page `/bienvenue` en moins).
 
 ## P1 — Les « Must » manquants et Africa Rise-Up (objectif : 11 novembre)
 

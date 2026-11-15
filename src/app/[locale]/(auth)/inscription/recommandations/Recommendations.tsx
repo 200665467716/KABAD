@@ -5,7 +5,7 @@ import { useState } from "react";
 import { InviteSheet, type InviteTarget } from "@/components/features/InviteSheet";
 import { AuthFrame } from "@/components/shell/AuthFrame";
 import { Button, ButtonLink } from "@/components/ui/Button";
-import { Avatar, Badge, PersonRow } from "@/components/ui/Display";
+import { Avatar, MentorBadge, PersonRow } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { Link } from "@/i18n/navigation";
 import type { Recommendation } from "@/lib/domain-types";
@@ -76,9 +76,9 @@ export function Recommendations({ people }: { people: Recommendation[] }) {
             return (
               <li key={m.id} className="px-3.5 py-3">
                 <PersonRow
-                  avatar={<Avatar initials={initials(m.name)} size="lg" tone={m.verified ? "brand" : "neutral"} />}
+                  avatar={<Avatar initials={initials(m.name)} src={m.photo} size="lg" tone={m.verified ? "brand" : "neutral"} verified={m.verified} />}
                   name={m.name}
-                  badge={m.verified ? <Badge tone="brand">{t("mentor")}</Badge> : undefined}
+                  badge={m.verified ? <MentorBadge>{t("mentor")}</MentorBadge> : undefined}
                   meta={[m.headline, m.city].filter(Boolean).join(" · ")}
                   extra={<span className="text-xs font-extrabold text-brand-text">{t(`why.${m.why.key}`, { tech: m.why.tech ?? "" })}</span>}
                   action={

@@ -6,41 +6,11 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmSheet } from "@/components/ui/Controls";
 import { Alert } from "@/components/ui/Display";
 import { useRouter } from "@/i18n/navigation";
+import { AddToCalendar } from "@/components/features/AddToCalendar";
 import { api, ApiError } from "@/lib/api";
+import type { CalendarEvent } from "@/lib/calendar";
 
-type CalendarEvent = { startsAt: string; minutes: number; title: string; description: string; url: string | null };
-
-const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-const escape = (s: string) => s.replace(/\\/g, "\\\\").replace(/[;,]/g, (c) => `\\${c}`).replace(/\n/g, "\\n");
-
-/** A one-event .ics file, built in the browser: no calendar account needed. */
-function downloadIcs(id: string, e: CalendarEvent) {
-  const start = new Date(e.startsAt);
-  const end = new Date(start.getTime() + e.minutes * 60_000);
-  const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//KABAD//Mentorat//FR",
-    "BEGIN:VEVENT",
-    `UID:${id}@kabad.app`,
-    `DTSTAMP:${stamp(new Date())}`,
-    `DTSTART:${stamp(start)}`,
-    `DTEND:${stamp(end)}`,
-    `SUMMARY:${escape(e.title)}`,
-    `DESCRIPTION:${escape(e.description)}`,
-    ...(e.url ? [`URL:${e.url}`, `LOCATION:${escape(e.url)}`] : []),
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ];
-  const url = URL.createObjectURL(new Blob([lines.join("\r\n")], { type: "text/calendar;charset=utf-8" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "kabad-mentorat.ics";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-export function SessionActions({ id, cancellable, calendar }: { id: string; cancellable: boolean; calendar: CalendarEvent | null }) {
+export function SessionActions({ id, cancellable, calendar }: { id: string; cancellable: boolean; calendar: Omit<CalendarEvent, "id"> | null }) {
   const t = useTranslations("mentoring");
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -63,11 +33,7 @@ export function SessionActions({ id, cancellable, calendar }: { id: string; canc
 
   return (
     <>
-      {calendar && (
-        <Button variant="secondary" block icon="clock" onClick={() => downloadIcs(id, calendar)}>
-          {t("session.calendar")}
-        </Button>
-      )}
+      {calendar && <AddToCalendar event={{ id, ...calendar }} />}
       {cancellable && (
         <Button variant="ghost" block onClick={() => setConfirming(true)} disabled={busy}>
           {t("session.cancel")}

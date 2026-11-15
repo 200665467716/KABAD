@@ -3,6 +3,8 @@
  * - a first contact is an invitation, with an optional first message of 300 characters at most;
  * - a conversation opens only once the invitation is accepted, and both become contacts;
  * - groups are private: only their creator adds participants, chosen among the creator's contacts;
+ * - in a group, a message can answer another one, mention members (« @Nadia », who is notified),
+ *   and the group's owner pins the messages that matter;
  * - only members read and write in a conversation; blocking stops direct messages and invitations.
  * Every function takes the acting member's id, never trusts ids coming from the client alone.
  */
@@ -13,6 +15,7 @@ import { attachmentProblem, groupPhotoProblem, safeFileName, sniffMime, type Att
 import { DomainError, forbidden, notFound } from "./errors";
 import { pushNotifications } from "./notifications";
 import { notify } from "./realtime-events";
+import { findMentions } from "@/lib/mentions";
 import { GROUP_MAX_MEMBERS } from "@/lib/schemas";
 import type { ChatMessage, ConversationDetail, ConversationSummary, InvitationDetail } from "@/lib/messaging-types";
 
@@ -41,8 +44,6 @@ async function membership(prisma: Db | Prisma.TransactionClient, userId: string,
 }
 
 /* Conversations */
-
-
 
 export async function unreadCounts(userId: string, prisma: Db = db): Promise<Map<string, number>> {
   const rows = await prisma.$queryRaw<Array<{ conversationId: string; unread: bigint }>>`
@@ -123,10 +124,22 @@ async function audience(prisma: Db | Prisma.TransactionClient, authorId: string,
 }
 
 /** What `viewer` gets of a message written by someone they blocked: no text, no file. */
-const masked = (m: ChatMessage, blocked: Set<string>): ChatMessage => (m.authorId && blocked.has(m.authorId) && !m.system ? { ...m, body: BLOCKED_MESSAGE, hidden: true, attachment: null } : m);
+const masked = (m: ChatMessage, blocked: Set<string>): ChatMessage => {
+  if (m.authorId && blocked.has(m.authorId) && !m.system) return { ...m, body: BLOCKED_MESSAGE, hidden: true, attachment: null, replyTo: null };
+  // A quote of a blocked member's message is masked too.
+  if (m.replyTo?.authorId && blocked.has(m.replyTo.authorId)) return { ...m, replyTo: { ...m.replyTo, body: BLOCKED_MESSAGE, hidden: true } };
+  return m;
+};
 
 const attachmentSelect = { select: { id: true, name: true, mime: true, size: true, seconds: true } } as const;
-const withAuthor = { author: { select: { name: true } }, attachment: attachmentSelect } as const;
+const withAuthor = {
+  author: { select: { name: true } },
+  attachment: attachmentSelect,
+  replyTo: { select: { id: true, authorId: true, body: true, kind: true, hiddenAt: true, author: { select: { name: true } }, attachment: { select: { name: true } } } },
+} as const;
+
+/** How much of the answered message is quoted above a reply. */
+export const QUOTE_LENGTH = 140;
 
 type ChatRow = {
   id: string;
@@ -137,8 +150,21 @@ type ChatRow = {
   createdAt: Date;
   clientId: string | null;
   hiddenAt?: Date | null;
+  pinnedAt?: Date | null;
   attachment?: { id: string; name: string; mime: string; size: number; seconds: number | null } | null;
+  replyTo?: { id: string; authorId: string | null; body: string; kind: string; hiddenAt: Date | null; author: { name: string } | null; attachment: { name: string } | null } | null;
 };
+
+type QuoteRow = NonNullable<ChatRow["replyTo"]>;
+const toQuote = (r: QuoteRow): NonNullable<ChatMessage["replyTo"]> => ({
+  id: r.id,
+  authorId: r.authorId,
+  authorName: r.author?.name ?? null,
+  // A removed message is quoted as removed; a file by its name; a voice note by its kind only.
+  body: r.hiddenAt ? HIDDEN_MESSAGE : (r.body || (r.kind === "FILE" ? (r.attachment?.name ?? "") : "")).slice(0, QUOTE_LENGTH),
+  kind: r.kind === "VOICE" ? "VOICE" : r.kind === "FILE" ? "FILE" : "TEXT",
+  hidden: Boolean(r.hiddenAt),
+});
 
 const toChat = (m: ChatRow): ChatMessage => ({
   id: m.id,
@@ -152,6 +178,8 @@ const toChat = (m: ChatRow): ChatMessage => ({
   clientId: m.clientId,
   // A removed message keeps nothing: neither its text nor its file.
   attachment: m.attachment && !m.hiddenAt ? { ...m.attachment, kind: m.kind === "VOICE" ? "VOICE" : "FILE" } : null,
+  replyTo: m.replyTo && !m.hiddenAt ? toQuote(m.replyTo) : null,
+  pinned: Boolean(m.pinnedAt) && !m.hiddenAt,
 });
 
 export async function getConversation(userId: string, conversationId: string, opts: { before?: string; limit?: number } = {}, prisma: Db = db): Promise<ConversationDetail> {
@@ -164,8 +192,10 @@ export async function getConversation(userId: string, conversationId: string, op
       members: { include: { user: { select: { id: true, name: true, role: true, city: true, photoAt: true } } }, orderBy: [{ joinedAt: "asc" }, { userId: "asc" }] },
       // T4: the testers' group shows the tasks to tick and the install link.
       testApp: { select: { id: true, url: true, steps: true, platforms: true, ownerId: true, participants: { where: { userId }, select: { doneSteps: true } } } },
-      project: { select: { id: true } },
+      // The co-leads of a Rise-Up project moderate its channel with its initiator.
+      project: { select: { id: true, members: { where: { userId, role: "CO_LEAD" }, select: { userId: true } } } },
       team: { select: { hackathonId: true } },
+      instructorsOf: { select: { id: true } },
     },
   });
   const rows = await prisma.message.findMany({
@@ -174,6 +204,8 @@ export async function getConversation(userId: string, conversationId: string, op
     take: limit + 1,
     include: withAuthor,
   });
+  // The pinned messages of a group, the last pinned first.
+  const pinnedRows = c.kind === "GROUP" ? await prisma.message.findMany({ where: { conversationId, pinnedAt: { not: null }, hiddenAt: null }, orderBy: { pinnedAt: "desc" }, take: 5, include: withAuthor }) : [];
   const other = c.kind === "DIRECT" ? c.members.find((x) => x.userId !== userId)?.user : undefined;
   const blocks = other ? await prisma.block.findMany({ where: { OR: [{ blockerId: userId, blockedId: other.id }, { blockerId: other.id, blockedId: userId }] }, select: { blockerId: true } }) : [];
   // In a group, a blocked member may still write to the others: their messages are masked for whoever blocked them.
@@ -184,21 +216,54 @@ export async function getConversation(userId: string, conversationId: string, op
     kind: c.kind,
     title: c.kind === "GROUP" ? (c.name ?? "Groupe") : (other?.name ?? "Conversation"),
     theme: c.theme,
+    description: c.description,
     photo: photoUrl(c),
     other: other ? { id: other.id, name: other.name, role: other.role, city: other.city, photo: avatarUrl(other) } : null,
     isOwner: c.createdById === userId,
-    linked: c.testApp ? { kind: "test", id: c.testApp.id } : c.project ? { kind: "rise", id: c.project.id } : c.team ? { kind: "team", id: c.team.hackathonId } : null,
+    canModerate: c.kind === "GROUP" && (c.createdById === userId || (c.project?.members.length ?? 0) > 0),
+    linked: c.testApp
+      ? { kind: "test", id: c.testApp.id }
+      : c.project
+        ? { kind: "rise", id: c.project.id }
+        : c.team
+          ? { kind: "team", id: c.team.hackathonId }
+          : c.instructorsOf
+            ? { kind: "instructors", id: c.instructorsOf.id }
+            : null,
     test: c.testApp
       ? { id: c.testApp.id, url: c.testApp.url, steps: c.testApp.steps, platforms: c.testApp.platforms, ownerId: c.testApp.ownerId, doneSteps: c.testApp.participants[0]?.doneSteps ?? null }
       : null,
-    members: c.members.map((x) => ({ id: x.user.id, name: x.user.name, owner: x.role === "OWNER", photo: avatarUrl(x.user) })),
+    members: c.members.map((x) => ({ id: x.user.id, name: x.user.name, owner: x.role === "OWNER", photo: avatarUrl(x.user), mentor: x.user.role === "SENIOR" })),
     lastReadAt: m.lastReadAt.toISOString(),
     hasMore: rows.length > limit,
     messages: rows.slice(0, limit).reverse().map((row) => masked(toChat(row), mine)),
+    pinned: pinnedRows.map((row) => masked(toChat(row), mine)),
   };
 }
 
-export async function sendMessage(userId: string, conversationId: string, input: { body: string; clientId?: string }, prisma: Db = db): Promise<ChatMessage> {
+/** The answered message must be a message of the same conversation, not a line of the system. */
+async function checkReply(prisma: Db, conversationId: string, replyToId: string | undefined) {
+  if (!replyToId) return null;
+  const r = await prisma.message.findUnique({ where: { id: replyToId }, select: { conversationId: true, kind: true } });
+  if (!r || r.conversationId !== conversationId || r.kind === "SYSTEM") throw notFound("Le message auquel tu réponds est introuvable.");
+  return replyToId;
+}
+
+/** Members mentioned in a group message are notified; never the author, nor a member who blocked them. */
+async function notifyMentions(tx: Prisma.TransactionClient, msg: { id: string; body: string }, conversationId: string, authorId: string, recipients: string[]) {
+  const c = await tx.conversation.findUniqueOrThrow({ where: { id: conversationId }, select: { kind: true, name: true, members: { select: { user: { select: { id: true, name: true } } } } } });
+  if (c.kind !== "GROUP") return;
+  const others = c.members.map((x) => x.user).filter((u) => u.id !== authorId && recipients.includes(u.id));
+  const mentioned = findMentions(msg.body, others);
+  if (mentioned.length === 0) return;
+  const author = await tx.user.findUniqueOrThrow({ where: { id: authorId }, select: { name: true } });
+  await pushNotifications(
+    tx,
+    mentioned.map((id) => ({ userId: id, actor: author.name, key: "mentioned" as const, params: { title: c.name ?? "Groupe" }, href: `/messages/${conversationId}`, icon: "message" as const, tone: "brand" as const })),
+  );
+}
+
+export async function sendMessage(userId: string, conversationId: string, input: { body: string; clientId?: string; replyToId?: string }, prisma: Db = db): Promise<ChatMessage> {
   const m = await membership(prisma, userId, conversationId);
   if (input.clientId) {
     const existing = await prisma.message.findUnique({ where: { authorId_clientId: { authorId: userId, clientId: input.clientId } }, include: withAuthor });
@@ -208,17 +273,61 @@ export async function sendMessage(userId: string, conversationId: string, input:
     const other = m.conversation.members.find((x) => x.userId !== userId)?.userId;
     if (other && (await isBlocked(prisma, userId, other))) throw forbidden("Tu ne peux plus écrire à ce membre.");
   }
+  const replyToId = await checkReply(prisma, conversationId, input.replyToId);
   // Whoever blocked the author does not receive the message live (it is masked for them in the group).
   const recipients = await audience(prisma, userId, m.conversation.members.map((x) => x.userId));
   return prisma.$transaction(async (tx) => {
     const msg = await tx.message.create({
-      data: { conversationId, authorId: userId, body: input.body, clientId: input.clientId },
+      data: { conversationId, authorId: userId, body: input.body, clientId: input.clientId, replyToId },
       include: withAuthor,
     });
     await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: msg.createdAt } });
     await tx.conversationMember.update({ where: { conversationId_userId: { conversationId, userId } }, data: { lastReadAt: msg.createdAt } });
     await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients });
+    await notifyMentions(tx, msg, conversationId, userId, recipients);
     return toChat(msg);
+  });
+}
+
+/** The owner of a group pins a message, or unpins it. The members see a line « Kossi a épinglé un message ». */
+export async function pinMessage(userId: string, conversationId: string, messageId: string, pinned: boolean, prisma: Db = db) {
+  const m = await membership(prisma, userId, conversationId);
+  if (m.conversation.kind !== "GROUP") throw new DomainError("not_group", "On épingle un message dans un groupe.");
+  if (m.conversation.createdById !== userId) throw forbidden("Seul le responsable du groupe épingle un message.");
+  const target = await prisma.message.findUnique({ where: { id: messageId }, select: { conversationId: true, kind: true, hiddenAt: true, pinnedAt: true } });
+  if (!target || target.conversationId !== conversationId || target.kind === "SYSTEM" || target.hiddenAt) throw notFound("Message introuvable.");
+  // Nothing to do: already in the state asked.
+  if (Boolean(target.pinnedAt) === pinned) return { pinned };
+  return prisma.$transaction(async (tx) => {
+    await tx.message.update({ where: { id: messageId }, data: { pinnedAt: pinned ? new Date() : null } });
+    const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+    await announceChange(tx, conversationId, m.conversation.members.map((x) => x.userId), `${firstName(me.name)} a ${pinned ? "épinglé" : "désépinglé"} un message`);
+    return { pinned };
+  });
+}
+
+/**
+ * Who moderates a group: its owner and, in the channel of a Rise-Up project, the project's co-leads (P5).
+ * They remove a message unfit for the group; the KABAD team alone can show it again.
+ */
+async function moderates(prisma: Db | Prisma.TransactionClient, userId: string, conversation: { id: string; kind: string; createdById: string | null }) {
+  if (conversation.kind !== "GROUP") return false;
+  if (conversation.createdById === userId) return true;
+  return (await prisma.riseMember.count({ where: { userId, role: "CO_LEAD", project: { conversationId: conversation.id } } })) > 0;
+}
+
+/** The lead of a group removes another member's message: the members see that a message was removed. */
+export async function removeMessage(userId: string, conversationId: string, messageId: string, prisma: Db = db) {
+  const m = await membership(prisma, userId, conversationId);
+  if (!(await moderates(prisma, userId, m.conversation))) throw forbidden("Seul le responsable du groupe retire un message.");
+  const target = await prisma.message.findUnique({ where: { id: messageId }, select: { conversationId: true, kind: true, hiddenAt: true } });
+  if (!target || target.conversationId !== conversationId || target.kind === "SYSTEM") throw notFound("Message introuvable.");
+  if (target.hiddenAt) return { ok: true };
+  return prisma.$transaction(async (tx) => {
+    // Kept for the KABAD team, who can show it again; a removed message is unpinned.
+    await tx.message.update({ where: { id: messageId }, data: { hiddenAt: new Date(), hiddenById: userId, pinnedAt: null } });
+    await notify(tx, { t: "conversation", conversationId, recipients: m.conversation.members.map((x) => x.userId) });
+    return { ok: true };
   });
 }
 
@@ -226,7 +335,7 @@ export async function sendMessage(userId: string, conversationId: string, input:
 export async function sendAttachment(
   userId: string,
   conversationId: string,
-  input: { kind: AttachmentKind; name: string; data: Uint8Array; seconds?: number; caption?: string; clientId?: string },
+  input: { kind: AttachmentKind; name: string; data: Uint8Array; seconds?: number; caption?: string; clientId?: string; replyToId?: string },
   prisma: Db = db,
 ): Promise<ChatMessage> {
   const m = await membership(prisma, userId, conversationId);
@@ -242,6 +351,7 @@ export async function sendAttachment(
     if (other && (await isBlocked(prisma, userId, other))) throw forbidden("Tu ne peux plus écrire à ce membre.");
   }
   // Whoever blocked the author does not receive the message live (it is masked for them in the group).
+  const replyToId = await checkReply(prisma, conversationId, input.replyToId);
   const recipients = await audience(prisma, userId, m.conversation.members.map((x) => x.userId));
   return prisma.$transaction(async (tx) => {
     const msg = await tx.message.create({
@@ -251,6 +361,7 @@ export async function sendAttachment(
         kind: input.kind,
         body: (input.caption ?? "").slice(0, 1000),
         clientId: input.clientId,
+        replyToId,
         attachment: { create: { name: safeFileName(input.name, mime!), mime: mime!, size: input.data.byteLength, seconds: input.kind === "VOICE" ? Math.round(input.seconds!) : null, data: Buffer.from(input.data) } },
       },
       include: withAuthor,
@@ -293,7 +404,8 @@ export async function listContacts(userId: string, prisma: Db = db) {
   return rows.map(({ contact: { photoAt, ...c } }) => ({ ...c, photo: avatarUrl({ id: c.id, photoAt }) }));
 }
 
-const fromSelect = { id: true, name: true, city: true, country: true, stack: true, years: true, role: true, photoAt: true } as const;
+/** What a member reads of whoever invites them: who they are, their level, and their presentation (P8). */
+const fromSelect = { id: true, name: true, city: true, country: true, stack: true, years: true, role: true, level: true, headline: true, bio: true, photoAt: true } as const;
 /** L'expéditeur d'une invitation, avec l'adresse de sa photo à la place de sa date. */
 const withPhoto = <T extends { id: string; photoAt: Date | null }>({ photoAt, ...u }: T) => ({ ...u, photo: avatarUrl({ id: u.id, photoAt }) });
 
@@ -410,7 +522,8 @@ export async function answerInvitation(userId: string, invitationId: string, acc
 
 /** The group of an app to test, of a Rise-Up project or of a hackathon team follows it: its members change only from there. */
 async function assertPrivateGroup(prisma: Db | Prisma.TransactionClient, conversationId: string) {
-  const c = await prisma.conversation.findUnique({ where: { id: conversationId }, select: { testApp: { select: { id: true } }, project: { select: { id: true } }, team: { select: { id: true } } } });
+  const c = await prisma.conversation.findUnique({ where: { id: conversationId }, select: { testApp: { select: { id: true } }, project: { select: { id: true } }, team: { select: { id: true } }, instructorsOf: { select: { id: true } } } });
+  if (c?.instructorsOf) throw new DomainError("community_group", "Ce groupe réunit les instructeurs du hackathon : on y entre en acceptant une mission.", 409);
   if (c?.team) throw new DomainError("community_group", "Ce groupe est la discussion d’une équipe de hackathon : on le rejoint ou on le quitte depuis l’équipe.", 409);
   if (c?.testApp) throw new DomainError("community_group", "Ce groupe suit l’application à tester : on le rejoint ou on le quitte depuis l’annonce.", 409);
   if (c?.project) throw new DomainError("community_group", "Ce groupe suit le projet Rise-Up : on le rejoint ou on le quitte depuis le projet.", 409);
@@ -423,21 +536,21 @@ async function assertAllContacts(tx: Prisma.TransactionClient | Db, ownerId: str
   if (blocked) throw forbidden("Tu ne peux pas ajouter un membre avec qui un blocage est en place.");
 }
 
-export async function createGroup(userId: string, input: { name: string; theme?: string; memberIds: string[] }, prisma: Db = db) {
+export async function createGroup(userId: string, input: { name: string; theme?: string; description?: string; memberIds: string[] }, prisma: Db = db) {
   const ids = [...new Set(input.memberIds)].filter((id) => id !== userId);
   if (ids.length === 0) throw new DomainError("no_members", "Choisis au moins un participant.");
   if (ids.length + 1 > GROUP_MAX_MEMBERS) throw new DomainError("too_many", `Un groupe compte ${GROUP_MAX_MEMBERS} membres au plus.`);
   return prisma.$transaction(async (tx) => {
     await assertAllContacts(tx, userId, ids);
-    const [owner, added] = await Promise.all([
-      tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
-      tx.user.findMany({ where: { id: { in: ids } }, select: { name: true } }),
-    ]);
+    // One connection per transaction: its queries run one after the other (pg refuses queries sent at once).
+    const owner = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+    const added = await tx.user.findMany({ where: { id: { in: ids } }, select: { name: true } });
     const group = await tx.conversation.create({
       data: {
         kind: "GROUP",
         name: input.name,
         theme: input.theme || null,
+        description: input.description || null,
         createdById: userId,
         members: { create: [{ userId, role: "OWNER" }, ...ids.map((id) => ({ userId: id }))] },
       },
@@ -462,10 +575,9 @@ export async function addGroupMembers(userId: string, conversationId: string, me
 
   return prisma.$transaction(async (tx) => {
     await assertAllContacts(tx, userId, ids);
-    const [owner, added] = await Promise.all([
-      tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
-      tx.user.findMany({ where: { id: { in: ids } }, select: { name: true } }),
-    ]);
+    // One connection per transaction: its queries run one after the other (pg refuses queries sent at once).
+    const owner = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+    const added = await tx.user.findMany({ where: { id: { in: ids } }, select: { name: true } });
     await tx.conversationMember.createMany({ data: ids.map((id) => ({ conversationId, userId: id })) });
     const msg = await tx.message.create({
       data: { conversationId, kind: "SYSTEM", body: `${firstName(owner.name)} a ajouté ${listNames(added.map((a) => firstName(a.name)))}` },
@@ -485,17 +597,19 @@ export async function removeGroupMember(userId: string, conversationId: string, 
   if (m.conversation.kind !== "GROUP") throw new DomainError("not_group", "On ne retire des participants que d’un groupe.");
   if (m.conversation.createdById !== userId) throw forbidden("Seul le créateur du groupe peut retirer des participants.");
   if (memberId === userId) throw new DomainError("self", "Pour partir, quitte le groupe.");
-  await assertPrivateGroup(prisma, conversationId);
+  // A testers' group: its owner removes a tester, who leaves the test too. A tester who sent a report keeps their place.
+  const app = await prisma.testApp.findUnique({ where: { conversationId }, select: { id: true, reports: { where: { testerId: memberId }, select: { id: true } } } });
+  if (app && app.reports.length) throw new DomainError("reported", "Ce testeur a déjà envoyé son rapport : il reste dans le groupe.", 409);
+  if (!app) await assertPrivateGroup(prisma, conversationId);
   const everyone = m.conversation.members.map((x) => x.userId);
   if (!everyone.includes(memberId)) throw notFound("Ce membre ne fait pas partie du groupe.");
 
   return prisma.$transaction(async (tx) => {
-    const [owner, removed] = await Promise.all([
-      tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
-      tx.user.findUniqueOrThrow({ where: { id: memberId }, select: { name: true } }),
-    ]);
+    const owner = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+    const removed = await tx.user.findUniqueOrThrow({ where: { id: memberId }, select: { name: true } });
+    if (app) await tx.testParticipant.deleteMany({ where: { testAppId: app.id, userId: memberId } });
     await tx.conversationMember.delete({ where: { conversationId_userId: { conversationId, userId: memberId } } });
-    const msg = await tx.message.create({ data: { conversationId, kind: "SYSTEM", body: `${firstName(owner.name)} a retiré ${firstName(removed.name)}` } });
+    const msg = await tx.message.create({ data: { conversationId, kind: "SYSTEM", body: `${firstName(owner.name)} a retiré ${firstName(removed.name)}${app ? " du test" : ""}` } });
     await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: msg.createdAt } });
     const remaining = everyone.filter((id) => id !== memberId);
     await notify(tx, { t: "message", conversationId, messageId: msg.id, recipients: remaining });
@@ -505,11 +619,14 @@ export async function removeGroupMember(userId: string, conversationId: string, 
 }
 
 /** The owner of a private group, checked before a change to its name, theme or photo. */
+/**
+ * The owner of a group, checked before a change to its name, theme, description or photo.
+ * A linked group (testers, Rise-Up project, hackathon team) is edited by its owner too: only its members follow its source.
+ */
 async function ownedGroup(prisma: Db, userId: string, conversationId: string) {
   const m = await membership(prisma, userId, conversationId);
   if (m.conversation.kind !== "GROUP") throw new DomainError("not_group", "Seul un groupe a un nom et une photo.");
   if (m.conversation.createdById !== userId) throw forbidden("Seul le responsable du groupe peut le modifier.");
-  await assertPrivateGroup(prisma, conversationId);
   return m;
 }
 
@@ -522,18 +639,22 @@ async function announceChange(tx: Prisma.TransactionClient, conversationId: stri
 }
 
 /** The owner renames the group or changes its theme. Nothing is written when nothing changes. */
-export async function updateGroup(userId: string, conversationId: string, input: { name: string; theme?: string | null }, prisma: Db = db) {
+export async function updateGroup(userId: string, conversationId: string, input: { name: string; theme?: string | null; description?: string | null }, prisma: Db = db) {
   const m = await ownedGroup(prisma, userId, conversationId);
   const theme = input.theme === undefined ? m.conversation.theme : input.theme;
+  const description = input.description === undefined ? m.conversation.description : input.description || null;
   const renamed = input.name !== m.conversation.name;
-  if (!renamed && theme === m.conversation.theme) return { ok: true };
+  const described = description !== m.conversation.description;
+  if (!renamed && !described && theme === m.conversation.theme) return { ok: true };
   return prisma.$transaction(async (tx) => {
     const me = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
-    await tx.conversation.update({ where: { id: conversationId }, data: { name: input.name, theme } });
+    await tx.conversation.update({ where: { id: conversationId }, data: { name: input.name, theme, description } });
     const everyone = m.conversation.members.map((x) => x.userId);
-    // Un renommage et un changement de thème faits ensemble laissent chacun leur ligne.
-    if (renamed) await announceChange(tx, conversationId, everyone, `${firstName(me.name)} a renommé le groupe « ${input.name} »`);
-    if (theme !== m.conversation.theme) await announceChange(tx, conversationId, everyone, `${firstName(me.name)} a changé le thème du groupe`);
+    const who = firstName(me.name);
+    // Chaque changement fait ensemble (nom, thème, description) laisse sa propre ligne.
+    if (renamed) await announceChange(tx, conversationId, everyone, `${who} a renommé le groupe « ${input.name} »`);
+    if (theme !== m.conversation.theme) await announceChange(tx, conversationId, everyone, `${who} a changé le thème du groupe`);
+    if (described) await announceChange(tx, conversationId, everyone, `${who} a changé la description du groupe`);
     return { ok: true };
   });
 }

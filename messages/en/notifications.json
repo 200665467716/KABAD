@@ -18,6 +18,7 @@
       "juryAppointed": " appointed you to the jury of the hackathon “{title}”.",
       "hackathonProposed": " proposes the hackathon “{title}”.",
       "hackathonPublished": " published your hackathon “{title}”.",
+      "hackathonRejected": " did not publish “{title}”: {reason}",
       "teamJoinRequested": " asks to join the team {team} ({title}).",
       "teamJoinAccepted": " accepted you in the team ({title}).",
       "teamJoinDeclined": " didn’t accept your request ({title}).",
@@ -33,7 +34,6 @@
       "riseJoined": " joined your project “{title}”.",
       "riseEvent": ": “{title}” on {at}.",
       "riseEventSoon": ": “{title}” starts in {minutes} min.",
-      "riseEventCancelled": ": “{title}”, planned on {at}, is cancelled.",
       "testJoined": " joined the testers of “{title}”.",
       "testReport": " sent a test report on “{title}”.",
       "testReportValidated": " approved your test report on “{title}”.",
@@ -41,13 +41,18 @@
       "invitationReceived": " invites you to talk.",
       "invitationAccepted": " accepted your invitation. You can now talk.",
       "roomLive": " is live: “{title}”. Join the room.",
+      "riseCoLead": " named you co-lead of the project “{title}”.",
+      "roomProposed": " proposes a room “{title}” in “{project}”. Approve it to open it to the members.",
+      "roomRefused": ": your room “{title}” was not approved.",
       "teamInvited": " invites you to join team {team} ({title}).",
       "teamInviteAccepted": " joined your team {team} ({title}).",
       "teamInviteDeclined": " won’t be joining your team {team} ({title}).",
+      "sessionRated": " rated your session “{topic}”: {rating} out of 5.",
+      "mentioned": " mentioned you in “{title}”.",
+      "riseEventCancelled": ": “{title}”, planned on {at}, is cancelled.",
       "teamMemberLeft": " left your team {team} ({title}).",
       "teamCaptainHandedOver": " left the team {team} ({title}): you are now its captain.",
-      "juryToScore": " is over: solutions are waiting for your marks.",
-      "sessionRated": " rated your session “{topic}”: {rating} out of 5."
+      "juryToScore": " is over: solutions are waiting for your marks."
     }
   }
 }

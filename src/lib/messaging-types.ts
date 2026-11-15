@@ -12,7 +12,13 @@ export type ChatMessage = {
   hidden?: boolean;
   /** A file or a voice note; the body is then an optional caption. */
   attachment?: ChatAttachment | null;
+  /** The message this one answers, quoted above it (an excerpt). */
+  replyTo?: ChatQuote | null;
+  /** Pinned by the group's owner. */
+  pinned?: boolean;
 };
+
+export type ChatQuote = { id: string; authorId: string | null; authorName: string | null; body: string; kind: "TEXT" | "FILE" | "VOICE"; hidden: boolean };
 
 export type ChatAttachment = { id: string; kind: "FILE" | "VOICE"; name: string; mime: string; size: number; seconds: number | null };
 
@@ -39,20 +45,39 @@ export type ConversationDetail = {
   kind: "DIRECT" | "GROUP";
   title: string;
   theme: string | null;
+  /** What the group is about, written by its owner. */
+  description: string | null;
   photo: string | null;
   other: { id: string; name: string; role: "JUNIOR" | "SENIOR"; city: string; photo: string | null } | null;
   isOwner: boolean;
+  /** Removes other members' messages: the group's owner, and the co-leads of a Rise-Up project's channel. */
+  canModerate: boolean;
   /** A community group follows an app to test, a Rise-Up project or a hackathon team (id: the hackathon): one joins or leaves it from there. */
-  linked: { kind: "test" | "rise" | "team"; id: string } | null;
+  linked: { kind: "test" | "rise" | "team" | "instructors"; id: string } | null;
   /** The testers' group of an app (T4): its tasks, the install link, and what this member ticked (null for the author). */
   test: { id: string; url: string; steps: string[]; platforms: Array<"WEB" | "ANDROID" | "IOS">; ownerId: string; doneSteps: number[] | null } | null;
-  members: Array<{ id: string; name: string; owner: boolean; photo: string | null }>;
+  members: Array<{ id: string; name: string; owner: boolean; photo: string | null; mentor: boolean }>;
   lastReadAt: string;
   hasMore: boolean;
   messages: ChatMessage[];
+  /** The pinned messages of a group, the last pinned first. */
+  pinned: ChatMessage[];
 };
 
-export type InvitationFrom = { id: string; name: string; city: string; country: string; stack: string[]; years: number; role: "JUNIOR" | "SENIOR"; photo: string | null };
+export type InvitationFrom = {
+  id: string;
+  name: string;
+  city: string;
+  country: string;
+  stack: string[];
+  years: number;
+  role: "JUNIOR" | "SENIOR";
+  level: "ASPIRANT" | "DEBUTANT" | "INTERMEDIAIRE" | "SENIOR";
+  headline: string;
+  /** The sender's presentation, read before answering (P8). */
+  bio: string;
+  photo: string | null;
+};
 
 export type ReceivedInvitation = { id: string; message: string; createdAt: string; from: InvitationFrom };
 

@@ -134,12 +134,14 @@ export function SideNav() {
         {me ? (
           <div className="flex items-center gap-1">
             <Link href={`/profil/${me.id}`} className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 text-ink no-underline hover:bg-bg">
-              <Avatar initials={initials(me.name)} size="sm" tone="accent" />
+              <Avatar initials={initials(me.name)} src={me.photo} size="sm" tone="brand" verified={me.isMentor} />
               <span className="grid min-w-0">
                 <span className="truncate text-sm font-bold">{me.name}</span>
-                <span className="text-xs text-muted">
+                {/* P13, P21: the level the member chose; the mentor badge is shown apart, on the avatar. */}
+                <span className="truncate text-xs text-muted">
                   {me.city ? `${me.city} · ` : ""}
-                  {me.role === "SENIOR" ? t("senior") : t("junior")}
+                  {t(`levels.${me.level}`)}
+                  {me.isMentor ? ` · ${t("mentor")}` : ""}
                 </span>
               </span>
             </Link>

@@ -15,9 +15,9 @@
       "nextSlot": "Prochain créneau : {when}",
       "noSlot": "Pas de créneau ouvert pour l’instant",
       "empty": "Aucun mentor ne correspond. Essaie un autre domaine.",
-      "badgeTitle": "Tu as de l’expérience à partager ?",
-      "badgeText": "Demande le badge mentor, KABAD le valide.",
-      "badgePending": "Ta demande de badge est en cours d’examen.",
+      "badgeTitle": "Devenir mentor",
+      "badgeText": "Tu as de l’expérience à partager ? Demande le badge, l’équipe KABAD le valide.",
+      "badgePending": "L’équipe KABAD vérifie ton expérience et tes liens. Tu es prévenu dès qu’elle a répondu.",
       "mySessions": "Mes séances",
       "mentorSide": "Côté mentor",
       "requests": "Demandes reçues",
@@ -25,7 +25,15 @@
       "requestsCount": "{count, plural, =0 {Aucune demande à traiter} one {# demande à traiter} other {# demandes à traiter}}",
       "availability": "Mes disponibilités",
       "availabilityText": "Tes plages de chaque semaine",
-      "upcomingAsMentor": "{count, plural, =0 {Aucune séance à venir} one {# séance à venir} other {# séances à venir}}"
+      "upcomingAsMentor": "{count, plural, =0 {Aucune séance à venir} one {# séance à venir} other {# séances à venir}}",
+      "badgePendingTitle": "Ta demande de badge est en examen",
+      "badgeSteps": "Étapes de la demande",
+      "badgeStep1": "Envoyée",
+      "badgeStep2": "En examen",
+      "badgeStep3": "Badge",
+      "badgePerk1": "Séances gratuites de 30 min à 1 h",
+      "badgePerk2": "Tes créneaux, ton rythme",
+      "badgePerk3": "Badge visible sur ton profil"
     },
     "status": {
       "PENDING": "En attente",
@@ -63,7 +71,12 @@
       "bookCta": "Réserver une séance",
       "verifiedShort": "{gender, select, FEMALE {Vérifiée} MALE {Vérifié} other {Vérifié}}",
       "slotTaken": "{time}, déjà réservé",
-      "rating": "{average, number} sur 5 ({count, plural, one {# avis} other {# avis}})"
+      "rating": "{average, number} sur 5 ({count, plural, one {# avis} other {# avis}})",
+      "statSessions": "{count, plural, one {séance} other {séances}}",
+      "statExperience": "d’expérience",
+      "statNew": "Nouveau",
+      "statRating": "pas encore noté",
+      "statRatings": "{count, plural, one {# avis} other {# avis}}"
     },
     "book": {
       "title": "Réserver",
@@ -194,6 +207,10 @@
       "editRange": "Modifier la plage du {day}, {range}",
       "remove": "Retirer",
       "done": "OK",
+      "blockedEnd": "Jusqu’au",
+      "blockedEndHint": "Facultatif : pour bloquer plusieurs jours d’un coup.",
+      "blockedRange": "Du {from} au {to} ({count} jours)",
+      "addBlockedRange": "Bloquer ces {count} jours",
       "overlapOn": "Deux plages du {day} se chevauchent. Change les heures de l’une d’elles."
     },
     "badge": {

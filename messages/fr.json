@@ -14,6 +14,11 @@
     "seeAll": "Tout voir",
     "step": "Étape {step} sur {total}",
     "stepShort": "{step} / {total}",
+    "calendar": {
+      "google": "Ajouter à Google Agenda",
+      "other": "Autre agenda :",
+      "ics": "Fichier .ics"
+    },
     "logoHome": "KABAD, accueil",
     "choices": {
       "BJ": "Bénin",
@@ -48,8 +53,13 @@
     "signOut": "Se déconnecter",
     "unreadMessages": "{count, plural, one {# message non lu} other {# messages non lus}}",
     "unreadNotifications": "{count, plural, one {# non lue} other {# non lues}}",
-    "senior": "Senior",
-    "junior": "Junior"
+    "levels": {
+      "ASPIRANT": "Aspirant",
+      "DEBUTANT": "Débutant",
+      "INTERMEDIAIRE": "Intermédiaire",
+      "SENIOR": "Senior"
+    },
+    "mentor": "Mentor"
   },
   "language": {
     "label": "Langue",

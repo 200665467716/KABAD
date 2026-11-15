@@ -62,6 +62,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // P29: the welcome screen is gone; the landing page leads straight to sign-up and sign-in. Old links land on it.
+  async redirects() {
+    return [
+      { source: "/bienvenue", destination: "/", permanent: true },
+      { source: "/:locale(fr|en)/bienvenue", destination: "/:locale", permanent: true },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {

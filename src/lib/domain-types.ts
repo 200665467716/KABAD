@@ -48,6 +48,8 @@ export type MentorCard = {
   city: string;
   country: string;
   headline: string;
+  /** Address of the profile photo, or null. */
+  photo: string | null;
   domains: string[];
   technologies: string[];
   /** Next free slot, or null when the mentor has none in the coming weeks. */
@@ -147,6 +149,8 @@ export type HackathonSummary = {
   instructorCount: number;
   /** False while the KABAD team has not published it: only its author and the team see it. */
   published: boolean;
+  /** The KABAD team refused to publish it (P7). */
+  rejected: boolean;
   teams: number;
   participants: number;
   resultsAt: string | null;
@@ -182,11 +186,17 @@ export type HackathonDetail = HackathonSummary & {
   amJuror: boolean;
   /** The viewer proposed this hackathon: they run it and cannot take part. */
   amOrganizer: boolean;
+  /** The viewer accepted a mission of instructor for this hackathon. */
+  amInstructor: boolean;
+  /** The group of the organizer and the instructors, for them only. */
+  instructorsGroupId: string | null;
   myTeam: TeamView | null;
   openTeams: OpenTeam[];
   /** Teams whose captain invited the viewer, who has not answered yet. */
   invitations: Array<{ id: string; team: string; captain: string; members: number }>;
   published: boolean;
+  /** Why the KABAD team refused it, for its organizer and the team; null otherwise. */
+  rejectionReason: string | null;
   canEdit: boolean;
 };
 
@@ -196,6 +206,10 @@ export type MissionView = {
   status: "PROPOSED" | "ACCEPTED" | "DECLINED";
   createdAt: string;
   hackathon: { id: string; title: string; organizerName: string; format: HackathonFormat; city: string | null; startsAt: string; endsAt: string; missionText: string | null };
+  /** The member who created the hackathon, to reach their profile. */
+  organizerId: string | null;
+  /** The instructors' group, once the mission is accepted. */
+  groupId: string | null;
 };
 
 export type RankingRow = { teamId: string; team: string; captainId: string; captain: string; mark: number };
@@ -233,6 +247,12 @@ export type RiseProjectSummary = {
 
 export type RisePostView = { id: string; body: string; createdAt: string; author: { id: string; name: string } | null; replies: number };
 
+/** « initiator » leads the project; the « co_lead » members lead it with them. */
+export type RiseRole = "initiator" | "co_lead" | "member";
+
+/** A room proposed by a member who does not lead the project, waiting for a lead. */
+export type RisePendingRoom = { id: string; title: string; author: { id: string; name: string } | null; createdAt: string };
+
 export type RiseProjectDetail = RiseProjectSummary & {
   problem: string;
   createdAt: string;
@@ -240,7 +260,11 @@ export type RiseProjectDetail = RiseProjectSummary & {
   conversationId: string | null;
   posts: RisePostView[];
   events: RiseEventView[];
-  people: Array<{ id: string; name: string; city: string; skill: string; initiator: boolean }>;
+  people: Array<{ id: string; name: string; city: string; skill: string; initiator: boolean; role: RiseRole }>;
+  /** The viewer's role, or null when they are not a member. */
+  viewerRole: RiseRole | null;
+  /** Rooms waiting for approval: all of them for a lead, their own for a member. */
+  pendingRooms: RisePendingRoom[];
 };
 
 export type TestQuestion = { q: string; options?: string[]; answer: string };

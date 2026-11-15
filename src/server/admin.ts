@@ -4,10 +4,12 @@
  * Mentor badges: src/server/badges.ts. Hackathon review and results: src/server/hackathons.ts.
  */
 import type { Prisma } from "@/generated/prisma/client";
+import { avatarUrl } from "@/lib/avatar";
+import { dailyCounts, weekOverWeek } from "@/lib/daily-counts";
 import { requireAdmin } from "./hackathons";
 import { db, type Db } from "./db";
 import { DomainError, notFound } from "./errors";
-import { HIDDEN_MESSAGE } from "./messaging";
+import { HIDDEN_MESSAGE, leaveCommunityGroup } from "./messaging";
 import { pushNotifications } from "./notifications";
 import { endRoom } from "./rooms";
 import { notify } from "./realtime-events";
@@ -19,34 +21,51 @@ export async function logAction(tx: Prisma.TransactionClient | Db, adminId: stri
   await tx.adminAction.create({ data: { adminId, action, targetId: targetId ?? null, details: details?.slice(0, 500) } });
 }
 
-const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000);
+/** How many days the activity charts of the dashboard cover: this week and the one before. */
+const CHART_DAYS = 14;
 
 export async function dashboard(adminId: string, prisma: Db = db) {
   await requireAdmin(adminId, prisma);
-  const [members, newMembers, mentors, pendingBadges, unverified, suspended, messages7d, openReports, upcomingSessions, held, openHackathons, juryHackathons, toPublish, riseProjects] = await Promise.all([
+  const now = new Date();
+  // Midnight GMT, 13 days ago: the first day of the charts.
+  const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - (CHART_DAYS - 1) * 86_400_000);
+  const [members, mentors, pendingBadges, unverified, suspended, openReports, upcomingSessions, held, openHackathons, juryHackathons, toPublish, riseProjects, signupRows, messageRows, latest] = await Promise.all([
     prisma.user.count({ where: { isAdmin: false } }),
-    prisma.user.count({ where: { isAdmin: false, createdAt: { gte: daysAgo(7) } } }),
     prisma.user.count({ where: { seniorVerifiedAt: { not: null } } }),
     prisma.mentorBadgeRequest.count({ where: { status: "PENDING" } }),
     prisma.user.count({ where: { emailVerifiedAt: null } }),
     prisma.user.count({ where: { suspendedAt: { not: null } } }),
-    prisma.message.count({ where: { kind: "TEXT", createdAt: { gte: daysAgo(7) } } }),
     prisma.report.count({ where: { status: "OPEN" } }),
-    prisma.mentoringBooking.count({ where: { status: "ACCEPTED", startsAt: { gte: new Date() } } }),
-    prisma.mentoringBooking.aggregate({ where: { status: "ACCEPTED", startsAt: { lt: new Date() } }, _sum: { minutes: true } }),
+    prisma.mentoringBooking.count({ where: { status: "ACCEPTED", startsAt: { gte: now } } }),
+    prisma.mentoringBooking.aggregate({ where: { status: "ACCEPTED", startsAt: { lt: now } }, _sum: { minutes: true } }),
     prisma.hackathon.count({ where: { status: "OPEN", publishedAt: { not: null } } }),
     prisma.hackathon.count({ where: { status: "JURY" } }),
-    prisma.hackathon.count({ where: { publishedAt: null } }),
+    // A refused hackathon is handled: it is no longer to publish.
+    prisma.hackathon.count({ where: { publishedAt: null, rejectedAt: null } }),
     prisma.riseProject.count(),
+    // Day by day: only the days with activity come back, dailyCounts fills the others with 0.
+    prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+      SELECT date_trunc('day', "createdAt") AS day, count(*) AS count FROM "User"
+      WHERE "isAdmin" = false AND "createdAt" >= ${since} GROUP BY 1`,
+    // Messages written by members: text, files and voice notes, not the lines KABAD adds itself.
+    prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+      SELECT date_trunc('day', "createdAt") AS day, count(*) AS count FROM "Message"
+      WHERE kind <> 'SYSTEM' AND "createdAt" >= ${since} GROUP BY 1`,
+    prisma.user.findMany({
+      where: { isAdmin: false },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, name: true, city: true, level: true, createdAt: true, emailVerifiedAt: true, seniorVerifiedAt: true, photoAt: true },
+    }),
   ]);
+  const signups = dailyCounts(signupRows, CHART_DAYS, now);
+  const messages = dailyCounts(messageRows, CHART_DAYS, now);
   return {
     members,
-    newMembers,
     mentors,
     pendingBadges,
     unverified,
     suspended,
-    messages7d,
     openReports,
     upcomingSessions,
     heldHours: Math.floor((held._sum.minutes ?? 0) / 60),
@@ -54,6 +73,20 @@ export async function dashboard(adminId: string, prisma: Db = db) {
     juryHackathons,
     toPublish,
     riseProjects,
+    signups,
+    messages,
+    signupsWeek: weekOverWeek(signups),
+    messagesWeek: weekOverWeek(messages),
+    latest: latest.map((u) => ({
+      id: u.id,
+      name: u.name,
+      city: u.city,
+      level: u.level,
+      createdAt: u.createdAt.toISOString(),
+      confirmed: u.emailVerifiedAt !== null,
+      verified: u.seniorVerifiedAt !== null,
+      photo: avatarUrl(u),
+    })),
   };
 }
 
@@ -67,7 +100,7 @@ export type ReportContext = {
   status: "OPEN" | "REVIEWED";
   resolution: string | null;
   reporter: { id: string; name: string };
-  targetType: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION" | "ROOM";
+  targetType: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION" | "ROOM" | "RISE_POST";
   targetId: string;
   target: { id: string; name: string; suspended: boolean } | null;
   /** How many reports this member has received in total: repeat offenders stand out. */
@@ -76,6 +109,10 @@ export type ReportContext = {
   excerpt: Array<{ author: string; body: string; reported?: boolean; hidden?: boolean }>;
   messageId: string | null;
   roomId: string | null;
+  /** The Rise-Up project of a reported post, to open it. */
+  riseProjectId: string | null;
+  /** The reported message or post is hidden now: the team may show it again. */
+  targetHidden: boolean;
 };
 
 export async function listReports(adminId: string, status: "OPEN" | "REVIEWED", prisma: Db = db): Promise<ReportContext[]> {
@@ -88,6 +125,8 @@ export async function listReports(adminId: string, status: "OPEN" | "REVIEWED", 
     let excerpt: ReportContext["excerpt"] = [];
     let messageId: string | null = null;
     let roomId: string | null = null;
+    let riseProjectId: string | null = null;
+    let targetHidden = false;
     if (r.targetType === "MESSAGE") {
       const m = await prisma.message.findUnique({ where: { id: r.targetId }, select: { id: true, conversationId: true, createdAt: true } });
       if (m) {
@@ -95,6 +134,7 @@ export async function listReports(adminId: string, status: "OPEN" | "REVIEWED", 
         // The reported message with the two messages before it, for context.
         const around = await prisma.message.findMany({ where: { conversationId: m.conversationId, createdAt: { lte: m.createdAt }, kind: "TEXT" }, orderBy: { createdAt: "desc" }, take: 3, include: { author: { select: { name: true } } } });
         excerpt = around.reverse().map((x) => ({ author: x.author?.name ?? "Compte supprimé", body: x.body, reported: x.id === m.id, hidden: x.hiddenAt !== null }));
+        targetHidden = excerpt.some((x) => x.reported && x.hidden);
       }
     } else if (r.targetType === "CONVERSATION") {
       const last = await prisma.message.findMany({ where: { conversationId: r.targetId, kind: "TEXT", createdAt: { lte: r.createdAt } }, orderBy: { createdAt: "desc" }, take: 6, include: { author: { select: { name: true } } } });
@@ -105,6 +145,14 @@ export async function listReports(adminId: string, status: "OPEN" | "REVIEWED", 
     } else if (r.targetType === "USER") {
       const u = await prisma.user.findUnique({ where: { id: r.targetId }, select: { name: true, headline: true, bio: true, profileLink: true } });
       if (u) excerpt = [{ author: u.name, body: [u.headline, u.bio, u.profileLink].filter(Boolean).join(" · ") || "(profil vide)" }];
+    } else if (r.targetType === "RISE_POST") {
+      // A post of a Rise-Up project, hidden at once when a lead of the project reported it.
+      const post = await prisma.risePost.findUnique({ where: { id: r.targetId }, include: { author: { select: { name: true } } } });
+      if (post) {
+        riseProjectId = post.projectId;
+        targetHidden = post.hiddenAt !== null;
+        excerpt = [{ author: post.author?.name ?? "Compte supprimé", body: post.body, reported: true, hidden: targetHidden }];
+      }
     } else if (r.targetType === "ROOM") {
       const room = await prisma.voiceRoom.findUnique({ where: { id: r.targetId }, include: { host: { select: { name: true } } } });
       if (room) {
@@ -127,6 +175,8 @@ export async function listReports(adminId: string, status: "OPEN" | "REVIEWED", 
       excerpt,
       messageId,
       roomId,
+      riseProjectId,
+      targetHidden,
     });
   }
   return out;
@@ -140,7 +190,8 @@ export async function resolveReport(adminId: string, reportId: string, decision:
   if (!r) throw notFound("Signalement introuvable.");
   if (r.status !== "OPEN") throw new DomainError("already_resolved", "Ce signalement est déjà traité.", 409);
   if ((decision === "warn" || decision === "suspend") && !r.targetUserId) throw new DomainError("no_member", "Ce signalement ne vise pas un membre précis.");
-  if (decision === "hide" && r.targetType !== "MESSAGE" && r.targetType !== "ROOM") throw new DomainError("not_hideable", "Seuls un message ou un salon peuvent être retirés.");
+  if (decision === "hide" && r.targetType !== "MESSAGE" && r.targetType !== "ROOM" && r.targetType !== "RISE_POST") throw new DomainError("not_hideable", "Seuls un message ou un salon peuvent être retirés.");
+  if (decision === "restore" && r.targetType !== "MESSAGE" && r.targetType !== "RISE_POST") throw new DomainError("not_restorable", "Seul un message peut être rétabli.");
   const resolution = [DECISION_LABEL[decision], note?.trim()].filter(Boolean).join(" : ");
 
   if (decision === "suspend") await suspendMember(adminId, r.targetUserId!, note?.trim() || r.reason, prisma);
@@ -154,6 +205,18 @@ export async function resolveReport(adminId: string, reportId: string, decision:
     }
     if (decision === "hide" && r.targetType === "ROOM") {
       await tx.voiceRoom.update({ where: { id: r.targetId }, data: { hiddenAt: new Date() } });
+    }
+    // A post hidden by the team; one already hidden by a lead stays so, now confirmed by the team.
+    if (decision === "hide" && r.targetType === "RISE_POST") {
+      await tx.risePost.updateMany({ where: { id: r.targetId, hiddenAt: null }, data: { hiddenAt: new Date() } });
+    }
+    // Only the KABAD team shows again a message hidden by a lead (P5).
+    if (decision === "restore" && r.targetType === "RISE_POST") {
+      await tx.risePost.update({ where: { id: r.targetId }, data: { hiddenAt: null, hiddenById: null, hiddenReason: null } });
+    }
+    if (decision === "restore" && r.targetType === "MESSAGE") {
+      const m = await tx.message.update({ where: { id: r.targetId }, data: { hiddenAt: null, hiddenById: null }, select: { conversationId: true, conversation: { select: { members: { select: { userId: true } } } } } });
+      await notify(tx, { t: "conversation", conversationId: m.conversationId, recipients: m.conversation.members.map((x) => x.userId) });
     }
     if (decision === "warn") {
       await pushNotifications(tx, [{ userId: r.targetUserId!, actor: "KABAD", key: "warning", params: { reason: note?.trim() || r.reason }, href: "/compte", icon: "info", tone: "accent" }]);
@@ -239,8 +302,11 @@ export async function revokeBadge(adminId: string, userId: string, reason: strin
     // The sessions to come are cancelled, and each dev is told: they would otherwise wait for a mentor who no longer is one.
     const sessions = await tx.mentoringBooking.findMany({ where: { mentorId: userId, status: { in: ["PENDING", "ACCEPTED"] }, startsAt: { gt: now } }, select: { id: true, menteeId: true, startsAt: true, mentee: { select: { timeZone: true } } } });
     await tx.mentoringBooking.updateMany({ where: { id: { in: sessions.map((b) => b.id) } }, data: { status: "CANCELLED", answeredAt: now } });
-    // An instructor is a badged mentor: the missions of hackathons not finished yet stop with the badge.
-    await tx.instructorMission.updateMany({ where: { mentorId: userId, status: { in: ["PROPOSED", "ACCEPTED"] }, hackathon: { endsAt: { gt: now } } }, data: { status: "DECLINED", answeredAt: now } });
+    // An instructor is a badged mentor: the missions of hackathons not finished yet stop with the badge,
+    // and the mentor leaves the instructors' groups of those hackathons.
+    const missions = await tx.instructorMission.findMany({ where: { mentorId: userId, status: { in: ["PROPOSED", "ACCEPTED"] }, hackathon: { endsAt: { gt: now } } }, select: { id: true, hackathon: { select: { instructorsConversationId: true } } } });
+    await tx.instructorMission.updateMany({ where: { id: { in: missions.map((x) => x.id) } }, data: { status: "DECLINED", answeredAt: now } });
+    for (const x of missions) if (x.hackathon.instructorsConversationId) await leaveCommunityGroup(tx, x.hackathon.instructorsConversationId, userId);
     await pushNotifications(tx, [
       { userId, actor: "KABAD", key: "badgeRevoked", params: { reason }, href: "/mentorat/badge", icon: "info", tone: "neutral" },
       ...sessions.map((b) => ({ userId: b.menteeId, actor: mentor.name, key: "bookingCancelled" as const, params: { at: b.startsAt.toISOString(), tz: b.mentee.timeZone }, href: `/mentorat/seances/${b.id}`, icon: "clock" as const, tone: "neutral" as const })),

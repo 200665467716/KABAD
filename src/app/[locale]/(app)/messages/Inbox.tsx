@@ -11,7 +11,7 @@ import { Link } from "@/i18n/navigation";
 import { api } from "@/lib/api";
 import { initials } from "@/lib/format";
 import type { ConversationSummary, ReceivedInvitation, SentInvitation } from "@/lib/messaging-types";
-import { useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
+import { useOfflineRefresh, useRealtime, useRealtimeReconnect } from "@/lib/realtime-client";
 import { localizeGroupName, localizeSystemText } from "@/lib/system-text";
 import { useChatTime } from "./useChatTime";
 
@@ -64,7 +64,8 @@ export function Inbox({
       const updated: ConversationSummary = {
         ...target,
         lastMessageAt: message.createdAt,
-        unread: message.authorId !== me && !message.system ? target.unread + 1 : target.unread,
+        // My own message means I read the conversation up to it (the server moves my reading mark too).
+        unread: message.authorId === me ? 0 : message.system ? target.unread : target.unread + 1,
         last: { body: message.body, authorId: message.authorId, authorName: message.authorName, system: message.system, attachment: message.attachment?.kind ?? null },
       };
       return [updated, ...list.filter((c) => c.id !== conversationId)];
@@ -75,17 +76,19 @@ export function Inbox({
   useRealtime("invitation:new", () => refresh());
   useRealtime("invitation:answered", () => refresh());
   useRealtimeReconnect(refresh);
-  // En revenant d'une conversation, le routeur remonte la boîte avec la liste qu'il avait en cache :
-  // la lecture faite entre-temps n'y est pas (l'événement est arrivé boîte démontée). On relit la liste au montage.
+  // Without the realtime server, the list is read again every 5 seconds.
+  useOfflineRefresh(refresh, 5_000);
+  // The page may come from the browser's cache (back from a conversation, a group just created):
+  // it reads the list again when it opens and when the tab comes back to the front.
   useEffect(() => {
-    let alive = true;
-    api<{ conversations: ConversationSummary[] }>("/api/conversations")
-      .then((c) => alive && setConversations(c.conversations))
-      .catch(() => {});
+    const first = setTimeout(refresh, 0);
+    const onVisible = () => document.visibilityState === "visible" && refresh();
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
-      alive = false;
+      clearTimeout(first);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [refresh]);
 
   // The search looks at the name of the person or of the group, without accents or capitals.
   const plain = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();

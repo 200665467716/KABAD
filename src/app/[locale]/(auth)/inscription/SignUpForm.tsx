@@ -60,7 +60,7 @@ export function SignUpForm() {
   return (
     <form onSubmit={submit} noValidate>
       <AuthFrame
-        back="/bienvenue"
+        back="/"
         heading={t("heading")}
         step={1}
         title={t("title")}

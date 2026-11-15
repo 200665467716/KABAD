@@ -14,6 +14,11 @@
     "seeAll": "See all",
     "step": "Step {step} of {total}",
     "stepShort": "{step} / {total}",
+    "calendar": {
+      "google": "Add to Google Calendar",
+      "other": "Other calendar:",
+      "ics": ".ics file"
+    },
     "logoHome": "KABAD, home",
     "choices": {
       "BJ": "Benin",
@@ -48,8 +53,13 @@
     "signOut": "Sign out",
     "unreadMessages": "{count, plural, one {# unread message} other {# unread messages}}",
     "unreadNotifications": "{count, plural, one {# unread} other {# unread}}",
-    "senior": "Senior",
-    "junior": "Junior"
+    "levels": {
+      "ASPIRANT": "Aspiring",
+      "DEBUTANT": "Beginner",
+      "INTERMEDIAIRE": "Intermediate",
+      "SENIOR": "Senior"
+    },
+    "mentor": "Mentor"
   },
   "language": {
     "label": "Language",

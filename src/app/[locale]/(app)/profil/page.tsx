@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
 import { ButtonLink } from "@/components/ui/Button";
-import { Avatar, Badge, Card, Tag } from "@/components/ui/Display";
+import { Avatar, Badge, Card, MentorBadge, Tag } from "@/components/ui/Display";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Link } from "@/i18n/navigation";
 import { avatarUrl } from "@/lib/avatar";
@@ -48,14 +48,23 @@ async function MyProfile() {
     <Page narrow>
       <Card className="gap-3.5">
         <div className="flex items-center gap-3.5">
-          <Avatar initials={initials(user.name)} src={avatarUrl(user)} size="lg" tone="accent" />
+          {/* P13: the photo is changed from here, in one tap. */}
+          <Link href="/profil/modifier#photo" aria-label={t("changePhoto")} className="relative shrink-0 rounded-full">
+            <Avatar initials={initials(user.name)} src={avatarUrl(user)} size="lg" tone="brand" verified={mentor} />
+            {!mentor && (
+              <span aria-hidden="true" className="absolute -right-0.5 -bottom-0.5 grid size-6 place-items-center rounded-full border-2 border-raised bg-ink text-raised">
+                <Icon name="image" size={16} className="size-3.5" />
+              </span>
+            )}
+          </Link>
           <div className="grid min-w-0 gap-0.5">
             <p className="font-display text-lg font-extrabold">{user.name}</p>
             <p className="truncate text-sm text-muted">{[user.headline, user.city].filter(Boolean).join(" · ")}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          {mentor ? <Badge tone="success" icon="check">{t("mentor", { gender: user.gender ?? "other" })}</Badge> : <Badge tone="brand">{tl(user.level)}</Badge>}
+          <Badge tone="brand">{tl(user.level)}</Badge>
+          {mentor && <MentorBadge>{t("mentorVerified")}</MentorBadge>}
           {user.stack.map((s) => (
             <Tag key={s}>{s}</Tag>
           ))}

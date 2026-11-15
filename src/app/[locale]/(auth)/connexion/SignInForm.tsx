@@ -45,7 +45,7 @@ export function SignInForm({ demo }: { demo: boolean }) {
   return (
     <form onSubmit={submit} noValidate>
       <AuthFrame
-        back="/bienvenue"
+        back="/"
         heading={t("heading")}
         title={t("title")}
         lead={t("lead")}

@@ -66,13 +66,21 @@ export const answerInvitationSchema = z.object({ accept: z.boolean() });
 export const sendMessageSchema = z.object({
   body: trimmed(1, MESSAGE_MAX_LENGTH, "Le message est vide.", `Un message fait ${MESSAGE_MAX_LENGTH} caractères au plus.`),
   clientId: z.string().min(8).max(64).optional(),
+  /** The message this one answers. */
+  replyToId: id.optional(),
 });
+
+export const pinMessageSchema = z.object({ pinned: z.boolean() });
+
+export const GROUP_DESCRIPTION_MAX = 300;
+const groupDescription = z.string().trim().max(GROUP_DESCRIPTION_MAX, `La description fait ${GROUP_DESCRIPTION_MAX} caractères au plus.`);
 
 export const GROUP_THEMES = ["Fintech", "Hackathon", "Entraide", "Mobile", "Data et IA"] as const;
 
 export const createGroupSchema = z.object({
   name: trimmed(1, GROUP_NAME_MAX, "Donne un nom au groupe.", `Le nom du groupe fait ${GROUP_NAME_MAX} caractères au plus.`),
   theme: z.enum(GROUP_THEMES).optional(),
+  description: groupDescription.optional(),
   memberIds: z.array(id).min(1, "Choisis au moins un participant.").max(GROUP_MAX_MEMBERS - 1, `Un groupe compte ${GROUP_MAX_MEMBERS} membres au plus.`),
 });
 
@@ -80,6 +88,7 @@ export const createGroupSchema = z.object({
 export const updateGroupSchema = z.object({
   name: trimmed(1, GROUP_NAME_MAX, "Donne un nom au groupe.", `Le nom du groupe fait ${GROUP_NAME_MAX} caractères au plus.`),
   theme: z.enum(GROUP_THEMES).nullable().optional(),
+  description: groupDescription.nullable().optional(),
 });
 
 export const addMembersSchema = z.object({
@@ -89,7 +98,7 @@ export const addMembersSchema = z.object({
 export const REPORT_REASONS = ["Spam ou arnaque", "Harcèlement ou propos haineux", "Faux profil ou faux badge mentor", "Plagiat dans un hackathon", "Autre"] as const;
 
 export const reportSchema = z.object({
-  targetType: z.enum(["USER", "MESSAGE", "CONVERSATION", "INVITATION", "ROOM"]),
+  targetType: z.enum(["USER", "MESSAGE", "CONVERSATION", "INVITATION", "ROOM", "RISE_POST"]),
   targetId: id,
   reason: z.enum(REPORT_REASONS, "Choisis un motif."),
   details: z.string().max(1000).optional(),
@@ -99,6 +108,9 @@ export const reportSchema = z.object({
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 
 /* Profile */
+
+/** The presentation of a profile, read on the public profile and with each invitation (P8, P17). */
+export const BIO_MAX = 1000;
 
 export const STACK_CHOICES = ["TypeScript", "React", "Node.js", "Python", "PostgreSQL", "Flutter", "PHP", "Java"] as const;
 export const COUNTRIES = ["Bénin", "Burkina Faso", "Cameroun", "Côte d’Ivoire", "Ghana", "Mali", "Niger", "Nigeria", "RD Congo", "Sénégal", "Togo", "Autre pays"] as const;
@@ -124,7 +136,7 @@ export const profileSchema = z.object({
   goals: z.array(z.enum(GOALS)).max(GOALS.length).optional(),
   profileLink: profileUrl.optional(),
   headline: z.string().trim().max(80).optional(),
-  bio: z.string().trim().max(600).optional(),
+  bio: z.string().trim().max(BIO_MAX, `La présentation fait ${BIO_MAX} caractères au plus.`).optional(),
   years: z.number().int().min(0).max(50).optional(),
   timeZone: z.string().max(40).optional(),
   // null: the member prefers not to say; the texts stay neutral.
@@ -252,8 +264,9 @@ export const testQuestionSchema = z.object({
   answer: trimmed(1, 60, "Indique la bonne réponse.", "60 caractères au plus."),
 });
 
-/** The choices offered by T3: the server accepts nothing else. */
-export const TEST_SLOTS = [5, 8, 10, 20] as const;
+/** Testers wanted: any number from 1 to 50, typed or picked among suggestions (P3). */
+export const TEST_SLOTS_MAX = 50;
+/** The durations offered by T3: the server accepts nothing else. */
 export const TEST_MINUTES = [10, 15, 30] as const;
 
 // Fields in the order of screen T3: the first error reported is the highest one on the screen.
@@ -261,7 +274,7 @@ export const testAppSchema = z.object({
   name: trimmed(2, 40, "Donne le nom de l’application.", "40 caractères au plus."),
   url: z.url({ protocol: /^https$/, message: "Indique le lien https de l’application." }).max(300),
   platforms: z.array(z.enum(["WEB", "ANDROID", "IOS"])).min(1, "Choisis au moins une plateforme.").max(3),
-  slots: z.number().refine((n) => (TEST_SLOTS as readonly number[]).includes(n), "Choisis 5, 8, 10 ou 20 testeurs."),
+  slots: z.number().int("Indique un nombre de testeurs entre 1 et 50.").min(1, "Indique un nombre de testeurs entre 1 et 50.").max(TEST_SLOTS_MAX, "Indique un nombre de testeurs entre 1 et 50."),
   minutes: z.number().refine((n) => (TEST_MINUTES as readonly number[]).includes(n), "Choisis une durée de 10, 15 ou 30 minutes."),
   steps: z.array(trimmed(5, 200, "Chaque étape fait 5 caractères au moins.", "200 caractères au plus.")).min(1, "Ajoute au moins une étape.").max(5, "5 étapes au plus."),
   pitch: trimmed(20, 500, "Présente l’application en une ou deux phrases.", "500 caractères au plus."),
@@ -295,7 +308,7 @@ export const deleteAccountSchema = z.object({ password: z.string().max(200).opti
 /* Team tools */
 
 export const adminReportSchema = z.object({
-  decision: z.enum(["dismiss", "hide", "warn", "suspend"]),
+  decision: z.enum(["dismiss", "hide", "restore", "warn", "suspend"]),
   note: z.string().trim().max(250).optional(),
 });
 
@@ -339,6 +352,15 @@ export const riseRoomSchema = z.object({
   title: z.string().trim().max(100, "100 caractères au plus.").optional(),
   meetingUrl: meetLink,
 });
+
+/** The KABAD team refuses a proposed hackathon, with a reason for its organizer. */
+export const rejectHackathonSchema = z.object({ reason: z.string().trim().min(10, "Explique à l’organisateur pourquoi ce hackathon n’est pas publié.").max(500, "500 caractères au plus.") });
+
+/** The initiator names a co-lead, or takes the role back. */
+export const coLeadSchema = z.object({ coLead: z.boolean() });
+
+/** A lead approves or refuses a room proposed by a member. */
+export const answerRoomSchema = z.object({ approve: z.boolean() });
 
 export const joinSchema = z.object({ skill: z.string().trim().max(30).optional() });
 

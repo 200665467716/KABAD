@@ -85,10 +85,12 @@ export function InvitationsView({ received: initialReceived, sent: initialSent }
                 return (
                   <article key={i.id} className="grid gap-3 rounded-lg border-2 border-line-strong bg-raised p-3.5">
                     <Link href={`/messages/invitations/${i.id}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 text-ink no-underline">
-                      <Avatar initials={initials(i.from.name)} src={i.from.photo} />
+                      <Avatar initials={initials(i.from.name)} src={i.from.photo} verified={i.from.role === "SENIOR"} />
                       <span className="grid min-w-0">
                         <b className="truncate text-[15px]">{i.from.name}</b>
-                        <small className="truncate text-[13px] text-muted">{[i.from.city, i.from.stack.slice(0, 2).join(", ")].filter(Boolean).join(" · ")}</small>
+                        <small className="truncate text-[13px] text-muted">{[i.from.headline, i.from.city, i.from.stack.slice(0, 2).join(", ")].filter(Boolean).join(" · ")}</small>
+                        {/* P8: the presentation, as the sender wrote it on their profile. */}
+                        {i.from.bio && <small className="mt-0.5 line-clamp-2 text-[13px] text-ink">{i.from.bio}</small>}
                       </span>
                       <Icon name="chevron" size={18} className="text-subtle" />
                     </Link>

@@ -173,6 +173,8 @@ model Conversation {
   lastMessageAt DateTime         @default(now())
   /// Set each time the group's photo changes: the address of the picture carries it, so browsers refresh it.
   photoAt       DateTime?
+  /// What the group is about, shown in its info sheet.
+  description   String?          @db.VarChar(300)
 
   members  ConversationMember[]
   messages Message[]
@@ -180,6 +182,8 @@ model Conversation {
   project  RiseProject?
   team     Team?
   photo    GroupPhoto?
+  /// The group of a hackathon's paid instructors, run by its organizer.
+  instructorsOf Hackathon?       @relation("HackathonInstructors")
 }
 
 /// The picture of a group. Kept in its own table so that listing conversations never loads its bytes.
@@ -242,10 +246,19 @@ model Message {
   createdAt      DateTime     @default(now())
   /// Hidden by the moderation team: the members see that a message was removed, not its content.
   hiddenAt       DateTime?
+  /// The group's lead who removed it, or null when the KABAD team did. The team can show it again.
+  hiddenById     String?
   attachment     Attachment?
+  /// The message this one answers, quoted above it.
+  replyToId      String?
+  replyTo        Message?     @relation("Replies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        Message[]    @relation("Replies")
+  /// Pinned by the group's owner: shown above the messages.
+  pinnedAt       DateTime?
 
   @@unique([authorId, clientId])
   @@index([conversationId, createdAt])
+  @@index([conversationId, pinnedAt])
 }
 
 /// A file sent in a conversation (PDF, image, voice note). Small files only (2 MB), kept in PostgreSQL
@@ -278,6 +291,8 @@ enum ReportTarget {
   MESSAGE
   CONVERSATION
   INVITATION
+  /// A post or a reply in a Rise-Up project's discussion.
+  RISE_POST
 }
 
 enum ReportStatus {
@@ -462,12 +477,18 @@ model Hackathon {
   instructorCount  Int             @default(0)
   /// Set by a moderator. Until then only its author and the team see it.
   publishedAt      DateTime?
+  /// The KABAD team refused to publish it (P7): the organizer reads why on the hackathon's page.
+  rejectedAt       DateTime?
+  rejectionReason  String?         @db.VarChar(500)
   createdAt        DateTime        @default(now())
 
   jurors        HackathonJuror[]
   teams         Team[]
   submissions   Submission[]
   missions      InstructorMission[]
+  /// The group where the organizer and the instructors who accepted a mission talk (opened at the first acceptance).
+  instructorsConversationId String?       @unique
+  instructorsConversation   Conversation? @relation("HackathonInstructors", fields: [instructorsConversationId], references: [id], onDelete: SetNull)
 
   @@index([status, startsAt])
 }
@@ -721,6 +742,12 @@ model RiseProject {
   @@index([domain, createdAt])
 }
 
+/// The initiator leads the project; the co-leads they name lead it with them (events, rooms, moderation).
+enum RiseRole {
+  MEMBER
+  CO_LEAD
+}
+
 model RiseMember {
   projectId String
   userId    String
@@ -728,6 +755,7 @@ model RiseMember {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Mobile, Data, Backend…
   skill     String      @default("") @db.VarChar(30)
+  role      RiseRole    @default(MEMBER)
   joinedAt  DateTime    @default(now())
 
   @@id([projectId, userId])
@@ -747,6 +775,10 @@ model RisePost {
   body      String      @db.VarChar(2000)
   createdAt DateTime    @default(now())
   hiddenAt  DateTime?
+  /// The lead who hid it when reporting it, or null when the KABAD team did; only the team shows it again.
+  hiddenById   String?
+  /// Why a lead hid it: required, read by the KABAD team.
+  hiddenReason String?  @db.VarChar(300)
 
   @@index([projectId, parentId, createdAt])
 }
@@ -770,6 +802,9 @@ model RiseEvent {
   remindedAt  DateTime?
   /// Set when the author closes a live room before its planned end.
   endedAt     DateTime?
+  /// A room proposed by a member who does not lead the project waits for a lead: null until approved.
+  /// Events and the rooms of the leads are approved when created.
+  approvedAt  DateTime?
   createdAt   DateTime    @default(now())
 
   @@index([projectId, startsAt])

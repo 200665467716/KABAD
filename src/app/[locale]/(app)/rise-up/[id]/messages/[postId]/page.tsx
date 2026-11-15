@@ -10,13 +10,15 @@ import { orNotFound } from "@/server/messaging";
 import { pageUser } from "@/server/page";
 import { getThread } from "@/server/rise";
 import { Composer } from "../../ProjectView";
+import { ReportPostButton } from "../../ReportPostButton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("rise.thread");
   return { title: t("metaTitle") };
 }
 
-function Post({ post, main, format, now }: { post: RisePostView; main?: boolean; format: Awaited<ReturnType<typeof getFormatter>>; now: Date }) {
+/** `report`: the reader may report it (not their own post); `lead` hides it at once. */
+function Post({ post, main, format, now, report }: { post: RisePostView; main?: boolean; format: Awaited<ReturnType<typeof getFormatter>>; now: Date; report?: { lead: boolean } }) {
   return (
     <article className={main ? "grid gap-2 rounded-lg border-2 border-line-strong bg-raised p-4 shadow-pop" : "grid gap-1.5 border-l-2 border-line-strong pl-3.5"}>
       <div className="flex items-center gap-2.5">
@@ -25,6 +27,7 @@ function Post({ post, main, format, now }: { post: RisePostView; main?: boolean;
         <span className="text-[13px] text-muted">{format.relativeTime(new Date(post.createdAt), now)}</span>
       </div>
       <p className="text-[15px] leading-[22px] whitespace-pre-line">{post.body}</p>
+      {report && <ReportPostButton postId={post.id} lead={report.lead} />}
     </article>
   );
 }
@@ -41,10 +44,10 @@ async function ThreadData({ params }: { params: Promise<{ id: string; postId: st
     <>
       <TopBar back={`/rise-up/${id}`} backLabel={t("thread.back")} title={t("thread.header")} />
       <Page narrow>
-        <Post post={thread.post} main format={format} now={now} />
+        <Post post={thread.post} main format={format} now={now} report={thread.post.author?.id !== user.id ? { lead: thread.lead } : undefined} />
         <div className="grid gap-4">
           {thread.replies.map((r) => (
-            <Post key={r.id} post={r} format={format} now={now} />
+            <Post key={r.id} post={r} format={format} now={now} report={r.author?.id !== user.id ? { lead: thread.lead } : undefined} />
           ))}
           {thread.replies.length === 0 && <p className="text-sm text-muted">{t("thread.noReplies")}</p>}
         </div>

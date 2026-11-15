@@ -7,7 +7,7 @@ import { ReportSheet } from "@/components/features/ReportSheet";
 import { ShareButton } from "@/components/features/ShareButton";
 import { ActionBar, Page, TopBar } from "@/components/shell/TopBar";
 import { Button, ButtonLink, IconButton } from "@/components/ui/Button";
-import { Alert, Avatar, Badge, Card, Overline, Stat, TagList } from "@/components/ui/Display";
+import { Alert, Avatar, Badge, Card, MentorBadge, Overline, Stat, TagList } from "@/components/ui/Display";
 import { useRouter } from "@/i18n/navigation";
 import { api, ApiError } from "@/lib/api";
 import type { Profile } from "@/lib/domain-types";
@@ -60,20 +60,16 @@ export function ProfileView({ profile: m, isMe, badge }: { profile: Profile; isM
       <Page narrow>
         <Card className="gap-3.5">
           <div className="flex items-center gap-3.5">
-            <Avatar initials={initials(m.name)} src={m.photo} size="xl" tone={m.verified ? "brand" : "neutral"} />
+            <Avatar initials={initials(m.name)} src={m.photo} size="xl" tone={m.verified ? "brand" : "neutral"} verified={m.verified} />
             <div className="grid min-w-0 gap-1">
               <h1 className="font-display text-xl font-extrabold">{m.name}</h1>
               <p className="text-sm text-muted">{[badge?.jobTitle || m.headline, place, m.diaspora ? t("diaspora") : ""].filter(Boolean).join(" · ")}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {m.verified ? (
-              <Badge tone="success" icon="check">
-                {t("mentor", { gender: badge?.gender ?? "other" })}
-              </Badge>
-            ) : (
-              <Badge tone="brand">{tl(m.level)}</Badge>
-            )}
+            {/* P21: the level says how experienced the member is; the badge says KABAD verified them as a mentor. */}
+            <Badge tone="brand">{tl(m.level)}</Badge>
+            {m.verified && <MentorBadge>{t("mentorVerified")}</MentorBadge>}
             {m.years > 0 && <Badge>{t("years", { count: m.years })}</Badge>}
           </div>
           {m.bio && <p className="text-[15px] leading-[22px]">{m.bio}</p>}

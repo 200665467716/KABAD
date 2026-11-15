@@ -67,7 +67,12 @@
       "declining": "Refus…",
       "error": "La réponse n’est pas partie. Réessaie.",
       "declineTitle": "Refuser l’invitation ?",
-      "declineText": "Aucune notification n’est envoyée à {name}. Tu pourras toujours l’inviter plus tard."
+      "declineText": "Aucune notification n’est envoyée à {name}. Tu pourras toujours l’inviter plus tard.",
+      "mentorVerified": "Mentor vérifié par KABAD",
+      "presentation": "Sa présentation",
+      "acceptedAlready": "Tu as accepté l’invitation de {name} : votre conversation est ouverte.",
+      "declinedAlready": "Tu as refusé l’invitation de {name}.",
+      "write": "Écrire"
     },
     "conversation": {
       "metaTitle": "Conversation",
@@ -96,7 +101,6 @@
       "tooLong": "Un message fait {max} caractères au plus.",
       "voiceSending": "Message vocal…",
       "uploadFailed": "Le fichier n’a pas été envoyé. Réessaie.",
-      "fileTooBig": "Le fichier fait 2 Mo au plus.",
       "groupInfo": "Infos du groupe",
       "pinned": "Épinglé · consignes",
       "pinnedLabel": "Consignes épinglées",
@@ -104,7 +108,26 @@
       "appAuthor": "{name} · auteur de l’app",
       "attachCapture": "Joindre une capture",
       "placeholderTest": "Écrire un retour…",
-      "taskError": "La tâche n’a pas été enregistrée. Réessaie."
+      "taskError": "La tâche n’a pas été enregistrée. Réessaie.",
+      "reply": "Répondre",
+      "pin": "Épingler",
+      "unpin": "Désépingler",
+      "pinFailed": "L’épingle n’a pas été enregistrée. Réessaie.",
+      "remove": "Retirer",
+      "removeTitle": "Retirer ce message ?",
+      "removeText": "Les membres verront « Message retiré par la modération. ». Seule l’équipe KABAD peut le faire réapparaître.",
+      "removeConfirm": "Retirer le message",
+      "removeFailed": "Le message n’a pas pu être retiré. Réessaie.",
+      "replyingTo": "Réponse à {name}",
+      "cancelReply": "Annuler la réponse",
+      "mentionList": "Membres à mentionner",
+      "pinnedMessages": "Messages épinglés",
+      "pinnedCount": "{count, plural, one {# message épinglé} other {# messages épinglés}}",
+      "pinnedAll": "Tout voir",
+      "pinnedLess": "Réduire",
+      "fileTooBig": "Ce fichier fait plus de 2 Mo. La messagerie accepte les PDF, les images et les notes vocales de 2 Mo au plus.",
+      "videoRefused": "Les vidéos ne passent pas par la messagerie : trop lourdes pour la 4G. Mets-la sur YouTube ou Google Drive et partage le lien ici.",
+      "fileType": "La messagerie accepte les PDF, les images (PNG, JPEG, WebP) et les notes vocales."
     },
     "add": {
       "title": "Ajouter des participants",
@@ -146,7 +169,11 @@
       "removeTitle": "Retirer {name} du groupe ?",
       "removeText": "{name} ne verra plus les messages du groupe. Tu pourras l’ajouter à nouveau.",
       "openTeam": "Voir mon équipe",
-      "linkedTeam": "Ce groupe est la discussion de ton équipe de hackathon : on y entre en rejoignant l’équipe et on en sort en la quittant."
+      "linkedTeam": "Ce groupe est la discussion de ton équipe de hackathon : on y entre en rejoignant l’équipe et on en sort en la quittant.",
+      "linkedTestOwner": "Ce groupe suit l’annonce de test : on y entre en rejoignant le test. Tu peux le renommer, le décrire, changer sa photo et retirer un testeur.",
+      "removeTesterText": "{name} quitte le groupe et le test. Sa place se libère pour un autre testeur.",
+      "openHackathon": "Voir le hackathon",
+      "linkedInstructors": "Ce groupe réunit l’organisateur et les instructeurs du hackathon : on y entre en acceptant une mission."
     },
     "group": {
       "metaTitle": "Nouveau groupe",
@@ -174,13 +201,22 @@
       "addLabel": "Ajouter {name}",
       "submit": "Créer le groupe",
       "submitting": "Création…",
-      "error": "Le groupe n’a pas été créé. Réessaie."
+      "error": "Le groupe n’a pas été créé. Réessaie.",
+      "description": "Description",
+      "descriptionHint": "Facultatif : de quoi parle le groupe, ses règles.",
+      "photoAdd": "Ajouter une photo du groupe",
+      "photoChange": "Changer la photo du groupe",
+      "photoTooBig": "Cette image reste trop lourde. Choisis-en une autre."
     },
     "bubble": {
       "sending": "Envoi…",
       "failed": "Non envoyé",
       "report": "Signaler ce message",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "pinned": "Épinglé",
+      "voice": "Message vocal",
+      "file": "Fichier",
+      "member": "Membre"
     },
     "report": {
       "title": "Signaler {subject}",
@@ -190,6 +226,10 @@
       "sending": "Envoi…",
       "done": "L’équipe KABAD l’examine.",
       "doneBlocked": "Cette personne ne peut plus t’écrire ni t’inviter.",
+      "doneHidden": "Le message est masqué du projet. L’équipe KABAD lit ton justificatif ; elle seule peut le faire réapparaître.",
+      "leadNotice": "Tu es responsable de ce projet : ton signalement masque ce message tout de suite. Explique pourquoi, l’équipe KABAD le lira.",
+      "reasonLabel": "Justificatif (obligatoire)",
+      "reasonRequired": "Explique en une phrase pourquoi tu masques ce message.",
       "question": "Quel est le problème ?",
       "reasons": {
         "r0": "Spam ou arnaque",

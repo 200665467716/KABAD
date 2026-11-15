@@ -60,24 +60,22 @@ Ouvrez trois terminaux :
 
 ### 6. Se connecter
 
-La page d’accueil publique (`/`) présente KABAD ; « Rejoindre la communauté » mène à `/bienvenue`, où l’on crée un compte ou se connecte.
+La page d’accueil publique (`/`) présente KABAD ; ses boutons mènent directement à l’inscription et à la connexion.
 
-Mot de passe **`kabad-demo-2026`** pour tous les comptes. Les noms sont des exemples, comme dans les maquettes.
+Les comptes de départ sont ceux de l’équipe, sur de vraies adresses : leurs mots de passe ne sont **pas** dans le dépôt. Chacun se met dans `.env` (`SEED_PASSWORD_KOFFI`, `SEED_PASSWORD_AMINATA`, `SEED_PASSWORD_KWAME`, `SEED_PASSWORD_AICHA`, `SEED_PASSWORD_NADIA`, `SEED_PASSWORD_SADIO`, `SEED_PASSWORD_CHIDI`, `SEED_PASSWORD_EQUIPE`) avant `npm run db:seed`. En local, un mot de passe absent vaut `kabad-demo-2026`.
 
 | Compte | E-mail | Pour tester |
 | --- | --- | --- |
-| Kossi Mensah, intermédiaire | `kossi.mensah@exemple.tg` | Conversations, invitations, notifications, app « Kalo » à faire tester, testeur de « Marché Vert » |
-| Awa Diop, mentor | `awa.diop@exemple.sn` | Créneaux de mentorat et demandes de séance |
-| Ibrahim Keïta, mentor | `ibrahim.keita@exemple.ml` | Mentor cloud, organisateur du hackathon « Agritech Sahel » |
-| Aïcha Kouassi, mentor | `aicha.kouassi@exemple.ci` | Mentor mobile et UX |
-| Moussa Traoré, senior | `moussa.traore@exemple.ci` | Membre du projet Rise-Up « Dossier médical » |
-| Nadia Bello, senior | `nadia.bello@exemple.ca` | Porteuse du projet Rise-Up « Dossier médical », hackathon « Santé connectée » |
-| Edem Amouzou, senior | `edem.amouzou@exemple.tg` | App « Marché Vert » et ses rapports de test, projet Rise-Up « Prix des récoltes » |
-| Yao Agbeko, intermédiaire | `yao.agbeko@exemple.tg` | Porteur du projet Rise-Up « Forages au Sahel » |
-| Fatou Sow, intermédiaire | `fatou.sow@exemple.sn` | Testeuse, membre de projets Rise-Up |
-| Chidi Okafor, intermédiaire | `chidi.okafor@exemple.ng` | App « TontineApp » à faire tester |
-| FinLab Cotonou, organisation | `contact@finlab.exemple.bj` | Organisateur du hackathon « Fintech pour l’inclusion » |
-| **Équipe KABAD** | `equipe@kabad.app` | **Tableau de bord** `/admin` : badges mentor, hackathons à publier, signalements, membres, journal |
+| Koffi Mensah, intermédiaire (Lomé) | `success2025lord@gmail.com` | Conversations, invitations reçues, notifications, séances avec Aminata, équipe Baobab, app « Kalo » à faire tester, projet Rise-Up « Délestages » (avec Kwame co-responsable) |
+| Aminata Traoré, mentor (Bamako) | `lord2025success@gmail.com` | Créneaux et demande de séance de Sadio, mission d’instructeur à accepter, jurée |
+| Kwame Asante, mentor (Accra) | `emmerson.copychief.dev@gmail.com` | A proposé « Fintech pour l’inclusion » et anime le groupe de ses instructeurs, juré (notation du « Raccourcisseur ») |
+| Aïcha Diallo, mentor (Ouagadougou) | `worldwide.eliteagency229@gmail.com` | Instructrice du hackathon fintech, app « Marché Vert » et ses rapports, salon proposé dans « Carnet de santé » |
+| Nadia Kouassi, senior (Abidjan) | `worldwide.eliteagencyy@gmail.com` | Badge mentor à valider, responsable du projet « Carnet de santé » (salon à valider), hackathon « Santé connectée » |
+| Sadio Diop, intermédiaire (Dakar) | `asukadmt@gmail.com` | Responsable du projet « Forages en panne » (salon en direct), hackathon « Eau potable pour tous » à relire |
+| Chidi Okafor, intermédiaire (Lagos) | `emmersondmt.entrepreneur@gmail.com` | App « TontineApp », chef de l’équipe Kora, projet « Prix des marchés » |
+| **Équipe KABAD** | `kabadteam@gmail.com` | **Tableau de bord** `/admin` : badges mentor, hackathons à publier ou refuser, signalements, membres, journal |
+
+Le seed marque ses notifications comme déjà envoyées : le worker n’écrit pas aux vraies boîtes pour les événements de la démo.
 
 Ouvrez deux navigateurs (ou une fenêtre privée) avec deux comptes pour voir les messages en direct.
 
@@ -86,7 +84,7 @@ Ouvrez deux navigateurs (ou une fenêtre privée) avec deux comptes pour voir le
 ### Problèmes courants
 
 - **`P1000: Authentication failed`** : l’utilisateur ou le mot de passe de `DATABASE_URL` ne correspond pas à PostgreSQL. Refaites l’étape 2, ou adaptez `DATABASE_URL`.
-- **`Seed refusé`** : les données de démonstration ne s’installent que sur une base locale (`127.0.0.1` ou `localhost`).
+- **`Seed refusé`** : les données de départ ne s’installent que sur une base locale (`127.0.0.1` ou `localhost`), ou sur le serveur avec `SEED_FORCE=1` et tous les `SEED_PASSWORD_…` renseignés. Le seed vide la base avant de la remplir.
 - **Pas de messages en direct** : le terminal 1 (`npm run realtime`) doit tourner.
 
 ## Ce que fait KABAD
@@ -174,7 +172,6 @@ En local : `NEXT_PUBLIC_SALONS="on"` dans `.env`, puis `livekit-server --dev` (v
 src/
   app/[locale]/
     page.tsx       Landing page publique
-    bienvenue/     Écran A1 : créer un compte ou se connecter
     presentation/  Présentation animée en plein écran
     (auth)/        Inscription en 5 étapes, connexion, e-mail à confirmer, mot de passe oublié
     (app)/         Application connectée : accueil, mentorat, hackathons, Rise-Up, tests,

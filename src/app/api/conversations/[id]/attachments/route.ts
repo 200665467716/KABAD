@@ -7,7 +7,7 @@ import { ATTACHMENT_MAX_BYTES } from "@/lib/attachments";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** Multipart form: "file", "kind" (FILE or VOICE), and optionally "seconds", "caption", "clientId". */
+/** Multipart form: "file", "kind" (FILE or VOICE), and optionally "seconds", "caption", "clientId", "replyToId". */
 export const POST = route(async (request: Request, { params }: Ctx) => {
   const user = await requireVerifiedUser();
   const { id } = await params;
@@ -21,6 +21,7 @@ export const POST = route(async (request: Request, { params }: Ctx) => {
   const seconds = Number(form.get("seconds") ?? 0) || undefined;
   const caption = String(form.get("caption") ?? "").trim() || undefined;
   const clientId = String(form.get("clientId") ?? "").slice(0, 64) || undefined;
+  const replyToId = String(form.get("replyToId") ?? "").slice(0, 64) || undefined;
   const data = new Uint8Array(await file.arrayBuffer());
-  return Response.json(await sendAttachment(user.id, id, { kind, name: file.name, data, seconds, caption, clientId }), { status: 201 });
+  return Response.json(await sendAttachment(user.id, id, { kind, name: file.name, data, seconds, caption, clientId, replyToId }), { status: 201 });
 });

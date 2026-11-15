@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Controls";
-import { Alert, Avatar, Badge, PersonRow } from "@/components/ui/Display";
+import { Alert, Avatar, MentorBadge, PersonRow } from "@/components/ui/Display";
 import { TextArea } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
 import type { MemberCard } from "@/lib/domain-types";
@@ -54,9 +54,9 @@ export function InviteSheet({ target, open, onClose, onSent }: { target: InviteT
       }
     >
       <PersonRow
-        avatar={<Avatar initials={initials(target.name)} src={target.photo} size="lg" />}
+        avatar={<Avatar initials={initials(target.name)} src={target.photo} size="lg" verified={target.role === "SENIOR"} />}
         name={target.name}
-        badge={target.role === "SENIOR" ? <Badge tone="brand">{t("mentor")}</Badge> : undefined}
+        badge={target.role === "SENIOR" ? <MentorBadge>{t("mentor")}</MentorBadge> : undefined}
         meta={[target.city, target.diaspora ? t("diaspora") : "", target.headline, target.years ? t("years", { count: target.years }) : ""].filter(Boolean).join(" · ")}
       />
       <TextArea

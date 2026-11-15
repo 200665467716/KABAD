@@ -88,3 +88,22 @@ export function useRealtimeReconnect(onReconnect: () => void) {
     };
   }, []);
 }
+
+/**
+ * Safety net when the realtime server cannot be reached (not started, WebSockets blocked by a network):
+ * while the connection is down and the tab is visible, `refresh` runs every `everyMs`. Nothing is polled
+ * while the connection is up: the events above do the work.
+ */
+export function useOfflineRefresh(refresh: () => void, everyMs: number) {
+  const ref = useRef(refresh);
+  useEffect(() => {
+    ref.current = refresh;
+  });
+  useEffect(() => {
+    const s = getSocket();
+    const id = setInterval(() => {
+      if (!s.connected && document.visibilityState === "visible") ref.current();
+    }, everyMs);
+    return () => clearInterval(id);
+  }, [everyMs]);
+}

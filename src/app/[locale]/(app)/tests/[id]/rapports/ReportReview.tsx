@@ -4,7 +4,8 @@ import { useRouter } from "@/i18n/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { Page, TopBar } from "@/components/shell/TopBar";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClass, IconButton } from "@/components/ui/Button";
+import { Sheet } from "@/components/ui/Controls";
 import { Alert, Avatar, Badge, Card, Overline, PersonRow } from "@/components/ui/Display";
 import { TextArea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
@@ -13,6 +14,39 @@ import { initials } from "@/lib/format";
 import type { TestAppSummary, TestReportView } from "@/lib/domain-types";
 
 const TONE = { SUBMITTED: "accent", VALIDATED: "success", REFUSED: "danger" } as const;
+
+const shotUrl = (reportId: string, i: number, download?: boolean) => `/api/test-reports/${reportId}/captures/${i}${download ? "?telecharger=1" : ""}`;
+
+/**
+ * A capture in large, one step after the other, with a button to save it (P3): the author reads the
+ * tester's screen without opening a new tab, and keeps it if needed.
+ */
+function ShotViewer({ reportId, count, index, onChange }: { reportId: string; count: number; index: number | null; onChange: (i: number | null) => void }) {
+  const t = useTranslations("tests.review");
+  const i = index ?? 0;
+  return (
+    <Sheet
+      open={index !== null}
+      onClose={() => onChange(null)}
+      title={t("shotTitle", { n: i + 1, count })}
+      footer={
+        <div className="flex items-center gap-2">
+          <IconButton icon="back" label={t("previousShot")} disabled={i === 0} onClick={() => onChange(i - 1)} className="disabled:opacity-40" />
+          <IconButton icon="chevron" label={t("nextShot")} disabled={i >= count - 1} onClick={() => onChange(i + 1)} className="disabled:opacity-40" />
+          <a href={shotUrl(reportId, i, true)} download className={buttonClass({ variant: "secondary", block: true, className: "min-w-0 flex-1" })}>
+            <Icon name="download" size={18} />
+            {t("downloadShot")}
+          </a>
+        </div>
+      }
+    >
+      {index !== null && (
+        // eslint-disable-next-line @next/next/no-img-element -- private image served by the API to the owner only
+        <img src={shotUrl(reportId, i)} alt={t("openShot", { n: i + 1 })} className="max-h-[62dvh] w-full rounded-md border border-line bg-sunken object-contain" />
+      )}
+    </Sheet>
+  );
+}
 
 function ReportCard({ r, now }: { r: TestReportView; now: number }) {
   const router = useRouter();
@@ -23,6 +57,8 @@ function ReportCard({ r, now }: { r: TestReportView; now: number }) {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The capture shown in large, or null (P3).
+  const [shot, setShot] = useState<number | null>(null);
 
   async function review(validate: boolean) {
     setBusy(true);
@@ -39,33 +75,37 @@ function ReportCard({ r, now }: { r: TestReportView; now: number }) {
   return (
     <Card className="gap-3.5">
       <div className="flex items-start justify-between gap-2">
-        <PersonRow avatar={<Avatar initials={initials(r.tester.name)} tone="accent" />} name={r.tester.name} meta={`${r.device} · ${format.relativeTime(new Date(r.createdAt), now)}`} />
+        <PersonRow avatar={<Avatar initials={initials(r.tester.name)} />} name={r.tester.name} meta={`${r.device} · ${format.relativeTime(new Date(r.createdAt), now)}`} />
         <Badge tone={TONE[r.status]}>{t(`status.${r.status}`)}</Badge>
       </div>
-      <div className="grid gap-2">
-        <Overline as="h3">{t("questions")}</Overline>
-        {r.answers.map((a) => (
-          <div key={a.question} className="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2.5">
-            <Icon name={a.correct ? "checkCircle" : "info"} size={20} className={a.correct ? "text-success" : "text-danger"} strokeWidth={2} />
-            <span className="grid">
-              <span className="text-sm text-muted">{a.question}</span>
-              <span className="text-sm font-bold">
-                {a.answer} · {a.correct ? t("correct") : t("unexpected")}
+      {/* An app without control questions shows no empty heading. */}
+      {r.answers.length > 0 && (
+        <div className="grid gap-2">
+          <Overline as="h3">{t("questions")}</Overline>
+          {r.answers.map((a) => (
+            <div key={a.question} className="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2.5">
+              <Icon name={a.correct ? "checkCircle" : "info"} size={20} className={a.correct ? "text-success" : "text-danger"} strokeWidth={2} />
+              <span className="grid">
+                <span className="text-sm text-muted">{a.question}</span>
+                <span className="text-sm font-bold">
+                  {a.answer} · {a.correct ? t("correct") : t("unexpected")}
+                </span>
               </span>
-            </span>
-          </div>
-        ))}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="grid gap-2">
         <Overline as="h3">{t("shots")}</Overline>
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: r.screenshots }, (_, i) => (
-            <a key={i} href={`/api/test-reports/${r.id}/captures/${i}`} target="_blank" rel="noreferrer" aria-label={t("openShot", { n: i + 1 })}>
+            <button key={i} type="button" onClick={() => setShot(i)} aria-label={t("openShot", { n: i + 1 })} className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
               {/* eslint-disable-next-line @next/next/no-img-element -- private image served by the API to the owner only */}
-              <img src={`/api/test-reports/${r.id}/captures/${i}`} alt="" className="h-26 w-16 rounded-md border border-line bg-sunken object-cover" />
-            </a>
+              <img src={shotUrl(r.id, i)} alt="" className="h-26 w-16 rounded-md border border-line bg-sunken object-cover transition-transform duration-150 hover:scale-[1.03]" />
+            </button>
           ))}
         </div>
+        <ShotViewer reportId={r.id} count={r.screenshots} index={shot} onChange={setShot} />
       </div>
       {r.remarks && (
         <div className="grid gap-2">

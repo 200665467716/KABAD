@@ -67,7 +67,12 @@
       "declining": "Declining…",
       "error": "Your answer wasn’t sent. Try again.",
       "declineTitle": "Decline the invitation?",
-      "declineText": "No notification is sent to {name}. You can still invite them later."
+      "declineText": "No notification is sent to {name}. You can still invite them later.",
+      "mentorVerified": "Mentor verified by KABAD",
+      "presentation": "Their presentation",
+      "acceptedAlready": "You accepted {name}’s invitation: your conversation is open.",
+      "declinedAlready": "You declined {name}’s invitation.",
+      "write": "Write"
     },
     "conversation": {
       "metaTitle": "Conversation",
@@ -96,7 +101,6 @@
       "tooLong": "A message is {max} characters at most.",
       "voiceSending": "Voice message…",
       "uploadFailed": "The file wasn’t sent. Try again.",
-      "fileTooBig": "Files are 2 MB at most.",
       "groupInfo": "Group info",
       "pinned": "Pinned · instructions",
       "pinnedLabel": "Pinned instructions",
@@ -104,7 +108,26 @@
       "appAuthor": "{name} · author of the app",
       "attachCapture": "Attach a screenshot",
       "placeholderTest": "Write feedback…",
-      "taskError": "The task was not saved. Try again."
+      "taskError": "The task was not saved. Try again.",
+      "reply": "Reply",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "pinFailed": "The pin was not saved. Try again.",
+      "remove": "Remove",
+      "removeTitle": "Remove this message?",
+      "removeText": "Members will see “Message removed by moderation.”. Only the KABAD team can bring it back.",
+      "removeConfirm": "Remove the message",
+      "removeFailed": "The message could not be removed. Try again.",
+      "replyingTo": "Replying to {name}",
+      "cancelReply": "Cancel the reply",
+      "mentionList": "Members to mention",
+      "pinnedMessages": "Pinned messages",
+      "pinnedCount": "{count, plural, one {# pinned message} other {# pinned messages}}",
+      "pinnedAll": "See all",
+      "pinnedLess": "Show less",
+      "fileTooBig": "This file is over 2 MB. The messaging takes PDFs, images and voice notes of 2 MB at most.",
+      "videoRefused": "Videos do not go through the messaging: too heavy for 4G. Put it on YouTube or Google Drive and share the link here.",
+      "fileType": "The messaging takes PDFs, images (PNG, JPEG, WebP) and voice notes."
     },
     "add": {
       "title": "Add participants",
@@ -146,7 +169,11 @@
       "removeTitle": "Remove {name} from the group?",
       "removeText": "{name} will no longer see the group’s messages. You can add them again later.",
       "openTeam": "See my team",
-      "linkedTeam": "This group is your hackathon team’s discussion: join or leave it by joining or leaving the team."
+      "linkedTeam": "This group is your hackathon team’s discussion: join or leave it by joining or leaving the team.",
+      "linkedTestOwner": "This group follows the test listing: testers join it by joining the test. You can rename it, describe it, change its photo and remove a tester.",
+      "removeTesterText": "{name} leaves the group and the test. Their place opens up for another tester.",
+      "openHackathon": "See the hackathon",
+      "linkedInstructors": "This group brings together the organizer and the instructors of the hackathon: you join it by accepting a mission."
     },
     "group": {
       "metaTitle": "New group",
@@ -174,13 +201,22 @@
       "addLabel": "Add {name}",
       "submit": "Create the group",
       "submitting": "Creating…",
-      "error": "The group wasn’t created. Try again."
+      "error": "The group wasn’t created. Try again.",
+      "description": "Description",
+      "descriptionHint": "Optional: what the group is about, its rules.",
+      "photoAdd": "Add a group photo",
+      "photoChange": "Change the group photo",
+      "photoTooBig": "This image is still too heavy. Pick another one."
     },
     "bubble": {
       "sending": "Sending…",
       "failed": "Not sent",
       "report": "Report this message",
-      "retry": "Retry"
+      "retry": "Retry",
+      "pinned": "Pinned",
+      "voice": "Voice message",
+      "file": "File",
+      "member": "Member"
     },
     "report": {
       "title": "Report {subject}",
@@ -190,6 +226,10 @@
       "sending": "Sending…",
       "done": "The KABAD team is looking into it.",
       "doneBlocked": "This person can no longer write to you or invite you.",
+      "doneHidden": "The post is hidden from the project. The KABAD team reads your reason; only they can show it again.",
+      "leadNotice": "You lead this project: your report hides this post at once. Explain why, the KABAD team will read it.",
+      "reasonLabel": "Reason (required)",
+      "reasonRequired": "Explain in one sentence why you hide this post.",
       "question": "What’s the problem?",
       "reasons": {
         "r0": "Spam or scam",

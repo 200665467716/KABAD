@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { DomainError } from "@/server/errors";
 import { createGroup, addGroupMembers, answerInvitation, block, createReport, sendInvitation } from "@/server/messaging";
-import { reinstateMember, resolveReport, suspendMember } from "@/server/admin";
+import { dashboard, reinstateMember, resolveReport, suspendMember } from "@/server/admin";
 import { userFromToken, createSession } from "@/server/auth";
 import { rateLimit } from "@/server/rate-limit";
 import { makeContacts, makeUsers, prisma, resetDb } from "./helpers";
@@ -80,5 +80,33 @@ describe("comptes", () => {
   it("le limiteur partagé compte en base et bloque au-delà du maximum", async () => {
     for (let i = 0; i < 3; i++) await rateLimit("test-key", 3, 60_000, "Trop.", prisma);
     await refused(rateLimit("test-key", 3, 60_000, "Trop.", prisma), "rate_limited");
+  });
+});
+
+describe("tableau de bord de l'équipe", () => {
+  it("compte inscriptions et messages jour par jour, sans les lignes ajoutées par KABAD", async () => {
+    const day = 86_400_000;
+    await prisma.user.update({ where: { id: "yao" }, data: { createdAt: new Date(Date.now() - 9 * day) } });
+    await prisma.user.update({ where: { id: "awa" }, data: { createdAt: new Date(Date.now() - 40 * day) } });
+    await makeContacts("kossi", "moussa");
+    const conv = await prisma.conversation.create({ data: { kind: "DIRECT", directKey: "kossi:moussa", members: { create: [{ userId: "kossi" }, { userId: "moussa" }] } } });
+    await prisma.message.createMany({
+      data: [
+        { conversationId: conv.id, authorId: "kossi", body: "Salut" },
+        { conversationId: conv.id, authorId: "moussa", body: "Bonjour" },
+        { conversationId: conv.id, authorId: null, kind: "SYSTEM", body: "Kossi a rejoint la conversation" },
+        { conversationId: conv.id, authorId: "kossi", body: "Il y a 8 jours", createdAt: new Date(Date.now() - 8 * day) },
+      ],
+    });
+
+    await refused(dashboard("kossi", prisma), "forbidden");
+    const d = await dashboard("equipe", prisma);
+    expect(d.signups).toHaveLength(14);
+    // Kossi, Moussa, Nadia, Ibrahim cette semaine (l'équipe n'est pas comptée), Yao la semaine d'avant, Awa hors période.
+    expect(d.signupsWeek).toEqual({ current: 4, previous: 1, change: 3 });
+    expect(d.signups.at(-1)?.count).toBe(4);
+    expect(d.messagesWeek).toEqual({ current: 2, previous: 1, change: 1 });
+    expect(d.latest.map((u) => u.id)).not.toContain("equipe");
+    expect(d.latest).toHaveLength(5);
   });
 });

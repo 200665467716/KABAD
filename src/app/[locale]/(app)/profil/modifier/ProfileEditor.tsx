@@ -11,7 +11,7 @@ import { useRouter } from "@/i18n/navigation";
 import { choiceLabel } from "@/lib/choice-labels";
 import { api, ApiError } from "@/lib/api";
 import type { Level } from "@/lib/domain-types";
-import { COUNTRIES, GOALS, LEVELS, TECH_CHOICES } from "@/lib/schemas";
+import { BIO_MAX, COUNTRIES, GOALS, LEVELS, TECH_CHOICES } from "@/lib/schemas";
 import { zoneChoices, zoneCity } from "@/lib/time-zones";
 import { ProfilePhoto } from "./ProfilePhoto";
 
@@ -29,6 +29,7 @@ export function ProfileEditor({ initial, name, photo }: { initial: Initial; name
   const [stack, setStack] = useState(initial.stack);
   const [goals, setGoals] = useState<Goal[]>(initial.goals.filter((g): g is Goal => (GOALS as readonly string[]).includes(g)));
   const [extra, setExtra] = useState("");
+  const [bio, setBio] = useState(initial.bio);
   const [error, setError] = useState<{ field?: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const choices = [...new Set([...TECH_CHOICES, ...stack])];
@@ -48,7 +49,7 @@ export function ProfileEditor({ initial, name, photo }: { initial: Initial; name
     try {
       await api("/api/me", {
         method: "PATCH",
-        body: { country: text("country") || undefined, city: text("city") || undefined, level, headline: text("headline"), bio: text("bio"), profileLink: text("profileLink"), stack, goals, gender: text("gender") || null, timeZone: text("timeZone") },
+        body: { country: text("country") || undefined, city: text("city") || undefined, level, headline: text("headline"), bio, profileLink: text("profileLink"), stack, goals, gender: text("gender") || null, timeZone: text("timeZone") },
       });
       router.push("/profil");
       router.refresh();
@@ -87,7 +88,7 @@ export function ProfileEditor({ initial, name, photo }: { initial: Initial; name
           </Select>
         </div>
         <TextField id="headline" name="headline" label={t("headline")} hint={t("headlineHint")} defaultValue={initial.headline} maxLength={80} />
-        <TextArea id="bio" name="bio" label={t("bio")} hint={t("bioHint")} defaultValue={initial.bio} maxLength={600} rows={4} />
+        <TextArea id="bio" name="bio" label={t("bio")} hint={t("bioHint")} value={bio} onChange={(e) => setBio(e.target.value)} maxLength={BIO_MAX} rows={8} counter={`${bio.length} / ${BIO_MAX}`} />
         <TextField id="profileLink" name="profileLink" label={t("profileLink")} hint={t("profileLinkHint")} defaultValue={initial.profileLink} error={fieldError("profileLink")} />
         <fieldset className="m-0 grid min-w-0 gap-2 border-0 p-0">
           <legend className="mb-2 p-0 text-sm font-extrabold">{t("level")}</legend>

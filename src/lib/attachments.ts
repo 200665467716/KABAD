@@ -4,6 +4,8 @@
  */
 export const ATTACHMENT_MAX_BYTES = 2 * 1024 * 1024;
 export const VOICE_MAX_SECONDS = 120;
+/** What the file picker offers, and what the browser checks before sending (the server reads the bytes). */
+export const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
 
 export type AttachmentKind = "FILE" | "VOICE";
 

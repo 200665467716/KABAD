@@ -6,7 +6,7 @@ import { badgeRevocation, requestBadge, reviewBadge } from "@/server/badges";
 import { answerJoinRequest, getHackathon, getResults, publishResults, register, scoreSubmission, submitSolution } from "@/server/hackathons";
 import { createTestApp, joinTest, leaveTest, setStep } from "@/server/community-tests";
 import { leaveGroup, listConversations } from "@/server/messaging";
-import { addPost, closeRoom, createEvent, createProject, getEvent, getProject, joinProject, openRoom } from "@/server/rise";
+import { addPost, closeRoom, createEvent, createProject, getEvent, getProject, joinProject, openRoom, setCoLead } from "@/server/rise";
 import { remindRiseEvents } from "@/server/jobs";
 import { sendVerificationEmail, verifyEmailCode } from "@/server/account";
 import { updateProfile } from "@/server/members";
@@ -355,12 +355,14 @@ describe("Africa Rise-Up", () => {
     expect(await prisma.riseMember.count({ where: { projectId: id, userId: "kossi" } })).toBe(1);
   });
 
-  it("un salon : un membre l’ouvre sur un lien Meet, les autres sont prévenus ; un seul salon à la fois ; son auteur le ferme", async () => {
+  it("un salon : un responsable l’ouvre sur un lien Meet, les autres sont prévenus ; un seul salon à la fois ; son auteur le ferme", async () => {
     const { id } = await createProject("yao", { name: "Forages au Sahel", domain: "WATER", summary: "Une carte des forages.", problem: "x".repeat(40), skills: [] }, prisma);
     const meet = "https://meet.google.com/abc-defg-hij";
     await refused(openRoom("kossi", id, { meetingUrl: meet }, prisma), "forbidden");
     await joinProject("kossi", id, {}, prisma);
     await joinProject("fatou", id, {}, prisma);
+    // Kossi, co-responsable, ouvre le salon tout de suite (un simple membre le propose : voir le 14 novembre).
+    await setCoLead("yao", id, "kossi", true, prisma);
 
     const room = await openRoom("kossi", id, { meetingUrl: meet }, prisma);
     expect(await prisma.notification.count({ where: { key: "roomLive", userId: { in: ["yao", "fatou"] } } })).toBe(2);
@@ -371,7 +373,7 @@ describe("Africa Rise-Up", () => {
     expect((await getProject("fatou", id, prisma)).event).toMatchObject({ live: true, title: "Salon de discussion", meetingUrl: meet });
     expect((await getProject("aicha", id, prisma)).event).toMatchObject({ live: true, meetingUrl: "" });
 
-    // Its author or the initiator closes it; another member does not.
+    // Its author or a lead closes it; another member does not.
     await refused(closeRoom("fatou", id, room.id, prisma), "forbidden");
     await closeRoom("kossi", id, room.id, prisma);
     expect((await getEvent("kossi", id, room.id, prisma)).live).toBe(false);

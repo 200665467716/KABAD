@@ -9,10 +9,14 @@ import { Checkbox, RadioCard, TextArea } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
 import { REPORT_REASONS } from "@/lib/schemas";
 
-export type ReportTarget = { type: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION" | "ROOM"; id: string };
+export type ReportTarget = { type: "USER" | "MESSAGE" | "CONVERSATION" | "INVITATION" | "ROOM" | "RISE_POST"; id: string };
 
-/** Report a member, a message, a conversation or an invitation. A moderator reviews it within 24 h; the reporter stays anonymous. */
-export function ReportSheet({ open, onClose, subject, target, onBlocked }: { open: boolean; onClose: () => void; subject: string; target: ReportTarget; onBlocked?: () => void }) {
+/**
+ * Report a member, a message, a conversation, an invitation or a Rise-Up post. A moderator reviews it within 24 h;
+ * the reporter stays anonymous. `hides`: a lead of a Rise-Up project hides the post at once by reporting it,
+ * with a reason that the KABAD team reads (P5); `onSent` then refreshes the page.
+ */
+export function ReportSheet({ open, onClose, subject, target, onBlocked, hides, onSent }: { open: boolean; onClose: () => void; subject: string; target: ReportTarget; onBlocked?: () => void; hides?: boolean; onSent?: () => void }) {
   const t = useTranslations("messaging.report");
   const [reason, setReason] = useState<(typeof REPORT_REASONS)[number] | null>(null);
   const [details, setDetails] = useState("");
@@ -34,12 +38,14 @@ export function ReportSheet({ open, onClose, subject, target, onBlocked }: { ope
 
   async function submit() {
     if (!reason) return setError(t("chooseReason"));
+    if (hides && details.trim().length < 10) return setError(t("reasonRequired"));
     setState("sending");
     setError(null);
     try {
       await api("/api/reports", { body: { targetType: target.type, targetId: target.id, reason, details: details.trim() || undefined, block } });
       setState("sent");
       if (block) onBlocked?.();
+      onSent?.();
     } catch (e) {
       setState("form");
       setError(e instanceof ApiError ? e.message : t("error"));
@@ -65,7 +71,7 @@ export function ReportSheet({ open, onClose, subject, target, onBlocked }: { ope
     >
       {state === "sent" ? (
         <Alert tone="success" role="status">
-          {t("done")}
+          {hides ? t("doneHidden") : t("done")}
           {block ? ` ${t("doneBlocked")}` : ""}
         </Alert>
       ) : (
@@ -87,7 +93,12 @@ export function ReportSheet({ open, onClose, subject, target, onBlocked }: { ope
               />
             ))}
           </fieldset>
-          <TextArea id={detailsId} label={t("details")} rows={3} maxLength={1000} value={details} onChange={(e) => setDetails(e.target.value)} placeholder={t("detailsPlaceholder")} />
+          {hides && (
+            <Alert tone="info">
+              {t("leadNotice")}
+            </Alert>
+          )}
+          <TextArea id={detailsId} label={hides ? t("reasonLabel") : t("details")} rows={3} maxLength={1000} value={details} onChange={(e) => setDetails(e.target.value)} placeholder={t("detailsPlaceholder")} />
           <Checkbox checked={block} onChange={(e) => setBlock(e.target.checked)}>
             {t("block")}
           </Checkbox>

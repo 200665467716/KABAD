@@ -18,6 +18,7 @@
       "juryAppointed": " t’a nommé au jury du hackathon « {title} ».",
       "hackathonProposed": " propose le hackathon « {title} ».",
       "hackathonPublished": " a publié ton hackathon « {title} ».",
+      "hackathonRejected": " n’a pas publié « {title} » : {reason}",
       "teamJoinRequested": " demande à rejoindre l’équipe {team} ({title}).",
       "teamJoinAccepted": " t’a accepté·e dans l’équipe ({title}).",
       "teamJoinDeclined": " n’a pas retenu ta demande ({title}).",
@@ -33,7 +34,6 @@
       "riseJoined": " a rejoint ton projet « {title} ».",
       "riseEvent": " : « {title} » le {at}.",
       "riseEventSoon": " : « {title} » commence dans {minutes} min.",
-      "riseEventCancelled": " : « {title} », prévu le {at}, est annulé.",
       "testJoined": " a rejoint les testeurs de « {title} ».",
       "testReport": " a envoyé un rapport de test sur « {title} ».",
       "testReportValidated": " a validé ton rapport de test sur « {title} ».",
@@ -41,13 +41,18 @@
       "invitationReceived": " t’invite à échanger.",
       "invitationAccepted": " a accepté ton invitation. Vous pouvez discuter.",
       "roomLive": " est en direct : « {title} ». Rejoins le salon.",
+      "riseCoLead": " t’a nommé·e co-responsable du projet « {title} ».",
+      "roomProposed": " propose un salon « {title} » dans « {project} ». Valide-le pour l’ouvrir aux membres.",
+      "roomRefused": " : ton salon « {title} » n’a pas été validé.",
       "teamInvited": " t’invite dans l’équipe {team} ({title}).",
       "teamInviteAccepted": " a rejoint ton équipe {team} ({title}).",
       "teamInviteDeclined": " ne rejoint pas ton équipe {team} ({title}).",
+      "sessionRated": " a noté votre séance « {topic} » : {rating} sur 5.",
+      "mentioned": " t’a mentionné·e dans « {title} ».",
+      "riseEventCancelled": " : « {title} », prévu le {at}, est annulé.",
       "teamMemberLeft": " a quitté ton équipe {team} ({title}).",
       "teamCaptainHandedOver": " a quitté l’équipe {team} ({title}) : tu en es maintenant le chef d’équipe.",
-      "juryToScore": " est terminé : des solutions attendent ta note.",
-      "sessionRated": " a noté votre séance « {topic} » : {rating} sur 5."
+      "juryToScore": " est terminé : des solutions attendent ta note."
     }
   }
 }

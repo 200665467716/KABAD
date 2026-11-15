@@ -33,7 +33,9 @@
       "signOut": "Se déconnecter",
       "signOutTitle": "Se déconnecter ?",
       "signOutText": "Tu devras te reconnecter avec ton e-mail et ton mot de passe.",
-      "signOutStay": "Rester connecté"
+      "signOutStay": "Rester connecté",
+      "mentorVerified": "Mentor vérifié par KABAD",
+      "changePhoto": "Changer ma photo de profil"
     },
     "edit": {
       "title": "Modifier mon profil",
@@ -44,7 +46,7 @@
       "headline": "Ce que tu fais",
       "headlineHint": "Par exemple : Développeur web, Data analyst.",
       "bio": "Présentation",
-      "bioHint": "Quelques phrases sur toi et ce que tu construis.",
+      "bioHint": "Qui tu es, ce que tu construis. Elle s’affiche sur ton profil et accompagne tes invitations.",
       "profileLink": "Profil GitHub ou LinkedIn",
       "profileLinkHint": "github.com/… ou linkedin.com/…",
       "stack": "Tes technologies",
@@ -93,7 +95,8 @@
       "invite": "Inviter",
       "invited": "Invitation envoyée",
       "book": "Réserver une séance",
-      "others": "Voir d’autres membres"
+      "others": "Voir d’autres membres",
+      "mentorVerified": "Mentor vérifié par KABAD"
     },
     "notifications": {
       "title": "Notifications",

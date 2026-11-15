@@ -22,15 +22,20 @@ const SYSTEM_EN: Array<[RegExp, (...m: string[]) => string]> = [
   [/^(\S+) a ajouté (.+)$/, (a, b) => `${a} added ${namesEn(b)}`],
   [/^(\S+) a retiré la photo du groupe$/, (a) => `${a} removed the group photo`],
   [/^(\S+) a changé la photo du groupe$/, (a) => `${a} changed the group photo`],
+  [/^(\S+) a retiré (\S+) du test$/, (a, b) => `${a} removed ${b} from the test`],
   [/^(\S+) a retiré (\S+)$/, (a, b) => `${a} removed ${b}`],
   [/^(\S+) a renommé le groupe « (.+) »$/, (a, b) => `${a} renamed the group “${b}”`],
   [/^(\S+) a changé le thème du groupe$/, (a) => `${a} changed the group theme`],
+  [/^(\S+) a changé la description du groupe$/, (a) => `${a} changed the group description`],
+  [/^(\S+) a épinglé un message$/, (a) => `${a} pinned a message`],
+  [/^(\S+) a désépinglé un message$/, (a) => `${a} unpinned a message`],
   [/^(\S+) a quitté le groupe\. (\S+) gère maintenant le groupe$/, (a, b) => `${a} left the group. ${b} now manages the group`],
   [/^(\S+) a quitté le groupe$/, (a) => `${a} left the group`],
   [/^(\S+) a rejoint le groupe$/, (a) => `${a} joined the group`],
   [/^(\S+) a ouvert le groupe de test\. Installer l’app : (.+)$/, (a, b) => `${a} opened the test group. Install the app: ${b}`],
   [/^(\S+) a créé l’équipe (.+)\. Cette discussion est réservée à ses membres\.$/, (a, b) => `${a} created the team ${b}. This chat is for its members only.`],
   [/^(\S+) a lancé le projet « (.+) »$/, (a, b) => `${a} launched the project “${b}”`],
+  [/^Groupe des instructeurs de « (.+) » : organisation, modalités et questions des équipes\.$/, (a) => `Instructors' group of “${a}”: organisation, arrangements and the teams' questions.`],
 ];
 
 const english = (locale: string) => !locale.startsWith("fr");
@@ -52,10 +57,10 @@ export function localizeSystemText(text: string, locale: string, system = true):
   return text;
 }
 
-/** Le nom d'un groupe, traduit s'il a été écrit par l'application : « Testeurs Kora » → « Testers Kora ». */
+/** Le nom d'un groupe, traduit s'il a été écrit par l'application : « Testeurs Kora » → « Testers Kora », « Instructeurs · X » → « Instructors · X ». */
 export function localizeGroupName(name: string, locale: string): string {
   if (!english(locale)) return name;
-  return name.replace(/^Testeurs (?=\S)/, "Testers ");
+  return name.replace(/^Testeurs (?=\S)/, "Testers ").replace(/^Instructeurs · (?=\S)/, "Instructors · ");
 }
 
 /** Le titre d'un salon : le titre par défaut est traduit, celui choisi par un membre reste tel quel. */

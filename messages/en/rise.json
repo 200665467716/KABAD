@@ -34,7 +34,7 @@
       "skills": "Skills wanted",
       "noPosts": "No message yet. Start the discussion!",
       "noEvents": "No event planned.",
-      "initiator": "Initiator",
+      "initiator": "Lead",
       "replies": "{count, plural, =0 {Reply} one {# reply} other {# replies}}",
       "composerLabel": "Write to the project",
       "composerPlaceholder": "Share progress, a question…",
@@ -44,7 +44,19 @@
       "joinToWrite": "Join the project to take part in the discussion.",
       "openChat": "Project chat",
       "error": "Something went wrong. Try again.",
-      "tabInfo": "About"
+      "tabInfo": "About",
+      "coLead": "Co-lead",
+      "makeCoLead": "Make co-lead",
+      "removeCoLead": "Remove the role",
+      "leadsOnly": "The lead and the co-leads schedule the events. You can propose a room in the Discussion tab.",
+      "pendingTitle": "Rooms to approve",
+      "pendingMineTitle": "Your room",
+      "pendingBy": "Proposed by {name}",
+      "pendingMine": "Waiting for a lead of the project to approve it.",
+      "approve": "Approve",
+      "refuse": "Refuse",
+      "report": "Report",
+      "reportSubject": "this post"
     },
     "room": {
       "open": "Open a room",
@@ -57,7 +69,10 @@
       "linkHint": "Create a meeting on meet.google.com, then paste its link here.",
       "start": "Open the room",
       "starting": "Opening…",
-      "error": "The room was not opened. Try again."
+      "error": "The room was not opened. Try again.",
+      "propose": "Propose a room",
+      "proposeText": "A lead of the project approves it, then it opens to the members for one hour. They are told at that moment.",
+      "proposeSend": "Send the proposal"
     },
     "thread": {
       "metaTitle": "Project discussion",
@@ -119,7 +134,13 @@
         "text": "It leaves the project and its reminder is not sent. The members who were told get a notification.",
         "keep": "Keep the event",
         "error": "The event was not cancelled. Try again."
-      }
+      },
+      "pending": "To approve",
+      "pendingLead": "A member proposes this room. Approve it to open it to the members for one hour, or refuse it.",
+      "pendingAuthor": "Your room is waiting for a lead of the project to approve it. The members will see it once approved.",
+      "approve": "Approve the room",
+      "refuse": "Refuse",
+      "answerError": "The answer was not sent. Try again."
     },
     "newEvent": {
       "metaTitle": "Schedule an event",

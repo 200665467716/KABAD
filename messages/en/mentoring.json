@@ -15,9 +15,9 @@
       "nextSlot": "Next slot: {when}",
       "noSlot": "No open slot for now",
       "empty": "No mentor matches. Try another area.",
-      "badgeTitle": "Got experience to share?",
-      "badgeText": "Ask for the mentor badge, KABAD checks it.",
-      "badgePending": "Your badge request is being reviewed.",
+      "badgeTitle": "Become a mentor",
+      "badgeText": "Have experience to share? Ask for the badge, the KABAD team validates it.",
+      "badgePending": "The KABAD team checks your experience and your links. You will be told as soon as it answers.",
       "mySessions": "My sessions",
       "mentorSide": "As a mentor",
       "requests": "Requests received",
@@ -25,7 +25,15 @@
       "requestsCount": "{count, plural, =0 {No request to answer} one {# request to answer} other {# requests to answer}}",
       "availability": "My availability",
       "availabilityText": "Your weekly time ranges",
-      "upcomingAsMentor": "{count, plural, =0 {No upcoming session} one {# upcoming session} other {# upcoming sessions}}"
+      "upcomingAsMentor": "{count, plural, =0 {No upcoming session} one {# upcoming session} other {# upcoming sessions}}",
+      "badgePendingTitle": "Your badge request is being reviewed",
+      "badgeSteps": "Steps of the request",
+      "badgeStep1": "Sent",
+      "badgeStep2": "In review",
+      "badgeStep3": "Badge",
+      "badgePerk1": "Free sessions of 30 min to 1 h",
+      "badgePerk2": "Your slots, your pace",
+      "badgePerk3": "Badge shown on your profile"
     },
     "status": {
       "PENDING": "Pending",
@@ -63,7 +71,12 @@
       "bookCta": "Book a session",
       "verifiedShort": "Verified",
       "slotTaken": "{time}, already booked",
-      "rating": "{average, number} out of 5 ({count, plural, one {# review} other {# reviews}})"
+      "rating": "{average, number} out of 5 ({count, plural, one {# review} other {# reviews}})",
+      "statSessions": "{count, plural, one {session} other {sessions}}",
+      "statExperience": "of experience",
+      "statNew": "New",
+      "statRating": "not rated yet",
+      "statRatings": "{count, plural, one {# review} other {# reviews}}"
     },
     "book": {
       "title": "Book",
@@ -194,6 +207,10 @@
       "editRange": "Change the {day} range, {range}",
       "remove": "Remove",
       "done": "OK",
+      "blockedEnd": "Until",
+      "blockedEndHint": "Optional: to block several days at once.",
+      "blockedRange": "From {from} to {to} ({count} days)",
+      "addBlockedRange": "Block these {count} days",
       "overlapOn": "Two ranges on {day} overlap. Change the hours of one of them."
     },
     "badge": {
