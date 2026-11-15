@@ -51,3 +51,8 @@ next-env.d.ts
 /e2e/.auth/
 /.livekit/
 /dist
+
+# consignes et réglages des agents IA, gardés en local
+/.claude/
+/AGENTS.md
+/CLAUDE.md
