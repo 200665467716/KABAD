@@ -30,7 +30,7 @@ Moyenne des fonctionnalités produit (1 à 12) : **8,6/10**. Les notes relevées
 
 ## Préparer les tests
 
-Sur un ordinateur, en suivant le README (« Lancer KABAD sur son ordinateur ») :
+Sur un ordinateur, en suivant `docs/README-complet.md` (« Lancer KABAD sur son ordinateur ») :
 
 1. Récupérer la branche : `git switch dev/main`, puis `git pull --rebase`.
 2. `npm install`, `npm run db:migrate`, `npm run db:seed` (remet les données de démo à zéro : à refaire entre deux séries de tests).
@@ -39,7 +39,7 @@ Sur un ordinateur, en suivant le README (« Lancer KABAD sur son ordinateur ») 
 
 Bon à savoir :
 
-- **Mot de passe de tous les comptes de démo : `kabad-demo-2026`.** Les comptes et ce qu'ils permettent de tester sont dans le README.
+- **Mot de passe de tous les comptes de démo : `kabad-demo-2026`.** Les comptes et ce qu'ils permettent de tester sont dans `docs/README-complet.md`.
 - **E-mails** : en local, aucun e-mail ne part. Le code de confirmation et les liens (mot de passe oublié) s'affichent dans le terminal de `npm run dev` ; les notifications par e-mail s'affichent dans celui de `npm run worker`.
 - **Deux personnes à la fois** : utiliser deux navigateurs, ou une fenêtre normale et une fenêtre privée, pour voir le temps réel (messages, invitations, notifications).
 - **Téléphone** : tester aussi dans le navigateur en mode téléphone (outils de développement, 390 px), puisque KABAD est pensé d'abord pour le mobile.
